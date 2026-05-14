@@ -16,4 +16,10 @@ class MorphologySnapshot(BaseModel):
     average_energy: float = 0.0
     coherence_phi: float = 0.0
     myelinated_pathways: int = 0
+    # T12 — burst metadata
+    execution_mode: str = "global_tick"
+    burst_id: int = 0
+    fired_neurons: int = 0
+    propagated_synapses: int = 0
+    fire_queue_size: int = 0
     metadata: Dict[str, Any] = Field(default_factory=dict)

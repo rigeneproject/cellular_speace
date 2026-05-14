@@ -22,6 +22,9 @@ class DigitalNeuron(DigitalCell):
     utility_score: float = 0.0
     apoptosis_risk: float = 0.0
 
+    # T12 — EventDrivenBurstEngine fields
+    last_fired_burst: int = 0
+
     # T10 — CellDifferentiationEngine fields
     cell_type: str = "generic_neuron"
     region: str | None = None

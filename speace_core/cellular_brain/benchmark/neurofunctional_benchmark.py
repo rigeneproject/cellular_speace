@@ -126,19 +126,28 @@ class NeuroFunctionalBenchmark:
         )
         return result
 
-    async def run_case(self, case_name: str, **kwargs: Any) -> BenchmarkResult:
+    async def run_case(
+        self, case_name: str, execution_mode: str = "global_tick", **kwargs: Any
+    ) -> BenchmarkResult:
         """Dispatcher for predefined benchmark scenarios."""
-        if case_name == "adaptation_after_error":
-            return await self._case_adaptation_after_error(**kwargs)
-        if case_name == "useful_neurogenesis":
-            return await self._case_useful_neurogenesis(**kwargs)
-        if case_name == "useful_apoptosis":
-            return await self._case_useful_apoptosis(**kwargs)
-        if case_name == "differentiation_consistency":
-            return await self._case_differentiation_consistency(**kwargs)
-        if case_name == "morphological_memory_trace":
-            return await self._case_morphological_memory_trace(**kwargs)
-        raise ValueError(f"Unknown benchmark case: {case_name}")
+        original_mode = self.orch.execution_mode
+        self.orch.execution_mode = execution_mode
+        try:
+            if case_name == "adaptation_after_error":
+                result = await self._case_adaptation_after_error(**kwargs)
+            elif case_name == "useful_neurogenesis":
+                result = await self._case_useful_neurogenesis(**kwargs)
+            elif case_name == "useful_apoptosis":
+                result = await self._case_useful_apoptosis(**kwargs)
+            elif case_name == "differentiation_consistency":
+                result = await self._case_differentiation_consistency(**kwargs)
+            elif case_name == "morphological_memory_trace":
+                result = await self._case_morphological_memory_trace(**kwargs)
+            else:
+                raise ValueError(f"Unknown benchmark case: {case_name}")
+        finally:
+            self.orch.execution_mode = original_mode
+        return result
 
     async def _case_adaptation_after_error(
         self,

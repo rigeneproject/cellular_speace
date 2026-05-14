@@ -21,6 +21,7 @@ from speace_core.cellular_brain.regulation.homeostasis_engine import (
 )
 from speace_core.cellular_brain.memory.morphological_memory import MorphologicalMemory
 from speace_core.cellular_brain.memory.morphology_snapshot import MorphologySnapshot
+from speace_core.cellular_brain.execution.burst_engine import EventDrivenBurstEngine
 from speace_core.cellular_brain.regulation.neurogenesis_engine import NeurogenesisEngine
 from speace_core.cellular_brain.regulation.plasticity_engine import PlasticityEngine
 from speace_core.dna.models import SharedGenome
@@ -39,7 +40,9 @@ class CellularBrainOrchestrator(BaseModel):
     _neurogenesis: NeurogenesisEngine = None  # type: ignore[assignment]
     _apoptosis: ApoptosisEngine = None  # type: ignore[assignment]
     _differentiation: CellDifferentiationEngine = None  # type: ignore[assignment]
+    _burst_engine: EventDrivenBurstEngine = None  # type: ignore[assignment]
     negative_feedback_count: int = 0
+    execution_mode: str = "global_tick"
 
     class Config:
         arbitrary_types_allowed = True
@@ -56,6 +59,7 @@ class CellularBrainOrchestrator(BaseModel):
             genome=self.genome,
             memory=self._memory,
         )
+        self._burst_engine = EventDrivenBurstEngine()
 
     async def run_ticks(self, n_ticks: int) -> None:
         for _ in range(n_ticks):
@@ -65,7 +69,10 @@ class CellularBrainOrchestrator(BaseModel):
 
     async def _tick(self) -> None:
         self.current_tick += 1
-        await self.circuit.tick()
+        if self.execution_mode == "event_driven_burst":
+            self._burst_engine.run_event_cycle(self.circuit)
+        else:
+            await self.circuit.tick()
 
         all_neurons = (
             self.circuit.input_neurons
@@ -133,7 +140,7 @@ class CellularBrainOrchestrator(BaseModel):
         weights = [s.weight for s in self.circuit.synapses if s.state != "pruned"]
         trusts = [s.trust for s in self.circuit.synapses if s.state != "pruned"]
         energies = [n.energy for n in self.circuit.input_neurons + self.circuit.hidden_neurons + self.circuit.output_neurons]
-        return MorphologySnapshot(
+        snapshot = MorphologySnapshot(
             snapshot_id=f"snap_{self.current_tick}",
             timestamp=metrics.tick,
             tick=self.current_tick,
@@ -145,7 +152,11 @@ class CellularBrainOrchestrator(BaseModel):
             average_trust=sum(trusts) / len(trusts) if trusts else 0.0,
             average_energy=sum(energies) / len(energies) if energies else 0.0,
             coherence_phi=metrics.coherence_phi,
+            execution_mode=self.execution_mode,
         )
+        if self.execution_mode == "event_driven_burst":
+            snapshot.burst_id = self._burst_engine.burst_counter
+        return snapshot
 
     @property
     def latest_metrics(self) -> SystemMetrics | None:
