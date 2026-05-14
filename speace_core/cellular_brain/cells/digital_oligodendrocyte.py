@@ -18,7 +18,7 @@ class Pathway(BaseModel):
     priority: float = 0.0
 
 
-class DigitalOligodendrocite(DigitalCell):
+class DigitalOligodendrocyte(DigitalCell):
     async def receive(self, signal: DigitalSignal) -> None:
         pass
 

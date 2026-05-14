@@ -31,7 +31,7 @@ class CellFactory:
         from speace_core.cellular_brain.cells.digital_neuron import DigitalNeuron
         from speace_core.cellular_brain.cells.digital_astrocyte import DigitalAstrocyte
         from speace_core.cellular_brain.cells.digital_microglia import DigitalMicroglia
-        from speace_core.cellular_brain.cells.digital_oligodendrocite import DigitalOligodendrocite
+        from speace_core.cellular_brain.cells.digital_oligodendrocyte import DigitalOligodendrocyte
 
         role = self._resolve_role(context)
         if role not in self.genome.morphology.allowed_cell_types:

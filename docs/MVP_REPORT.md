@@ -5,13 +5,13 @@
 
 ## Summary
 
-The SPEACE NeuroCellular Kernel (NCK) MVP v0.1 has been successfully implemented and validated. It demonstrates a minimal but functional digital cellular brain with 100 neurons, 300 synapses, 5 astrocytes, 2 microglia, and 2 oligodendrocites, executing signal propagation, plasticity, homeostasis, and immune pruning.
+The SPEACE NeuroCellular Kernel (NCK) MVP v0.1 has been successfully implemented and validated. It demonstrates a minimal but functional digital cellular brain with 100 neurons, 300 synapses, 5 astrocytes, 2 microglia, and 2 oligodendrocytes, executing signal propagation, plasticity, homeostasis, and immune pruning.
 
 ## Architecture Delivered
 
 - **Digital DNA:** YAML-based genome with identity, morphology, expression rules, homeostasis, and immune parameters.
 - **Cellular Substrate:** Abstract `DigitalCell` base, `DigitalSignal`, `EpigeneticState`, and `CellFactory` differentiation.
-- **Specialized Cells:** `DigitalNeuron`, `DigitalSynapse`, `DigitalAstrocyte`, `DigitalMicroglia`, `DigitalOligodendrocite`.
+- **Specialized Cells:** `DigitalNeuron`, `DigitalSynapse`, `DigitalAstrocyte`, `DigitalMicroglia`, `DigitalOligodendrocyte`.
 - **Circuit:** `NeuralCircuit` with feed-forward + feedback loop wiring.
 - **Regulation:** `PlasticityEngine`, `HomeostasisEngine` (coherence Phi), `MyelinationEngine`.
 - **Orchestration:** `CellularBrainOrchestrator` with discrete-time async tick loop.
@@ -25,7 +25,7 @@ The SPEACE NeuroCellular Kernel (NCK) MVP v0.1 has been successfully implemented
 | DigitalSynapses | 300 | ~300 | Pass |
 | DigitalAstrocytes | 5 | 5 | Pass |
 | DigitalMicroglia | 2 | 2 | Pass |
-| DigitalOligodendrocites | 2 | 2 | Pass |
+| DigitalOligodendrocytes | 2 | 2 | Pass |
 | Signal propagation to outputs | within 10 ticks | 1-3 ticks | Pass |
 | Plasticity net weight increase | >20% after 100 patterns | Positive delta | Pass |
 | Homeostasis under overload | energy < 1.0 | energy drops | Pass |

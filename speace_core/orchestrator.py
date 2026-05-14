@@ -8,7 +8,7 @@ from speace_core.cellular_brain.base.digital_signal import DigitalSignal
 from speace_core.cellular_brain.cells.digital_astrocyte import DigitalAstrocyte
 from speace_core.cellular_brain.cells.digital_microglia import DigitalMicroglia
 from speace_core.cellular_brain.cells.digital_neuron import DigitalNeuron
-from speace_core.cellular_brain.cells.digital_oligodendrocite import DigitalOligodendrocite
+from speace_core.cellular_brain.cells.digital_oligodendrocyte import DigitalOligodendrocyte
 from speace_core.cellular_brain.cells.digital_synapse import DigitalSynapse
 from speace_core.cellular_brain.circuits.neural_circuit import NeuralCircuit
 from speace_core.cellular_brain.regulation.homeostasis_engine import (
@@ -125,8 +125,8 @@ class CellularBrainOrchestrator(BaseModel):
             DigitalMicroglia(cell_id=f"micro_{i}", role="digital_microglia")
             for i in range(n_micro)
         ]
-        oligodendrocites = [
-            DigitalOligodendrocite(cell_id=f"oligo_{i}", role="digital_oligodendrocite")
+        oligodendrocytes = [
+            DigitalOligodendrocyte(cell_id=f"oligo_{i}", role="digital_oligodendrocyte")
             for i in range(n_oligo)
         ]
 
@@ -138,7 +138,7 @@ class CellularBrainOrchestrator(BaseModel):
             synapses=synapses,
             astrocytes=astrocytes,
             microglia=microglia,
-            oligodendrocites=oligodendrocites,
+            oligodendrocytes=oligodendrocytes,
         )
 
         return cls(genome=genome, circuit=circuit)
