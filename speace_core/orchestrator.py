@@ -15,6 +15,8 @@ from speace_core.cellular_brain.regulation.homeostasis_engine import (
     HomeostasisEngine,
     SystemMetrics,
 )
+from speace_core.cellular_brain.memory.morphological_memory import MorphologicalMemory
+from speace_core.cellular_brain.memory.morphology_snapshot import MorphologySnapshot
 from speace_core.cellular_brain.regulation.plasticity_engine import PlasticityEngine
 from speace_core.dna.models import SharedGenome
 
@@ -28,6 +30,7 @@ class CellularBrainOrchestrator(BaseModel):
 
     _homeostasis: HomeostasisEngine = None  # type: ignore[assignment]
     _plasticity: PlasticityEngine = None  # type: ignore[assignment]
+    _memory: MorphologicalMemory = None  # type: ignore[assignment]
 
     class Config:
         arbitrary_types_allowed = True
@@ -35,6 +38,9 @@ class CellularBrainOrchestrator(BaseModel):
     def model_post_init(self, __context: object) -> None:
         self._homeostasis = HomeostasisEngine()
         self._plasticity = PlasticityEngine()
+        self._memory = MorphologicalMemory()
+        self._memory.load()
+        self.circuit.memory = self._memory
 
     async def run_ticks(self, n_ticks: int) -> None:
         for _ in range(n_ticks):
@@ -60,6 +66,10 @@ class CellularBrainOrchestrator(BaseModel):
         )
         self.metrics_log.append(metrics)
 
+        # Record morphological snapshot every tick
+        snapshot = self._build_morphology_snapshot(metrics)
+        self._memory.record_snapshot(snapshot)
+
     def inject(self, pattern: List[float]) -> None:
         self.circuit.inject_input(pattern)
 
@@ -69,9 +79,32 @@ class CellularBrainOrchestrator(BaseModel):
     def run_immune(self) -> None:
         self.circuit.run_immune()
 
+    def _build_morphology_snapshot(self, metrics: SystemMetrics) -> MorphologySnapshot:
+        active = sum(1 for s in self.circuit.synapses if s.state != "pruned")
+        weights = [s.weight for s in self.circuit.synapses if s.state != "pruned"]
+        trusts = [s.trust for s in self.circuit.synapses if s.state != "pruned"]
+        energies = [n.energy for n in self.circuit.input_neurons + self.circuit.hidden_neurons + self.circuit.output_neurons]
+        return MorphologySnapshot(
+            snapshot_id=f"snap_{self.current_tick}",
+            timestamp=metrics.tick,
+            tick=self.current_tick,
+            neuron_count=len(self.circuit.input_neurons + self.circuit.hidden_neurons + self.circuit.output_neurons),
+            synapse_count=len(self.circuit.synapses),
+            active_synapse_count=active,
+            pruned_synapse_count=metrics.pruned_synapses,
+            average_weight=sum(weights) / len(weights) if weights else 0.0,
+            average_trust=sum(trusts) / len(trusts) if trusts else 0.0,
+            average_energy=sum(energies) / len(energies) if energies else 0.0,
+            coherence_phi=metrics.coherence_phi,
+        )
+
     @property
     def latest_metrics(self) -> SystemMetrics | None:
         return self.metrics_log[-1] if self.metrics_log else None
+
+    @property
+    def memory(self) -> MorphologicalMemory:
+        return self._memory
 
     @classmethod
     def build_mvp(cls, genome: SharedGenome) -> "CellularBrainOrchestrator":

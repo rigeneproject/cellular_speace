@@ -9,6 +9,8 @@ from speace_core.cellular_brain.cells.digital_microglia import DigitalMicroglia
 from speace_core.cellular_brain.cells.digital_neuron import DigitalNeuron
 from speace_core.cellular_brain.cells.digital_oligodendrocyte import DigitalOligodendrocyte
 from speace_core.cellular_brain.cells.digital_synapse import DigitalSynapse
+from speace_core.cellular_brain.memory.morphological_memory import MorphologicalMemory
+from speace_core.cellular_brain.memory.morphology_events import MorphologyEventType
 
 
 class NeuralCircuit(BaseModel):
@@ -21,6 +23,7 @@ class NeuralCircuit(BaseModel):
     microglia: List[DigitalMicroglia] = []
     oligodendrocytes: List[DigitalOligodendrocyte] = []
     feedback_buffer: List[float] = []
+    memory: MorphologicalMemory | None = None
 
     class Config:
         arbitrary_types_allowed = True
@@ -55,13 +58,30 @@ class NeuralCircuit(BaseModel):
         return outbound
 
     def apply_feedback(self, score: float) -> None:
+        event_type = (
+            MorphologyEventType.SYNAPSE_REINFORCED
+            if score > 0
+            else MorphologyEventType.SYNAPSE_WEAKENED
+        )
         for syn in self.synapses:
             if syn.state == "pruned":
                 continue
+            old_weight = syn.weight
             if score > 0:
                 syn.reinforce(score)
             else:
                 syn.weaken(abs(score))
+            if self.memory:
+                self.memory.create_event(
+                    event_type=event_type,
+                    source_id=syn.source,
+                    target_id=syn.target,
+                    metadata={
+                        "old_weight": old_weight,
+                        "new_weight": syn.weight,
+                        "feedback_score": score,
+                    },
+                )
         for neuron in self.hidden_neurons + self.output_neurons:
             neuron.adapt(score)
         self.feedback_buffer.append(score)
@@ -69,7 +89,13 @@ class NeuralCircuit(BaseModel):
     def run_immune(self) -> None:
         all_neurons = self.input_neurons + self.hidden_neurons + self.output_neurons
         for mg in self.microglia:
-            mg.inspect(all_neurons, self.synapses)
+            pruned = mg.inspect(all_neurons, self.synapses)
+            if self.memory:
+                for syn_id in pruned:
+                    self.memory.create_event(
+                        event_type=MorphologyEventType.SYNAPSE_PRUNED,
+                        metadata={"synapse_id": syn_id, "reason": "low_trust_low_usage"},
+                    )
 
     def _find_synapse(self, source: str, target: str) -> DigitalSynapse | None:
         for syn in self.synapses:
