@@ -127,11 +127,17 @@ class NeuroFunctionalBenchmark:
         return result
 
     async def run_case(
-        self, case_name: str, execution_mode: str = "global_tick", **kwargs: Any
+        self,
+        case_name: str,
+        execution_mode: str = "global_tick",
+        stdp_enabled: bool = True,
+        **kwargs: Any,
     ) -> BenchmarkResult:
         """Dispatcher for predefined benchmark scenarios."""
         original_mode = self.orch.execution_mode
+        original_stdp = self.orch.stdp_enabled
         self.orch.execution_mode = execution_mode
+        self.orch.stdp_enabled = stdp_enabled
         try:
             if case_name == "adaptation_after_error":
                 result = await self._case_adaptation_after_error(**kwargs)
@@ -147,6 +153,7 @@ class NeuroFunctionalBenchmark:
                 raise ValueError(f"Unknown benchmark case: {case_name}")
         finally:
             self.orch.execution_mode = original_mode
+            self.orch.stdp_enabled = original_stdp
         return result
 
     async def _case_adaptation_after_error(
