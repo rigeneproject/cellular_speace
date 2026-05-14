@@ -17,6 +17,7 @@ from speace_core.cellular_brain.regulation.homeostasis_engine import (
 )
 from speace_core.cellular_brain.memory.morphological_memory import MorphologicalMemory
 from speace_core.cellular_brain.memory.morphology_snapshot import MorphologySnapshot
+from speace_core.cellular_brain.regulation.neurogenesis_engine import NeurogenesisEngine
 from speace_core.cellular_brain.regulation.plasticity_engine import PlasticityEngine
 from speace_core.dna.models import SharedGenome
 
@@ -31,6 +32,8 @@ class CellularBrainOrchestrator(BaseModel):
     _homeostasis: HomeostasisEngine = None  # type: ignore[assignment]
     _plasticity: PlasticityEngine = None  # type: ignore[assignment]
     _memory: MorphologicalMemory = None  # type: ignore[assignment]
+    _neurogenesis: NeurogenesisEngine = None  # type: ignore[assignment]
+    negative_feedback_count: int = 0
 
     class Config:
         arbitrary_types_allowed = True
@@ -41,6 +44,7 @@ class CellularBrainOrchestrator(BaseModel):
         self._memory = MorphologicalMemory()
         self._memory.load()
         self.circuit.memory = self._memory
+        self._neurogenesis = NeurogenesisEngine()
 
     async def run_ticks(self, n_ticks: int) -> None:
         for _ in range(n_ticks):
@@ -75,9 +79,32 @@ class CellularBrainOrchestrator(BaseModel):
 
     def feedback(self, score: float) -> None:
         self.circuit.apply_feedback(score)
+        if score < 0:
+            self.negative_feedback_count += 1
 
     def run_immune(self) -> None:
         self.circuit.run_immune()
+
+    def run_neurogenesis(self) -> None:
+        metrics = self.latest_metrics
+        if metrics is None:
+            return
+        all_neurons = (
+            self.circuit.input_neurons
+            + self.circuit.hidden_neurons
+            + self.circuit.output_neurons
+        )
+        energy = metrics.mean_energy
+        phi = metrics.coherence_phi
+        if self._neurogenesis.should_generate(
+            self.negative_feedback_count, phi, energy
+        ):
+            self._neurogenesis.generate_neuron(
+                self.circuit,
+                phi_before=phi,
+                reason="recurrent_negative_feedback_and_low_phi",
+            )
+            self.negative_feedback_count = 0
 
     def _build_morphology_snapshot(self, metrics: SystemMetrics) -> MorphologySnapshot:
         active = sum(1 for s in self.circuit.synapses if s.state != "pruned")
