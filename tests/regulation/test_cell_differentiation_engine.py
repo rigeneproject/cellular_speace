@@ -133,6 +133,19 @@ def test_differentiate_circuit_differentiates_undifferentiated(engine, circuit):
     assert n1.cell_type == "prefrontal_neuron"
 
 
+def test_inhibitory_neuron_phenotype(engine, circuit):
+    n = DigitalNeuron(cell_id="inh", role="digital_neuron")
+    n.cell_type = "generic_neuron"
+    circuit.hidden_neurons.append(n)
+    context = engine.evaluate_cell_context(n, circuit)
+    engine.apply_differentiation(n, "inhibitory_neuron", context)
+    assert n.cell_type == "inhibitory_neuron"
+    assert n.inhibitory is True
+    assert n.neuron_role == "inhibitory"
+    assert n.inhibition_strength > 0
+    assert n.refractory_period > 0
+
+
 def test_genome_has_differentiation_rules(genome):
     assert "sensory_neuron" in genome.cell_differentiation_rules
     assert "motor_neuron" in genome.cell_differentiation_rules

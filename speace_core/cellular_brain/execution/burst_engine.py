@@ -147,7 +147,11 @@ class EventDrivenBurstEngine:
                 if target is None:
                     continue
                 delta = fire_activation * syn.weight
-                target.activation += delta
+                if neuron.inhibitory:
+                    target.activation -= abs(delta) * neuron.inhibition_strength
+                else:
+                    target.activation += delta
+                target.activation = max(0.0, target.activation)
                 propagated += 1
 
         mean_activation = (
@@ -181,7 +185,11 @@ class EventDrivenBurstEngine:
             if target is None:
                 continue
             delta = neuron.activation * syn.weight
-            target.activation += delta
+            if neuron.inhibitory:
+                target.activation -= abs(delta) * neuron.inhibition_strength
+            else:
+                target.activation += delta
+            target.activation = max(0.0, target.activation)
             propagated += 1
         return propagated
 

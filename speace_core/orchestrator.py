@@ -24,6 +24,7 @@ from speace_core.cellular_brain.memory.morphology_snapshot import MorphologySnap
 from speace_core.cellular_brain.execution.burst_engine import EventDrivenBurstEngine
 from speace_core.cellular_brain.regulation.neurogenesis_engine import NeurogenesisEngine
 from speace_core.cellular_brain.regulation.plasticity_engine import PlasticityEngine
+from speace_core.cellular_brain.regulation.inhibition_engine import InhibitionEngine
 from speace_core.cellular_brain.regulation.stdp_plasticity_engine import STDPPlasticityEngine
 from speace_core.dna.models import SharedGenome
 
@@ -43,9 +44,11 @@ class CellularBrainOrchestrator(BaseModel):
     _differentiation: CellDifferentiationEngine = None  # type: ignore[assignment]
     _burst_engine: EventDrivenBurstEngine = None  # type: ignore[assignment]
     _stdp: STDPPlasticityEngine = None  # type: ignore[assignment]
+    _inhibition: InhibitionEngine = None  # type: ignore[assignment]
     negative_feedback_count: int = 0
     execution_mode: str = "global_tick"
     stdp_enabled: bool = True
+    inhibition_enabled: bool = True
 
     class Config:
         arbitrary_types_allowed = True
@@ -64,6 +67,7 @@ class CellularBrainOrchestrator(BaseModel):
         )
         self._burst_engine = EventDrivenBurstEngine()
         self._stdp = STDPPlasticityEngine()
+        self._inhibition = InhibitionEngine()
 
     async def run_ticks(self, n_ticks: int) -> None:
         for _ in range(n_ticks):
@@ -74,9 +78,14 @@ class CellularBrainOrchestrator(BaseModel):
     async def _tick(self) -> None:
         self.current_tick += 1
         if self.execution_mode == "event_driven_burst":
-            self._burst_engine.run_event_cycle(self.circuit)
+            burst_results = self._burst_engine.run_event_cycle(self.circuit)
             if self.stdp_enabled:
                 self._stdp.apply_stdp(self.circuit, self._memory)
+            if self.inhibition_enabled:
+                last_result = burst_results[-1] if burst_results else None
+                self._inhibition.stabilize_after_burst(
+                    self.circuit, last_result, self._memory
+                )
         else:
             await self.circuit.tick()
 

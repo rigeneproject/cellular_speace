@@ -120,6 +120,14 @@ class CellDifferentiationEngine:
             if rule.role:
                 neuron.neuron_role = rule.role
 
+        # T14 — Inhibitory phenotype
+        if new_type == "inhibitory_neuron":
+            neuron.inhibitory = True
+            neuron.neuron_role = "inhibitory"
+            neuron.inhibition_strength = 1.0
+            if neuron.refractory_period == 0:
+                neuron.refractory_period = 2
+
         # Record epigenetic mark
         neuron.epigenetic_marks[new_type] = {
             "from": old_type,

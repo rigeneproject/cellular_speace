@@ -25,6 +25,11 @@ class DigitalNeuron(DigitalCell):
     # T12 — EventDrivenBurstEngine fields
     last_fired_burst: int = 0
 
+    # T14 — InhibitoryNeuron & Snooze fields
+    inhibitory: bool = False
+    inhibition_strength: float = 1.0
+    max_consecutive_fires: int = 5
+
     # T10 — CellDifferentiationEngine fields
     cell_type: str = "generic_neuron"
     region: str | None = None

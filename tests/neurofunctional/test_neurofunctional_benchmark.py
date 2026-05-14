@@ -226,3 +226,23 @@ async def test_adaptation_in_burst_mode_with_stdp(benchmark, orchestrator):
     assert result.final_state.neuron_count > 0
     assert result.final_state.coherence_phi > 0.0
     assert 0.0 <= result.metrics.speace_cognitive_score <= 1.0
+
+
+@pytest.mark.asyncio
+async def test_adaptation_in_burst_mode_with_stdp_and_inhibition(benchmark, orchestrator):
+    pattern = [1.0 if i % 2 == 0 else 0.0 for i in range(10)]
+    result = await benchmark.run_case(
+        "adaptation_after_error",
+        execution_mode="event_driven_burst",
+        stdp_enabled=True,
+        inhibition_enabled=True,
+        input_pattern=pattern,
+        target_output=pattern,
+        n_ticks=3,
+    )
+
+    assert result.case_name == "adaptation_after_error"
+    assert result.baseline_state.neuron_count > 0
+    assert result.final_state.neuron_count > 0
+    assert result.final_state.coherence_phi > 0.0
+    assert 0.0 <= result.metrics.speace_cognitive_score <= 1.0
