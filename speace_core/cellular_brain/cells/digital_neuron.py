@@ -22,6 +22,15 @@ class DigitalNeuron(DigitalCell):
     utility_score: float = 0.0
     apoptosis_risk: float = 0.0
 
+    # T10 — CellDifferentiationEngine fields
+    cell_type: str = "generic_neuron"
+    region: str | None = None
+    layer: str | None = None
+    differentiation_state: str = "undifferentiated"
+    differentiation_score: float = 0.0
+    gene_expression: dict = {}
+    epigenetic_marks: dict = {}
+
     async def receive(self, signal: DigitalSignal) -> None:
         self.activation += signal.strength
 

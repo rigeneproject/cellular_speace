@@ -12,6 +12,9 @@ from speace_core.cellular_brain.cells.digital_oligodendrocyte import DigitalOlig
 from speace_core.cellular_brain.cells.digital_synapse import DigitalSynapse
 from speace_core.cellular_brain.circuits.neural_circuit import NeuralCircuit
 from speace_core.cellular_brain.regulation.apoptosis_engine import ApoptosisEngine
+from speace_core.cellular_brain.regulation.cell_differentiation_engine import (
+    CellDifferentiationEngine,
+)
 from speace_core.cellular_brain.regulation.homeostasis_engine import (
     HomeostasisEngine,
     SystemMetrics,
@@ -35,6 +38,7 @@ class CellularBrainOrchestrator(BaseModel):
     _memory: MorphologicalMemory = None  # type: ignore[assignment]
     _neurogenesis: NeurogenesisEngine = None  # type: ignore[assignment]
     _apoptosis: ApoptosisEngine = None  # type: ignore[assignment]
+    _differentiation: CellDifferentiationEngine = None  # type: ignore[assignment]
     negative_feedback_count: int = 0
 
     class Config:
@@ -48,6 +52,10 @@ class CellularBrainOrchestrator(BaseModel):
         self.circuit.memory = self._memory
         self._neurogenesis = NeurogenesisEngine()
         self._apoptosis = ApoptosisEngine()
+        self._differentiation = CellDifferentiationEngine(
+            genome=self.genome,
+            memory=self._memory,
+        )
 
     async def run_ticks(self, n_ticks: int) -> None:
         for _ in range(n_ticks):
@@ -106,8 +114,15 @@ class CellularBrainOrchestrator(BaseModel):
                 self.circuit,
                 phi_before=phi,
                 reason="recurrent_negative_feedback_and_low_phi",
+                differentiation_engine=self._differentiation,
             )
             self.negative_feedback_count = 0
+
+    def run_differentiation(self) -> None:
+        metrics = self.latest_metrics
+        self._differentiation.differentiate_circuit(
+            self.circuit, metrics=metrics
+        )
 
     def run_apoptosis(self) -> None:
         metrics = self.latest_metrics

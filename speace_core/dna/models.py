@@ -39,6 +39,18 @@ class ImmuneParams(BaseModel):
     latency_reduction: float = 0.3
 
 
+class CellDifferentiationRule(BaseModel):
+    regions: List[str] = []
+    role: str = ""
+    threshold_modifier: float = 0.0
+    plasticity_modifier: float = 1.0
+    energy_profile: str = "normal"
+    signal_sign: int = 1
+    refractory_period: int = 0
+    memory_affinity: float = 0.0
+    inhibition_affinity: float = 0.0
+
+
 class SharedGenome(BaseModel):
     identity: GenomeIdentity = Field(default_factory=GenomeIdentity)
     morphology: GenomeMorphology = Field(default_factory=GenomeMorphology)
@@ -47,9 +59,15 @@ class SharedGenome(BaseModel):
     immune: ImmuneParams = Field(default_factory=ImmuneParams)
     ilf_core: Dict[str, Any] = Field(default_factory=dict)
     edd_cvt_core: Dict[str, Any] = Field(default_factory=dict)
+    cell_differentiation_rules: Dict[str, CellDifferentiationRule] = Field(
+        default_factory=dict
+    )
 
     def get_genes_for_role(self, role: str) -> List[str]:
         rules = self.expression_rules.get(role)
         if rules is None:
             return []
         return list(rules.express)
+
+    def get_differentiation_rule(self, cell_type: str) -> CellDifferentiationRule | None:
+        return self.cell_differentiation_rules.get(cell_type)

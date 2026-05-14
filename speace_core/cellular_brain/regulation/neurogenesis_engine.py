@@ -9,6 +9,9 @@ from speace_core.cellular_brain.cells.digital_synapse import DigitalSynapse
 from speace_core.cellular_brain.circuits.neural_circuit import NeuralCircuit
 from speace_core.cellular_brain.memory.morphological_memory import MorphologicalMemory
 from speace_core.cellular_brain.memory.morphology_events import MorphologyEventType
+from speace_core.cellular_brain.regulation.cell_differentiation_engine import (
+    CellDifferentiationEngine,
+)
 
 
 class NeurogenesisResult(BaseModel):
@@ -50,6 +53,7 @@ class NeurogenesisEngine:
         circuit: NeuralCircuit,
         phi_before: float,
         reason: str,
+        differentiation_engine: CellDifferentiationEngine | None = None,
     ) -> NeurogenesisResult:
         all_neurons = (
             circuit.input_neurons
@@ -72,6 +76,14 @@ class NeurogenesisEngine:
 
         self._integrate_new_neuron(circuit, new_neuron)
 
+        # T10 — differentiate newly created neuron
+        if differentiation_engine is not None:
+            new_type = differentiation_engine.differentiate_cell(
+                new_neuron, circuit, metrics=None
+            )
+        else:
+            new_type = "digital_neuron"
+
         if circuit.memory:
             circuit.memory.create_event(
                 event_type=MorphologyEventType.NEURON_CREATED,
@@ -80,7 +92,7 @@ class NeurogenesisEngine:
                 phi_before=phi_before,
                 metadata={
                     "reason": reason,
-                    "neuron_type": "digital_neuron",
+                    "neuron_type": new_type,
                     "initial_synapses": 4,
                 },
             )
@@ -88,7 +100,7 @@ class NeurogenesisEngine:
         return NeurogenesisResult(
             created=True,
             neuron_id=neuron_id,
-            neuron_type="digital_neuron",
+            neuron_type=new_type,
             reason=reason,
             phi_before=phi_before,
         )

@@ -112,3 +112,67 @@ edd_cvt_core:
   cellular_differentiation: true
   context_vector_transduction: true
   evolutionary_feedback: true
+
+# T10 — Cell Differentiation Rules
+# Maps cell_type to region/role modifiers for phenotypic specialization.
+cell_differentiation_rules:
+  sensory_neuron:
+    regions: ["sensory", "input"]
+    role: "input"
+    threshold_modifier: -0.05
+    plasticity_modifier: 0.8
+    energy_profile: "low_cost"
+    signal_sign: 1
+  motor_neuron:
+    regions: ["motor", "output"]
+    role: "output"
+    threshold_modifier: 0.05
+    plasticity_modifier: 0.9
+    energy_profile: "normal"
+    signal_sign: 1
+  hippocampal_neuron:
+    regions: ["hippocampus", "memory"]
+    role: "memory"
+    threshold_modifier: 0.0
+    plasticity_modifier: 1.4
+    energy_profile: "normal"
+    signal_sign: 1
+    memory_affinity: 1.0
+  prefrontal_neuron:
+    regions: ["prefrontal", "pfc", "control"]
+    role: "control"
+    threshold_modifier: 0.05
+    plasticity_modifier: 1.0
+    energy_profile: "normal"
+    signal_sign: 1
+    inhibition_affinity: 0.6
+  inhibitory_neuron:
+    regions: ["inhibitory"]
+    role: "inhibitory"
+    threshold_modifier: 0.0
+    plasticity_modifier: 1.0
+    energy_profile: "normal"
+    signal_sign: -1
+    refractory_period: 2
+  regulatory_neuron:
+    regions: ["regulatory", "homeostasis"]
+    role: "regulatory"
+    threshold_modifier: -0.03
+    plasticity_modifier: 1.1
+    energy_profile: "high_efficiency"
+    signal_sign: 1
+  memory_neuron:
+    regions: ["memory", "hippocampus"]
+    role: "memory"
+    threshold_modifier: 0.0
+    plasticity_modifier: 1.3
+    energy_profile: "normal"
+    signal_sign: 1
+    memory_affinity: 1.0
+  generic_neuron:
+    regions: []
+    role: "excitatory"
+    threshold_modifier: 0.0
+    plasticity_modifier: 1.0
+    energy_profile: "normal"
+    signal_sign: 1
