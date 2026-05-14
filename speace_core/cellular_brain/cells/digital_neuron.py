@@ -11,10 +11,31 @@ class DigitalNeuron(DigitalCell):
     targets: List[str] = []
     error_history: List[float] = []
 
+    # T9 — ApoptosisEngine fields
+    neuron_role: str = "excitatory"
+    is_critical: bool = False
+    snooze_counter: int = 0
+    refractory_counter: int = 0
+    refractory_period: int = 0
+    consecutive_fires: int = 0
+    last_fired_tick: int | None = None
+    utility_score: float = 0.0
+    apoptosis_risk: float = 0.0
+
     async def receive(self, signal: DigitalSignal) -> None:
         self.activation += signal.strength
 
     async def tick(self) -> List[DigitalSignal]:
+        # T9 — handle snooze and refractory
+        if self.snooze_counter > 0:
+            self.snooze_counter -= 1
+            self.activation *= 0.5
+            return []
+        if self.refractory_counter > 0:
+            self.refractory_counter -= 1
+            self.activation *= 0.5
+            return []
+
         signals: List[DigitalSignal] = []
         if self.activation >= self.threshold and self.energy > 0.1:
             self.energy = max(0.0, self.energy - 0.05)
@@ -27,8 +48,12 @@ class DigitalNeuron(DigitalCell):
                     )
                 )
             self.activation = 0.0
+            self.consecutive_fires += 1
+            if self.refractory_period > 0:
+                self.refractory_counter = self.refractory_period
         else:
             self.activation *= 0.5
+            self.consecutive_fires = 0
         return signals
 
     def adapt(self, feedback_score: float) -> None:

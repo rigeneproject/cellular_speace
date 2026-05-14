@@ -11,6 +11,7 @@ from speace_core.cellular_brain.cells.digital_neuron import DigitalNeuron
 from speace_core.cellular_brain.cells.digital_oligodendrocyte import DigitalOligodendrocyte
 from speace_core.cellular_brain.cells.digital_synapse import DigitalSynapse
 from speace_core.cellular_brain.circuits.neural_circuit import NeuralCircuit
+from speace_core.cellular_brain.regulation.apoptosis_engine import ApoptosisEngine
 from speace_core.cellular_brain.regulation.homeostasis_engine import (
     HomeostasisEngine,
     SystemMetrics,
@@ -33,6 +34,7 @@ class CellularBrainOrchestrator(BaseModel):
     _plasticity: PlasticityEngine = None  # type: ignore[assignment]
     _memory: MorphologicalMemory = None  # type: ignore[assignment]
     _neurogenesis: NeurogenesisEngine = None  # type: ignore[assignment]
+    _apoptosis: ApoptosisEngine = None  # type: ignore[assignment]
     negative_feedback_count: int = 0
 
     class Config:
@@ -45,6 +47,7 @@ class CellularBrainOrchestrator(BaseModel):
         self._memory.load()
         self.circuit.memory = self._memory
         self._neurogenesis = NeurogenesisEngine()
+        self._apoptosis = ApoptosisEngine()
 
     async def run_ticks(self, n_ticks: int) -> None:
         for _ in range(n_ticks):
@@ -105,6 +108,10 @@ class CellularBrainOrchestrator(BaseModel):
                 reason="recurrent_negative_feedback_and_low_phi",
             )
             self.negative_feedback_count = 0
+
+    def run_apoptosis(self) -> None:
+        metrics = self.latest_metrics
+        self._apoptosis.run(self.circuit, metrics=metrics)
 
     def _build_morphology_snapshot(self, metrics: SystemMetrics) -> MorphologySnapshot:
         active = sum(1 for s in self.circuit.synapses if s.state != "pruned")

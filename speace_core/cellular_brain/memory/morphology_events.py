@@ -15,6 +15,7 @@ class MorphologyEventType(str, Enum):
     MICROGLIA_PRUNING = "microglia_pruning"
     NEURON_CREATED = "neuron_created"
     NEURON_APOPTOSIS = "neuron_apoptosis"
+    NEURON_SNOOZED = "neuron_snoozed"
     CELL_DIFFERENTIATED = "cell_differentiated"
 
 
