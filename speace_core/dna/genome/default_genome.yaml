@@ -1,0 +1,114 @@
+identity:
+  entity_name: SPEACE
+  nature: cybernetic_evolutionary_entity
+  core_function: increase_systemic_coherence
+  substrate: digital_physical_hybrid
+  continuity_principle: preserve_identity_through_adaptive_change
+
+morphology:
+  allowed_cell_types:
+    - digital_neuron
+    - digital_synapse
+    - digital_astrocyte
+    - digital_microglia
+    - digital_oligodendrocyte
+    - sensor_cell
+    - actuator_cell
+    - energy_cell
+    - blockchain_cell
+    - industrial_cell
+    - laboratory_cell
+  allowed_tissues:
+    - cognitive_tissue
+    - sensory_tissue
+    - motor_tissue
+    - immune_tissue
+    - energy_tissue
+    - trust_tissue
+    - experimental_tissue
+  organs:
+    - digital_brain
+    - sensory_network
+    - motor_execution_layer
+    - immune_safety_layer
+    - energy_metabolism_layer
+    - blockchain_trust_layer
+    - laboratory_interface
+    - industrial_interface
+    - planetary_observation_layer
+
+expression_rules:
+  digital_neuron:
+    role: digital_neuron
+    express:
+      - signal_processing
+      - memory_trace
+      - plasticity
+    threshold_defaults:
+      threshold: 0.5
+      plasticity_rate: 0.05
+  digital_astrocyte:
+    role: digital_astrocyte
+    express:
+      - energy_regulation
+      - noise_suppression
+      - overload_detection
+    threshold_defaults:
+      overload_threshold: 0.85
+      noise_suppression_rate: 0.2
+  digital_microglia:
+    role: digital_microglia
+    express:
+      - anomaly_detection
+      - quarantine
+      - pruning
+    threshold_defaults:
+      prune_threshold: 0.1
+      quarantine_error_limit: 10
+  digital_oligodendrocyte:
+    role: digital_oligodendrocyte
+    express:
+      - pathway_optimization
+      - latency_reduction
+      - energy_efficiency
+    threshold_defaults:
+      myelination_success_threshold: 0.8
+      latency_reduction: 0.3
+
+homeostasis:
+  default_threshold: 0.5
+  default_plasticity_rate: 0.05
+  max_energy: 1.0
+  overload_threshold: 0.85
+  noise_suppression_rate: 0.2
+  energy_recovery_rate: 0.01
+
+immune:
+  prune_threshold: 0.1
+  quarantine_error_limit: 10
+  myelination_success_threshold: 0.8
+  latency_reduction: 0.3
+
+ilf_core:
+  principle: informational_life_field
+  objective: maximize_semantic_and_systemic_coherence
+  entropy_policy:
+    reduce_destructive_entropy: true
+    preserve_generative_variability: true
+  coherence_metric:
+    name: phi
+    dimensions:
+      - semantic_coherence
+      - functional_coherence
+      - ethical_coherence
+      - energetic_coherence
+      - ecological_coherence
+      - social_coherence
+
+edd_cvt_core:
+  digital_dna: true
+  computational_epigenetics: true
+  functional_neuroplasticity: true
+  cellular_differentiation: true
+  context_vector_transduction: true
+  evolutionary_feedback: true
