@@ -1,0 +1,63 @@
+{
+  "case_name": "morphological_memory_trace",
+  "baseline_state": {
+    "neuron_count": 80,
+    "synapse_count": 298,
+    "active_synapse_count": 298,
+    "coherence_phi": 0.419434496638979,
+    "mean_energy": 0.996875,
+    "accuracy": 0.5244039003171415,
+    "output_activations": [
+      0.16685465782111103,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0771843453503029,
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "final_state": {
+    "neuron_count": 81,
+    "synapse_count": 302,
+    "active_synapse_count": 302,
+    "coherence_phi": 0.4120771868973585,
+    "mean_energy": 0.9858024691358024,
+    "accuracy": 0.5268451711735102,
+    "output_activations": [
+      0.1933777020682126,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.09016156801978302,
+      0.0,
+      0.0,
+      0.015087558352893955
+    ]
+  },
+  "metrics": {
+    "accuracy_score": 0.5268451711735102,
+    "coherence_phi": 0.4120771868973585,
+    "phi_trend": -0.007357309741620521,
+    "mean_energy": 0.9858024691358024,
+    "energy_efficiency": 0.9858024691358024,
+    "neuron_count_delta": 1,
+    "synapse_count_delta": 4,
+    "neurogenesis_events": 1,
+    "apoptosis_events": 0,
+    "cell_differentiation_events": 81,
+    "adaptation_gain": 0.0024412708563686936,
+    "morphological_stability": 0.8771929824561403,
+    "morphological_adaptation": 1.0,
+    "structural_complexity": 3.728395061728395,
+    "functional_improvement": 0.0024412708563686936,
+    "speace_cognitive_score": 0.5237403308586135
+  },
+  "json_report_path": null,
+  "markdown_report_path": null
+}
