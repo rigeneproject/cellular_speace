@@ -37,6 +37,7 @@ from speace_core.cellular_brain.regulation.inhibition_engine import InhibitionEn
 from speace_core.cellular_brain.regulation.stdp_plasticity_engine import STDPPlasticityEngine
 from speace_core.cellular_brain.regions.region_registry import RegionRegistry
 from speace_core.cellular_brain.regions.region_factory import RegionFactory
+from speace_core.cellular_brain.regions.inter_region_plasticity import InterRegionPlasticityEngine
 from speace_core.dna.models import SharedGenome
 
 
@@ -57,6 +58,7 @@ class CellularBrainOrchestrator(BaseModel):
     _stdp: STDPPlasticityEngine = None  # type: ignore[assignment]
     _inhibition: InhibitionEngine = None  # type: ignore[assignment]
     _energy_control: EnergyControlAgent = None  # type: ignore[assignment]
+    _inter_region_plasticity: InterRegionPlasticityEngine = None  # type: ignore[assignment]
     _community: CommunityDetectionEngine = None  # type: ignore[assignment]
     _confidence: ConfidenceEngine = None  # type: ignore[assignment]
     negative_feedback_count: int = 0
@@ -64,6 +66,7 @@ class CellularBrainOrchestrator(BaseModel):
     stdp_enabled: bool = True
     inhibition_enabled: bool = True
     energy_control_enabled: bool = True
+    inter_region_plasticity_enabled: bool = True
     community_detection_enabled: bool = True
     confidence_enabled: bool = True
     last_community_result: CommunityDetectionResult | None = None
@@ -93,6 +96,7 @@ class CellularBrainOrchestrator(BaseModel):
         self._stdp = STDPPlasticityEngine()
         self._inhibition = InhibitionEngine()
         self._energy_control = EnergyControlAgent()
+        self._inter_region_plasticity = InterRegionPlasticityEngine()
         self._community = CommunityDetectionEngine()
         self._confidence = ConfidenceEngine()
         if self.region_architecture_enabled:
@@ -172,6 +176,20 @@ class CellularBrainOrchestrator(BaseModel):
         if self.region_architecture_enabled and self._region_registry is not None:
             for region in self._region_registry.regions.values():
                 region.regulate_region(self.circuit)
+
+        # Inter-Region Plasticity (T23)
+        if self.inter_region_plasticity_enabled and self._region_registry is not None:
+            confidence_score = 0.0
+            if self.last_confidence_state is not None:
+                confidence_score = self.last_confidence_state.confidence_score
+            self._inter_region_plasticity.update_pathways(
+                circuit=self.circuit,
+                registry=self._region_registry,
+                metrics=metrics,
+                memory=self._memory,
+                tick=self.current_tick,
+                confidence_score=confidence_score,
+            )
 
         # Record morphological snapshot every tick
         snapshot = self._build_morphology_snapshot(metrics)

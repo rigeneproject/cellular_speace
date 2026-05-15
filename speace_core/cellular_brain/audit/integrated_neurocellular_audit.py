@@ -31,6 +31,7 @@ class AuditConfiguration(BaseModel):
     energy_control_enabled: bool = False
     community_detection_enabled: bool = False
     confidence_enabled: bool = False
+    inter_region_plasticity_enabled: bool = False
     evolution_enabled: bool = False
     n_adaptive_cycles: int = 5
     benchmark_case: str = "morphological_memory_trace"
@@ -139,6 +140,7 @@ class IntegratedNeurocellularAudit:
                 energy_control_enabled=True,
                 community_detection_enabled=True,
                 confidence_enabled=True,
+                inter_region_plasticity_enabled=True,
                 evolution_enabled=True,
             ),
         ]
@@ -159,6 +161,7 @@ class IntegratedNeurocellularAudit:
         orch.energy_control_enabled = config.energy_control_enabled
         orch.community_detection_enabled = config.community_detection_enabled
         orch.confidence_enabled = config.confidence_enabled
+        orch.inter_region_plasticity_enabled = config.inter_region_plasticity_enabled
         return orch
 
     # ------------------------------------------------------------------ #
@@ -179,6 +182,7 @@ class IntegratedNeurocellularAudit:
                 energy_control_enabled=config.energy_control_enabled,
                 community_detection_enabled=config.community_detection_enabled,
                 confidence_enabled=config.confidence_enabled,
+                inter_region_plasticity_enabled=config.inter_region_plasticity_enabled,
                 input_pattern=pattern,
                 target_output=pattern,
                 n_ticks=config.n_adaptive_cycles,

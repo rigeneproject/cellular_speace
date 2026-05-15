@@ -24,6 +24,10 @@ class MorphologyEventType(str, Enum):
     GENOME_SELECTED = "genome_selected"
     EVOLUTION_STEP_COMPLETED = "evolution_step_completed"
     CONFIDENCE_EVALUATED = "confidence_evaluated"
+    REGION_PATHWAY_REINFORCED = "region_pathway_reinforced"
+    REGION_PATHWAY_WEAKENED = "region_pathway_weakened"
+    REGION_PATHWAY_STABILIZED = "region_pathway_stabilized"
+    INTER_REGION_PLASTICITY_APPLIED = "inter_region_plasticity_applied"
 
 
 class MorphologyEvent(BaseModel):
