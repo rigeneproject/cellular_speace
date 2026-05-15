@@ -1,5 +1,6 @@
 import copy
 import json
+import random
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -43,6 +44,7 @@ class PathwayCalibrationResult(BaseModel):
     weakened_pathways: int = 0
     pathway_energy_cost: float = 0.0
     regional_signal_flow_score: float = 0.0
+    inter_region_plasticity_events: int = 0
     regression_score: float = 0.0
     distance_from_baseline: float = 0.0
     passed: bool = True
@@ -160,6 +162,7 @@ class PathwayCalibrator:
     # ------------------------------------------------------------------ #
 
     def build_orchestrator(self) -> CellularBrainOrchestrator:
+        random.seed(self._seed)
         genome = SharedGenome(**self.genome)
         return CellularBrainOrchestrator.build_mvp(genome)
 
@@ -235,6 +238,7 @@ class PathwayCalibrator:
             weakened_pathways=m.weakened_pathways,
             pathway_energy_cost=m.pathway_energy_cost,
             regional_signal_flow_score=m.regional_signal_flow_score,
+            inter_region_plasticity_events=m.reinforced_pathways + m.weakened_pathways,
             regression_score=0.0,
             distance_from_baseline=0.0,
             passed=True,
@@ -300,21 +304,23 @@ class PathwayCalibrator:
         b_phi = baseline_metrics.get("coherence_phi", 0.0)
         b_ene = baseline_metrics.get("energy_efficiency", 0.0)
         b_flow = baseline_metrics.get("regional_signal_flow_score", 0.0)
+        b_func = baseline_metrics.get("functional_improvement", 0.0)
+        b_meta = baseline_metrics.get("meta_cognitive_score", 0.0)
 
         r_cog = result.speace_cognitive_score
         r_phi = result.coherence_phi
         r_ene = result.energy_efficiency
         r_flow = result.regional_signal_flow_score
-        r_func = baseline_metrics.get("functional_improvement", 0.0)
-        r_meta = baseline_metrics.get("meta_cognitive_score", 0.0)
+        r_func = result.benchmark_metrics.get("functional_improvement", 0.0)
+        r_meta = result.benchmark_metrics.get("meta_cognitive_score", 0.0)
 
         score = (
             0.25 * max(0.0, r_cog - b_cog)
             + 0.25 * max(0.0, r_phi - b_phi)
             + 0.20 * max(0.0, r_ene - b_ene)
             + 0.20 * max(0.0, r_flow - b_flow)
-            + 0.10 * max(0.0, r_func)
-            + 0.10 * max(0.0, r_meta)
+            + 0.10 * max(0.0, r_func - b_func)
+            + 0.10 * max(0.0, r_meta - b_meta)
         )
         return max(0.0, min(1.0, score))
 
