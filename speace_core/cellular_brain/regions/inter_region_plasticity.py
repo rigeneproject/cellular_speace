@@ -51,6 +51,8 @@ class InterRegionPlasticityEngine:
         max_strength: float = 1.0,
         stdp_window: int = 1,
         energy_cost_per_update: float = 0.001,
+        confidence_modulation_strength: float = 1.0,
+        energy_modulation_strength: float = 1.0,
     ):
         self.ltp_rate = ltp_rate
         self.ltd_rate = ltd_rate
@@ -58,6 +60,8 @@ class InterRegionPlasticityEngine:
         self.max_strength = max_strength
         self.stdp_window = stdp_window
         self.energy_cost_per_update = energy_cost_per_update
+        self.confidence_modulation_strength = confidence_modulation_strength
+        self.energy_modulation_strength = energy_modulation_strength
 
     # ------------------------------------------------------------------ #
     # Activation tracking
@@ -118,6 +122,7 @@ class InterRegionPlasticityEngine:
             pathway.plasticity_rate = 1.2
         else:
             pathway.plasticity_rate = 1.0
+        pathway.plasticity_rate *= self.energy_modulation_strength
 
     def modulate_by_confidence(
         self,
@@ -133,6 +138,7 @@ class InterRegionPlasticityEngine:
             pathway.confidence_modulation = 1.3
         else:
             pathway.confidence_modulation = 1.0
+        pathway.confidence_modulation *= self.confidence_modulation_strength
         pathway.plasticity_rate *= pathway.confidence_modulation
 
     def _is_isolated_region(
