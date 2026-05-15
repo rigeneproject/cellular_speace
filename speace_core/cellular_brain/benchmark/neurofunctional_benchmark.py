@@ -65,6 +65,14 @@ class BenchmarkMetrics(BaseModel):
     inter_region_plasticity_events: int = 0
     pathway_energy_cost: float = 0.0
     regional_signal_flow_score: float = 0.0
+    # T25 — Regional signal routing metrics
+    routed_signals: int = 0
+    delivered_signals: int = 0
+    blocked_signals: int = 0
+    total_routed_signal_strength: float = 0.0
+    mean_routed_signal_strength: float = 0.0
+    routing_energy_cost: float = 0.0
+    active_inter_region_pathways: int = 0
 
 
 class BenchmarkResult(BaseModel):
@@ -171,6 +179,7 @@ class NeuroFunctionalBenchmark:
         original_community = self.orch.community_detection_enabled
         original_confidence = self.orch.confidence_enabled
         original_irp = getattr(self.orch, "inter_region_plasticity_enabled", True)
+        original_routing = getattr(self.orch, "region_signal_routing_enabled", True)
         self.orch.execution_mode = execution_mode
         self.orch.stdp_enabled = stdp_enabled
         self.orch.inhibition_enabled = inhibition_enabled
@@ -178,6 +187,7 @@ class NeuroFunctionalBenchmark:
         self.orch.community_detection_enabled = community_detection_enabled
         self.orch.confidence_enabled = confidence_enabled
         self.orch.inter_region_plasticity_enabled = kwargs.pop("inter_region_plasticity_enabled", original_irp)
+        self.orch.region_signal_routing_enabled = kwargs.pop("region_signal_routing_enabled", original_routing)
         try:
             if case_name == "adaptation_after_error":
                 result = await self._case_adaptation_after_error(**kwargs)
@@ -199,6 +209,7 @@ class NeuroFunctionalBenchmark:
             self.orch.community_detection_enabled = original_community
             self.orch.confidence_enabled = original_confidence
             self.orch.inter_region_plasticity_enabled = original_irp
+            self.orch.region_signal_routing_enabled = original_routing
         return result
 
     async def _case_adaptation_after_error(
@@ -488,6 +499,27 @@ class NeuroFunctionalBenchmark:
                 normalized_active = active_conns / len(conns)
                 regional_signal_flow_score = mean_pathway_strength * normalized_active * mean_region_phi
 
+        # T25 — Regional signal routing metrics
+        routed_signals = 0
+        delivered_signals = 0
+        blocked_signals = 0
+        total_routed_signal_strength = 0.0
+        mean_routed_signal_strength = 0.0
+        routing_energy_cost = 0.0
+        active_inter_region_pathways = 0
+        last_routing = getattr(self.orch, "last_routing_result", None)
+        if last_routing is not None:
+            routed_signals = last_routing.routed_signals
+            delivered_signals = last_routing.delivered_signals
+            blocked_signals = last_routing.blocked_signals
+            total_routed_signal_strength = last_routing.total_signal_strength
+            mean_routed_signal_strength = last_routing.mean_signal_strength
+            routing_energy_cost = last_routing.total_energy_cost
+            active_inter_region_pathways = last_routing.active_pathways
+            # Override T24 flow score with T25 value if available
+            if last_routing.regional_signal_flow_score > 0:
+                regional_signal_flow_score = last_routing.regional_signal_flow_score
+
         return BenchmarkMetrics(
             accuracy_score=final.accuracy,
             coherence_phi=final.coherence_phi,
@@ -527,6 +559,13 @@ class NeuroFunctionalBenchmark:
             inter_region_plasticity_events=inter_region_plasticity_events,
             pathway_energy_cost=pathway_energy_cost,
             regional_signal_flow_score=regional_signal_flow_score,
+            routed_signals=routed_signals,
+            delivered_signals=delivered_signals,
+            blocked_signals=blocked_signals,
+            total_routed_signal_strength=total_routed_signal_strength,
+            mean_routed_signal_strength=mean_routed_signal_strength,
+            routing_energy_cost=routing_energy_cost,
+            active_inter_region_pathways=active_inter_region_pathways,
         )
 
     def generate_json_report(self, result: BenchmarkResult) -> Path:
@@ -607,6 +646,13 @@ class NeuroFunctionalBenchmark:
             f"| Inter-region plasticity events | {m.inter_region_plasticity_events} |",
             f"| Pathway energy cost | {m.pathway_energy_cost:.4f} |",
             f"| Regional signal flow score | {m.regional_signal_flow_score:.4f} |",
+            f"| Routed signals | {m.routed_signals} |",
+            f"| Delivered signals | {m.delivered_signals} |",
+            f"| Blocked signals | {m.blocked_signals} |",
+            f"| Total routed signal strength | {m.total_routed_signal_strength:.4f} |",
+            f"| Mean routed signal strength | {m.mean_routed_signal_strength:.4f} |",
+            f"| Routing energy cost | {m.routing_energy_cost:.4f} |",
+            f"| Active inter-region pathways | {m.active_inter_region_pathways} |",
             "",
             "---",
             "*Generated by NeuroFunctionalBenchmark v0.3*",

@@ -28,6 +28,10 @@ class MorphologyEventType(str, Enum):
     REGION_PATHWAY_WEAKENED = "region_pathway_weakened"
     REGION_PATHWAY_STABILIZED = "region_pathway_stabilized"
     INTER_REGION_PLASTICITY_APPLIED = "inter_region_plasticity_applied"
+    REGION_SIGNAL_ROUTED = "region_signal_routed"
+    REGION_SIGNAL_BLOCKED = "region_signal_blocked"
+    REGION_SIGNAL_DELIVERED = "region_signal_delivered"
+    REGIONAL_SIGNAL_FLOW_UPDATED = "regional_signal_flow_updated"
 
 
 class MorphologyEvent(BaseModel):
