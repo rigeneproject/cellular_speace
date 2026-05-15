@@ -176,3 +176,39 @@ cell_differentiation_rules:
     plasticity_modifier: 1.0
     energy_profile: "normal"
     signal_sign: 1
+
+# T21 — Brain Region Architecture
+brain_regions:
+  sensory:
+    region_type: "sensory"
+    neuron_fraction: 0.20
+    dominant_cell_types:
+      - sensory_neuron
+      - input
+    plasticity_bias: 0.5
+    role_description: "Input encoding and signal preprocessing"
+  hippocampus:
+    region_type: "hippocampus"
+    neuron_fraction: 0.25
+    dominant_cell_types:
+      - hippocampal_neuron
+      - memory_neuron
+    plasticity_bias: 0.9
+    role_description: "Pattern memory and consolidation"
+  prefrontal:
+    region_type: "prefrontal"
+    neuron_fraction: 0.35
+    dominant_cell_types:
+      - prefrontal_neuron
+      - inhibitory_neuron
+      - control
+    plasticity_bias: 0.7
+    role_description: "Planning, control, and decision"
+  motor:
+    region_type: "motor"
+    neuron_fraction: 0.20
+    dominant_cell_types:
+      - motor_neuron
+      - output
+    plasticity_bias: 0.4
+    role_description: "Output execution and action"

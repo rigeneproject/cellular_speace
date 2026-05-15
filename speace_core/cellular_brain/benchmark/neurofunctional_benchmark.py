@@ -39,6 +39,25 @@ class BenchmarkMetrics(BaseModel):
     structural_complexity: float = 0.0
     functional_improvement: float = 0.0
     speace_cognitive_score: float = 0.0
+    # T17 — Community metrics
+    community_count: int = 0
+    modularity_proxy: float = 0.0
+    isolated_neuron_count: int = 0
+    weak_community_count: int = 0
+    overloaded_community_count: int = 0
+    # T19 — Meta-cognitive metrics
+    confidence_score: float = 0.0
+    uncertainty_score: float = 0.0
+    output_entropy: float = 0.0
+    decision_stability: float = 0.0
+    error_risk: float = 0.0
+    recommended_action: str = "maintain"
+    meta_cognitive_score: float = 0.0
+    # T21 — Regional metrics
+    region_count: int = 0
+    connectome_density: float = 0.0
+    mean_region_energy: float = 0.0
+    mean_region_phi: float = 0.0
 
 
 class BenchmarkResult(BaseModel):
@@ -132,15 +151,24 @@ class NeuroFunctionalBenchmark:
         execution_mode: str = "global_tick",
         stdp_enabled: bool = True,
         inhibition_enabled: bool = True,
+        energy_control_enabled: bool = True,
+        community_detection_enabled: bool = True,
+        confidence_enabled: bool = True,
         **kwargs: Any,
     ) -> BenchmarkResult:
         """Dispatcher for predefined benchmark scenarios."""
         original_mode = self.orch.execution_mode
         original_stdp = self.orch.stdp_enabled
         original_inhibition = self.orch.inhibition_enabled
+        original_energy = self.orch.energy_control_enabled
+        original_community = self.orch.community_detection_enabled
+        original_confidence = self.orch.confidence_enabled
         self.orch.execution_mode = execution_mode
         self.orch.stdp_enabled = stdp_enabled
         self.orch.inhibition_enabled = inhibition_enabled
+        self.orch.energy_control_enabled = energy_control_enabled
+        self.orch.community_detection_enabled = community_detection_enabled
+        self.orch.confidence_enabled = confidence_enabled
         try:
             if case_name == "adaptation_after_error":
                 result = await self._case_adaptation_after_error(**kwargs)
@@ -158,6 +186,9 @@ class NeuroFunctionalBenchmark:
             self.orch.execution_mode = original_mode
             self.orch.stdp_enabled = original_stdp
             self.orch.inhibition_enabled = original_inhibition
+            self.orch.energy_control_enabled = original_energy
+            self.orch.community_detection_enabled = original_community
+            self.orch.confidence_enabled = original_confidence
         return result
 
     async def _case_adaptation_after_error(
@@ -366,6 +397,20 @@ class NeuroFunctionalBenchmark:
         apoptosis_events = mem.count_events(MorphologyEventType.NEURON_APOPTOSIS)
         cell_diff_events = mem.count_events(MorphologyEventType.CELL_DIFFERENTIATED)
 
+        # T17 — Community metrics from orchestrator
+        community_result = self.orch.last_community_result
+        community_count = community_result.community_count if community_result else 0
+        modularity_proxy = community_result.modularity_proxy if community_result else 0.0
+        isolated_neuron_count = (
+            len(community_result.isolated_neurons) if community_result else 0
+        )
+        weak_community_count = (
+            len(community_result.weak_communities) if community_result else 0
+        )
+        overloaded_community_count = (
+            len(community_result.overloaded_communities) if community_result else 0
+        )
+
         score = (
             0.20 * final.accuracy
             + 0.20 * final.coherence_phi
@@ -376,6 +421,38 @@ class NeuroFunctionalBenchmark:
             + 0.10 * safety_score
         )
         speace_cognitive_score = max(0.0, min(1.0, score))
+
+        # T19 — Confidence metrics from orchestrator
+        confidence_state = self.orch.last_confidence_state
+        confidence_score = confidence_state.confidence_score if confidence_state else 0.0
+        uncertainty_score = confidence_state.uncertainty_score if confidence_state else 0.0
+        output_entropy = confidence_state.output_entropy if confidence_state else 0.0
+        decision_stability = confidence_state.decision_stability if confidence_state else 0.0
+        error_risk = confidence_state.error_risk if confidence_state else 0.0
+        recommended_action = (
+            confidence_state.recommended_action if confidence_state else "maintain"
+        )
+
+        meta_cognitive_score = (
+            0.40 * confidence_score
+            + 0.30 * decision_stability
+            + 0.20 * (1.0 - error_risk)
+            + 0.10 * final.coherence_phi
+        )
+        meta_cognitive_score = max(0.0, min(1.0, meta_cognitive_score))
+
+        # T21 — Regional metrics from orchestrator
+        region_registry = self.orch.region_registry
+        region_count = 0
+        connectome_density = 0.0
+        mean_region_energy = 0.0
+        mean_region_phi = 0.0
+        if region_registry is not None:
+            region_count = len(region_registry.regions)
+            connectome_density = region_registry.connectome.compute_connectome_density()
+            global_metrics = region_registry.compute_global_metrics()
+            mean_region_energy = global_metrics.get("mean_region_energy", 0.0)
+            mean_region_phi = global_metrics.get("mean_region_phi", 0.0)
 
         return BenchmarkMetrics(
             accuracy_score=final.accuracy,
@@ -394,6 +471,22 @@ class NeuroFunctionalBenchmark:
             structural_complexity=structural_complexity,
             functional_improvement=functional_improvement,
             speace_cognitive_score=speace_cognitive_score,
+            community_count=community_count,
+            modularity_proxy=modularity_proxy,
+            isolated_neuron_count=isolated_neuron_count,
+            weak_community_count=weak_community_count,
+            overloaded_community_count=overloaded_community_count,
+            confidence_score=confidence_score,
+            uncertainty_score=uncertainty_score,
+            output_entropy=output_entropy,
+            decision_stability=decision_stability,
+            error_risk=error_risk,
+            recommended_action=recommended_action,
+            meta_cognitive_score=meta_cognitive_score,
+            region_count=region_count,
+            connectome_density=connectome_density,
+            mean_region_energy=mean_region_energy,
+            mean_region_phi=mean_region_phi,
         )
 
     def generate_json_report(self, result: BenchmarkResult) -> Path:
@@ -451,7 +544,23 @@ class NeuroFunctionalBenchmark:
             f"| Morphological adaptation | {m.morphological_adaptation:.4f} |",
             f"| Structural complexity | {m.structural_complexity:.4f} |",
             f"| Functional improvement | {m.functional_improvement:.4f} |",
+            f"| Community count | {m.community_count} |",
+            f"| Modularity proxy | {m.modularity_proxy:.4f} |",
+            f"| Isolated neurons | {m.isolated_neuron_count} |",
+            f"| Weak communities | {m.weak_community_count} |",
+            f"| Overloaded communities | {m.overloaded_community_count} |",
+            f"| Confidence score | {m.confidence_score:.4f} |",
+            f"| Uncertainty score | {m.uncertainty_score:.4f} |",
+            f"| Output entropy | {m.output_entropy:.4f} |",
+            f"| Decision stability | {m.decision_stability:.4f} |",
+            f"| Error risk | {m.error_risk:.4f} |",
+            f"| Recommended action | {m.recommended_action} |",
+            f"| **Meta-Cognitive Score** | **{m.meta_cognitive_score:.4f}** |",
             f"| **SPEACE Cognitive Score** | **{m.speace_cognitive_score:.4f}** |",
+            f"| Region count | {m.region_count} |",
+            f"| Connectome density | {m.connectome_density:.4f} |",
+            f"| Mean region energy | {m.mean_region_energy:.4f} |",
+            f"| Mean region phi | {m.mean_region_phi:.4f} |",
             "",
             "---",
             "*Generated by NeuroFunctionalBenchmark v0.2*",

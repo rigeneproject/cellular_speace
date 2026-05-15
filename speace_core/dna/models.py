@@ -62,6 +62,7 @@ class SharedGenome(BaseModel):
     cell_differentiation_rules: Dict[str, CellDifferentiationRule] = Field(
         default_factory=dict
     )
+    brain_regions: Dict[str, Any] = Field(default_factory=dict)
 
     def get_genes_for_role(self, role: str) -> List[str]:
         rules = self.expression_rules.get(role)

@@ -17,6 +17,13 @@ class MorphologyEventType(str, Enum):
     NEURON_APOPTOSIS = "neuron_apoptosis"
     NEURON_SNOOZED = "neuron_snoozed"
     CELL_DIFFERENTIATED = "cell_differentiated"
+    COMMUNITY_DETECTED = "community_detected"
+    GENOME_SAVED = "genome_saved"
+    GENOME_MUTATED = "genome_mutated"
+    GENOME_CROSSED = "genome_crossed"
+    GENOME_SELECTED = "genome_selected"
+    EVOLUTION_STEP_COMPLETED = "evolution_step_completed"
+    CONFIDENCE_EVALUATED = "confidence_evaluated"
 
 
 class MorphologyEvent(BaseModel):

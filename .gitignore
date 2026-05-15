@@ -1,0 +1,26 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Pytest
+.pytest_cache/
+
+# Coverage
+.coverage
+
+# Generated reports (non-baseline)
+reports/neurofunctional/benchmark_*.json
+reports/neurofunctional/benchmark_*.md
+reports/neurofunctional/latest_report.*
+reports/audit/audit_*.json
+reports/audit/audit_*.md
+reports/calibration/calibration_*.json
+reports/calibration/calibration_*.md
+
+# Runtime data
+data/evolution/*.jsonl
+
+# Temp files
+docs/_temp*.txt
+*.tmp

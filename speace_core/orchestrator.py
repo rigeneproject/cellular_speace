@@ -24,8 +24,19 @@ from speace_core.cellular_brain.memory.morphology_snapshot import MorphologySnap
 from speace_core.cellular_brain.execution.burst_engine import EventDrivenBurstEngine
 from speace_core.cellular_brain.regulation.neurogenesis_engine import NeurogenesisEngine
 from speace_core.cellular_brain.regulation.plasticity_engine import PlasticityEngine
+from speace_core.cellular_brain.analysis.community_detection_engine import (
+    CommunityDetectionEngine,
+    CommunityDetectionResult,
+)
+from speace_core.cellular_brain.metacognition.confidence_engine import (
+    ConfidenceEngine,
+    ConfidenceState,
+)
+from speace_core.cellular_brain.regulation.energy_control_agent import EnergyControlAgent
 from speace_core.cellular_brain.regulation.inhibition_engine import InhibitionEngine
 from speace_core.cellular_brain.regulation.stdp_plasticity_engine import STDPPlasticityEngine
+from speace_core.cellular_brain.regions.region_registry import RegionRegistry
+from speace_core.cellular_brain.regions.region_factory import RegionFactory
 from speace_core.dna.models import SharedGenome
 
 
@@ -45,10 +56,23 @@ class CellularBrainOrchestrator(BaseModel):
     _burst_engine: EventDrivenBurstEngine = None  # type: ignore[assignment]
     _stdp: STDPPlasticityEngine = None  # type: ignore[assignment]
     _inhibition: InhibitionEngine = None  # type: ignore[assignment]
+    _energy_control: EnergyControlAgent = None  # type: ignore[assignment]
+    _community: CommunityDetectionEngine = None  # type: ignore[assignment]
+    _confidence: ConfidenceEngine = None  # type: ignore[assignment]
     negative_feedback_count: int = 0
     execution_mode: str = "global_tick"
     stdp_enabled: bool = True
     inhibition_enabled: bool = True
+    energy_control_enabled: bool = True
+    community_detection_enabled: bool = True
+    confidence_enabled: bool = True
+    last_community_result: CommunityDetectionResult | None = None
+    last_confidence_state: ConfidenceState | None = None
+    neurogenesis_recommended: bool = False
+    stabilization_recommended: bool = False
+    plasticity_reduction_recommended: bool = False
+    region_architecture_enabled: bool = True
+    _region_registry: RegionRegistry | None = None
 
     class Config:
         arbitrary_types_allowed = True
@@ -68,6 +92,15 @@ class CellularBrainOrchestrator(BaseModel):
         self._burst_engine = EventDrivenBurstEngine()
         self._stdp = STDPPlasticityEngine()
         self._inhibition = InhibitionEngine()
+        self._energy_control = EnergyControlAgent()
+        self._community = CommunityDetectionEngine()
+        self._confidence = ConfidenceEngine()
+        if self.region_architecture_enabled:
+            self._region_registry = RegionFactory.build_from_genome(
+                self.circuit, self.genome.model_dump(), seed=42
+            )
+        else:
+            self._region_registry = None
 
     async def run_ticks(self, n_ticks: int) -> None:
         for _ in range(n_ticks):
@@ -86,6 +119,14 @@ class CellularBrainOrchestrator(BaseModel):
                 self._inhibition.stabilize_after_burst(
                     self.circuit, last_result, self._memory
                 )
+            if self.energy_control_enabled:
+                metrics = self.latest_metrics
+                self._energy_control.regulate(
+                    self.circuit,
+                    metrics=metrics,
+                    burst_engine=self._burst_engine,
+                    memory=self._memory,
+                )
         else:
             await self.circuit.tick()
 
@@ -102,6 +143,35 @@ class CellularBrainOrchestrator(BaseModel):
             pruned_count=sum(1 for s in self.circuit.synapses if s.state == "pruned"),
         )
         self.metrics_log.append(metrics)
+
+        # Community detection (observational only in T17)
+        if self.community_detection_enabled:
+            self.last_community_result = self._community.analyze(
+                self.circuit, memory=self._memory
+            )
+
+        # Meta-learning confidence evaluation (T19)
+        if self.confidence_enabled:
+            self.last_confidence_state = self._confidence.evaluate(
+                self.circuit,
+                metrics=metrics,
+                community_result=self.last_community_result,
+                memory=self._memory,
+            )
+            self.neurogenesis_recommended = (
+                self.last_confidence_state.neurogenesis_recommended
+            )
+            self.stabilization_recommended = (
+                self.last_confidence_state.stabilization_recommended
+            )
+            self.plasticity_reduction_recommended = (
+                self.last_confidence_state.plasticity_reduction_recommended
+            )
+
+        # Regional architecture regulation (T21)
+        if self.region_architecture_enabled and self._region_registry is not None:
+            for region in self._region_registry.regions.values():
+                region.regulate_region(self.circuit)
 
         # Record morphological snapshot every tick
         snapshot = self._build_morphology_snapshot(metrics)
@@ -180,6 +250,10 @@ class CellularBrainOrchestrator(BaseModel):
     @property
     def memory(self) -> MorphologicalMemory:
         return self._memory
+
+    @property
+    def region_registry(self) -> RegionRegistry | None:
+        return self._region_registry
 
     @classmethod
     def build_mvp(cls, genome: SharedGenome) -> "CellularBrainOrchestrator":
