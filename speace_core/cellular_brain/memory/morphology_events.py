@@ -32,6 +32,10 @@ class MorphologyEventType(str, Enum):
     REGION_SIGNAL_BLOCKED = "region_signal_blocked"
     REGION_SIGNAL_DELIVERED = "region_signal_delivered"
     REGIONAL_SIGNAL_FLOW_UPDATED = "regional_signal_flow_updated"
+    REGION_PLASTICITY_TRIGGERED = "region_plasticity_triggered"
+    REGION_PLASTICITY_TRIGGER_SKIPPED = "region_plasticity_trigger_skipped"
+    REGION_CAUSAL_CORRELATION_DETECTED = "region_causal_correlation_detected"
+    REGION_SOFT_ACTIVATION_TRACE = "region_soft_activation_trace"
 
 
 class MorphologyEvent(BaseModel):

@@ -23,6 +23,7 @@ class PathwayCalibrationProfile(BaseModel):
     name: str
     inter_region_plasticity_enabled: bool = True
     region_signal_routing_enabled: bool = False
+    trigger_mode: str = "hard_spike"
     ltp_rate: float = 0.05
     ltd_rate: float = 0.03
     min_strength: float = 0.0
@@ -51,6 +52,12 @@ class PathwayCalibrationResult(BaseModel):
     blocked_signals: int = 0
     routing_energy_cost: float = 0.0
     active_inter_region_pathways: int = 0
+    region_plasticity_triggers: int = 0
+    soft_activation_triggers: int = 0
+    routing_aware_triggers: int = 0
+    temporal_correlation_triggers: int = 0
+    region_causal_score: float = 0.0
+    trigger_to_update_ratio: float = 0.0
     regression_score: float = 0.0
     distance_from_baseline: float = 0.0
     passed: bool = True
@@ -120,6 +127,7 @@ class PathwayCalibrator:
                 name="plasticity_without_routing",
                 inter_region_plasticity_enabled=True,
                 region_signal_routing_enabled=False,
+                trigger_mode="hard_spike",
                 description="Enable plasticity without routing",
             ),
             PathwayCalibrationProfile(
@@ -127,45 +135,50 @@ class PathwayCalibrator:
                 name="routing_plus_plasticity",
                 inter_region_plasticity_enabled=True,
                 region_signal_routing_enabled=True,
-                description="Enable both routing and plasticity",
+                trigger_mode="hybrid",
+                description="Enable both routing and plasticity (hybrid trigger)",
             ),
             PathwayCalibrationProfile(
                 profile_id="p4",
                 name="routing_plus_low_plasticity",
                 inter_region_plasticity_enabled=True,
                 region_signal_routing_enabled=True,
+                trigger_mode="hybrid",
                 ltp_rate=0.02,
                 ltd_rate=0.01,
-                description="Routing + low LTP/LTD",
+                description="Routing + low LTP/LTD (hybrid trigger)",
             ),
             PathwayCalibrationProfile(
                 profile_id="p5",
                 name="routing_plus_medium_plasticity",
                 inter_region_plasticity_enabled=True,
                 region_signal_routing_enabled=True,
+                trigger_mode="hybrid",
                 ltp_rate=0.04,
                 ltd_rate=0.025,
-                description="Routing + medium LTP/LTD",
+                description="Routing + medium LTP/LTD (hybrid trigger)",
             ),
             PathwayCalibrationProfile(
                 profile_id="p6",
                 name="routing_plus_high_plasticity",
                 inter_region_plasticity_enabled=True,
                 region_signal_routing_enabled=True,
+                trigger_mode="hybrid",
                 ltp_rate=0.08,
                 ltd_rate=0.06,
-                description="Routing + aggressive LTP/LTD",
+                description="Routing + aggressive LTP/LTD (hybrid trigger)",
             ),
             PathwayCalibrationProfile(
                 profile_id="p7",
                 name="routing_plus_energy_conservative",
                 inter_region_plasticity_enabled=True,
                 region_signal_routing_enabled=True,
+                trigger_mode="hybrid",
                 ltp_rate=0.03,
                 ltd_rate=0.02,
                 energy_cost_per_update=0.0005,
                 energy_modulation_strength=1.5,
-                description="Routing + conservative energy pathways",
+                description="Routing + conservative energy pathways (hybrid trigger)",
             ),
         ]
 
@@ -205,6 +218,8 @@ class PathwayCalibrator:
             engine.energy_cost_per_update = profile.energy_cost_per_update
             engine.confidence_modulation_strength = profile.confidence_modulation_strength
             engine.energy_modulation_strength = profile.energy_modulation_strength
+            engine.trigger_mode = profile.trigger_mode
+            engine._trigger.trigger_mode = profile.trigger_mode
 
     # ------------------------------------------------------------------ #
     # Single profile run

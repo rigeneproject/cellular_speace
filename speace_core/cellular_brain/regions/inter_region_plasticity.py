@@ -7,6 +7,7 @@ from speace_core.cellular_brain.memory.morphological_memory import Morphological
 from speace_core.cellular_brain.memory.morphology_events import MorphologyEventType
 from speace_core.cellular_brain.regions.region_registry import RegionRegistry
 from speace_core.cellular_brain.regions.region_connectome import InterRegionConnection
+from speace_core.cellular_brain.regions.region_plasticity_trigger import RegionPlasticityTrigger
 from speace_core.cellular_brain.regulation.homeostasis_engine import SystemMetrics
 
 
@@ -53,6 +54,7 @@ class InterRegionPlasticityEngine:
         energy_cost_per_update: float = 0.001,
         confidence_modulation_strength: float = 1.0,
         energy_modulation_strength: float = 1.0,
+        trigger_mode: str = "hard_spike",
     ):
         self.ltp_rate = ltp_rate
         self.ltd_rate = ltd_rate
@@ -62,6 +64,8 @@ class InterRegionPlasticityEngine:
         self.energy_cost_per_update = energy_cost_per_update
         self.confidence_modulation_strength = confidence_modulation_strength
         self.energy_modulation_strength = energy_modulation_strength
+        self.trigger_mode = trigger_mode
+        self._trigger = RegionPlasticityTrigger(trigger_mode=trigger_mode)
 
     # ------------------------------------------------------------------ #
     # Activation tracking
@@ -163,6 +167,7 @@ class InterRegionPlasticityEngine:
         memory: Optional[MorphologicalMemory] = None,
         tick: int = 0,
         confidence_score: float = 0.0,
+        routing_result: Any = None,
     ) -> InterRegionPlasticityResult:
         result = InterRegionPlasticityResult()
         if registry is None or registry.connectome is None:
@@ -175,13 +180,13 @@ class InterRegionPlasticityEngine:
         global_energy = metrics.mean_energy if metrics else 0.5
         global_phi = metrics.coherence_phi if metrics else 0.0
 
+        use_trigger = self.trigger_mode != "hard_spike"
+        if use_trigger:
+            self._trigger.clear_history()
+
         for conn in connections:
             if not conn.plasticity_enabled:
                 continue
-
-            # Track activations
-            src_active = self.compute_region_activation(conn.source_region_id, circuit)
-            tgt_active = self.compute_region_activation(conn.target_region_id, circuit)
 
             # Build or recover pathway state stored in connection metadata
             if not hasattr(conn, "_pathway_state"):
@@ -192,30 +197,29 @@ class InterRegionPlasticityEngine:
                 )
             pw: RegionPathwayState = conn._pathway_state
 
-            # Update activation timestamps
-            if src_active:
-                pw.last_source_activation_tick = tick
-            if tgt_active:
-                pw.last_target_activation_tick = tick
+            if use_trigger:
+                trigger_result = self._trigger.evaluate_pathway_trigger(
+                    source_region_id=conn.source_region_id,
+                    target_region_id=conn.target_region_id,
+                    connection=conn,
+                    circuit=circuit,
+                    routing_result=routing_result,
+                    tick=tick,
+                    memory=memory,
+                )
+                src_active = trigger_result.triggered
+                tgt_active = trigger_result.triggered
+                if src_active:
+                    pw.last_source_activation_tick = tick
+                if tgt_active:
+                    pw.last_target_activation_tick = tick
 
-            # Skip if neither fired this tick
-            if not src_active and not tgt_active:
-                continue
+                # Skip if trigger not met
+                if not trigger_result.triggered:
+                    continue
 
-            # Modulate by energy
-            self.modulate_by_energy(pw, global_energy)
-
-            # Modulate by confidence
-            self.modulate_by_confidence(pw, confidence_score, global_phi)
-
-            # Compensatory strengthening for isolated/weak regions
-            if self._is_isolated_region(conn.source_region_id, registry) or self._is_isolated_region(conn.target_region_id, registry):
-                pw.plasticity_rate = max(pw.plasticity_rate, 1.0)
-
-            # Apply STDP if both have fired within window
-            delta = self.compute_delta_tick(pw, tick)
-            if delta is not None:
-                if delta > 0:
+                # For trigger modes, use recommended update when available
+                if trigger_result.recommended_update == "ltp":
                     self.apply_pathway_ltp(pw)
                     result.reinforced_pathways += 1
                     if memory is not None:
@@ -225,12 +229,12 @@ class InterRegionPlasticityEngine:
                             target_id=conn.target_region_id,
                             metadata={
                                 "mechanism": "inter_region_stdp",
-                                "pathway_strength": pw.pathway_strength,
-                                "delta_tick": delta,
+                                "trigger_type": trigger_result.trigger_type,
+                                "causal_score": trigger_result.causal_score,
                                 "tick": tick,
                             },
                         )
-                elif delta < 0:
+                elif trigger_result.recommended_update == "ltd":
                     self.apply_pathway_ltd(pw)
                     result.weakened_pathways += 1
                     if memory is not None:
@@ -240,11 +244,67 @@ class InterRegionPlasticityEngine:
                             target_id=conn.target_region_id,
                             metadata={
                                 "mechanism": "inter_region_stdp",
-                                "pathway_strength": pw.pathway_strength,
-                                "delta_tick": delta,
+                                "trigger_type": trigger_result.trigger_type,
+                                "causal_score": trigger_result.causal_score,
                                 "tick": tick,
                             },
                         )
+            else:
+                # Legacy hard_spike mode (T23 original)
+                src_active = self.compute_region_activation(conn.source_region_id, circuit)
+                tgt_active = self.compute_region_activation(conn.target_region_id, circuit)
+
+                if src_active:
+                    pw.last_source_activation_tick = tick
+                if tgt_active:
+                    pw.last_target_activation_tick = tick
+
+                if not src_active and not tgt_active:
+                    continue
+
+                # Modulate by energy
+                self.modulate_by_energy(pw, global_energy)
+
+                # Modulate by confidence
+                self.modulate_by_confidence(pw, confidence_score, global_phi)
+
+                # Compensatory strengthening for isolated/weak regions
+                if self._is_isolated_region(conn.source_region_id, registry) or self._is_isolated_region(conn.target_region_id, registry):
+                    pw.plasticity_rate = max(pw.plasticity_rate, 1.0)
+
+                # Apply STDP if both have fired within window
+                delta = self.compute_delta_tick(pw, tick)
+                if delta is not None:
+                    if delta > 0:
+                        self.apply_pathway_ltp(pw)
+                        result.reinforced_pathways += 1
+                        if memory is not None:
+                            memory.create_event(
+                                event_type=MorphologyEventType.REGION_PATHWAY_REINFORCED,
+                                source_id=conn.source_region_id,
+                                target_id=conn.target_region_id,
+                                metadata={
+                                    "mechanism": "inter_region_stdp",
+                                    "pathway_strength": pw.pathway_strength,
+                                    "delta_tick": delta,
+                                    "tick": tick,
+                                },
+                            )
+                    elif delta < 0:
+                        self.apply_pathway_ltd(pw)
+                        result.weakened_pathways += 1
+                        if memory is not None:
+                            memory.create_event(
+                                event_type=MorphologyEventType.REGION_PATHWAY_WEAKENED,
+                                source_id=conn.source_region_id,
+                                target_id=conn.target_region_id,
+                                metadata={
+                                    "mechanism": "inter_region_stdp",
+                                    "pathway_strength": pw.pathway_strength,
+                                    "delta_tick": delta,
+                                    "tick": tick,
+                                },
+                            )
 
             # Clamp and sync back to connection
             pw.pathway_strength = max(
@@ -274,6 +334,7 @@ class InterRegionPlasticityEngine:
                         "mean_pathway_strength": result.mean_pathway_strength,
                         "total_energy_cost": result.total_energy_cost,
                         "tick": tick,
+                        "trigger_mode": self.trigger_mode,
                     },
                 )
 

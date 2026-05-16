@@ -210,6 +210,7 @@ class CellularBrainOrchestrator(BaseModel):
                 memory=self._memory,
                 tick=self.current_tick,
                 confidence_score=confidence_score,
+                routing_result=self.last_routing_result,
             )
 
         # Record morphological snapshot every tick
