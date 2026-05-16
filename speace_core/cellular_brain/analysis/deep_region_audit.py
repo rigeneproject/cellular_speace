@@ -37,6 +37,9 @@ class DeepRegionAuditProfile(BaseModel):
     region_stability_controller_enabled: bool = False
     description: str = ""
 
+    class Config:
+        extra = "allow"
+
 
 class DeepRegionAuditResult(BaseModel):
     profile: DeepRegionAuditProfile
