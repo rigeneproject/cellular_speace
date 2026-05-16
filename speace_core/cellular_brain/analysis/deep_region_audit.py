@@ -34,6 +34,7 @@ class DeepRegionAuditProfile(BaseModel):
     confidence_modulation_strength: float = 1.0
     energy_modulation_strength: float = 1.0
     tuner_profile_id: Optional[str] = None
+    region_stability_controller_enabled: bool = False
     description: str = ""
 
 
@@ -262,6 +263,10 @@ class DeepRegionAuditor:
         from speace_core.cellular_brain.regions.pathway_plasticity_tuner import PathwayPlasticityTuner
         orch.inter_region_plasticity_enabled = profile.inter_region_plasticity_enabled
         orch.region_signal_routing_enabled = profile.region_signal_routing_enabled
+        orch.region_stability_controller_enabled = profile.region_stability_controller_enabled
+        if profile.region_stability_controller_enabled and orch._region_stability_controller is None:
+            from speace_core.cellular_brain.regions.region_stability_controller import RegionLevelStabilityController
+            orch._region_stability_controller = RegionLevelStabilityController()
         if profile.inter_region_plasticity_enabled and orch._inter_region_plasticity is not None:
             engine = orch._inter_region_plasticity
             engine.ltp_rate = profile.ltp_rate
