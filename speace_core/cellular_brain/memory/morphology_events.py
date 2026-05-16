@@ -99,6 +99,13 @@ class MorphologyEventType(str, Enum):
     BRAINSTEM_GAIN_CONVERGENCE_DETECTED = "brainstem_gain_convergence_detected"
     BRAINSTEM_SUPPRESSION_COST_REDUCED = "brainstem_suppression_cost_reduced"
     BRAINSTEM_COGNITIVE_RECOVERY_IMPROVED = "brainstem_cognitive_recovery_improved"
+    # T39 — Gain Input Coupling Redesign
+    BRAINSTEM_GAIN_INPUT_COUPLED = "brainstem_gain_input_coupled"
+    BRAINSTEM_STATE_THRESHOLD_ADJUSTED = "brainstem_state_threshold_adjusted"
+    BRAINSTEM_PROTECTIVE_ESCAPE = "brainstem_protective_escape"
+    BRAINSTEM_OUTPUT_COUPLED = "brainstem_output_coupled"
+    BRAINSTEM_COUPLING_TRACE_RECORDED = "brainstem_coupling_trace_recorded"
+    BRAINSTEM_SUPPRESSION_RELEASED = "brainstem_suppression_released"
 
 
 class MorphologyEvent(BaseModel):

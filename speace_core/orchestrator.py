@@ -302,9 +302,28 @@ class CellularBrainOrchestrator(BaseModel):
                 brainstem_metrics["regional_signal_flow"] = getattr(
                     self.last_routing_result, "regional_signal_flow_score", 0.0
                 )
+            # T39 — Evaluate gain controller BEFORE brainstem to pass gain vector into state selection
+            gain_vector: dict | None = None
+            if self.brainstem_gain_controller_enabled and self._brainstem_gain_controller is not None:
+                gain_metrics = {
+                    "cognitive_score_delta": 0.0,
+                    "coherence_phi_delta": 0.0,
+                    "energy_efficiency_delta": 0.0,
+                    "functional_improvement_delta": 0.0,
+                    "suppression_cost": getattr(self._brainstem_controller, "_last_suppression_cost", 0.0) if self._brainstem_controller else 0.0,
+                    "emergency_ticks": getattr(self._brainstem_controller, "_state_ticks", {}).get("emergency", 0) if self._brainstem_controller else 0,
+                    "protective_ticks": getattr(self._brainstem_controller, "_state_ticks", {}).get("protective", 0) if self._brainstem_controller else 0,
+                    "total_ticks": self.current_tick,
+                    "mean_region_energy": metrics.mean_energy,
+                    "mean_region_phi": metrics.coherence_phi,
+                }
+                self._last_brainstem_gain_result = self._brainstem_gain_controller.evaluate(gain_metrics)
+                gain_vector = self._last_brainstem_gain_result.decision.model_dump()
+
             self._last_brainstem_result = self._brainstem_controller.apply(
                 metrics=brainstem_metrics,
                 memory=self._memory,
+                gain_vector=gain_vector,
             )
             # Compose brainstem modulations with stability multipliers
             decision = self._last_brainstem_result.decision
@@ -324,22 +343,8 @@ class CellularBrainOrchestrator(BaseModel):
                     rid: decision.plasticity_suppression_multiplier
                     for rid in self._region_registry.regions
                 } if self._region_registry is not None else None
-            # T37 — Apply Adaptive Brainstem Gain Controller on top of T36 modulations
-            if self.brainstem_gain_controller_enabled and self._brainstem_gain_controller is not None:
-                gain_metrics = {
-                    "cognitive_score_delta": 0.0,
-                    "coherence_phi_delta": 0.0,
-                    "energy_efficiency_delta": 0.0,
-                    "functional_improvement_delta": 0.0,
-                    "suppression_cost": getattr(self._brainstem_controller, "_last_suppression_cost", 0.0) if self._brainstem_controller else 0.0,
-                    "emergency_ticks": getattr(self._brainstem_controller, "_state_ticks", {}).get("emergency", 0) if self._brainstem_controller else 0,
-                    "protective_ticks": getattr(self._brainstem_controller, "_state_ticks", {}).get("protective", 0) if self._brainstem_controller else 0,
-                    "total_ticks": self.current_tick,
-                    "mean_region_energy": metrics.mean_energy,
-                    "mean_region_phi": metrics.coherence_phi,
-                }
-                self._last_brainstem_gain_result = self._brainstem_gain_controller.evaluate(gain_metrics)
-                # Apply gain multipliers to brainstem modulations
+            # T37/T39 — Apply Adaptive Brainstem Gain Controller output coupling on top of T36 modulations
+            if self.brainstem_gain_controller_enabled and self._brainstem_gain_controller is not None and gain_vector is not None:
                 g = self._last_brainstem_gain_result.decision
                 if routing_multiplier_map is not None:
                     for rid in routing_multiplier_map:

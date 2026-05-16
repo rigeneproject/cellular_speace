@@ -54,6 +54,25 @@ class BrainstemModulationResult(BaseModel):
     phi_recovery_contribution: float = 0.0
 
 
+class BrainstemCouplingTrace(BaseModel):
+    """T39 — Output coupling trace for causal tracking."""
+
+    tick_id: int = 0
+    state_before: str = "stable"
+    state_after: str = "stable"
+    raw_vitality: float = 0.0
+    raw_risk: float = 0.0
+    adjusted_vitality: float = 0.0
+    adjusted_risk: float = 0.0
+    raw_balance_pressure: float = 0.0
+    adjusted_balance_pressure: float = 0.0
+    gain_vector: Dict[str, float] = Field(default_factory=dict)
+    raw_modulations: Dict[str, float] = Field(default_factory=dict)
+    final_modulations: Dict[str, float] = Field(default_factory=dict)
+    coupling_delta: float = 0.0
+    protective_escape_applied: bool = False
+
+
 class BrainstemFunctionalController:
     """Active homeostatic arbiter for the cellular brain.
 
@@ -68,6 +87,12 @@ class BrainstemFunctionalController:
     - soft modulation profiles to reduce cognitive regression
     - emergency hysteresis to avoid chronic panic
     - cognitive preservation rule to cap suppression when cognition is productive
+
+    T39 adds Gain Input Coupling Redesign:
+    - gain-coupled vitality/risk scoring
+    - dynamic state thresholds adjusted by gain vector
+    - protective escape rule after persistent protective state
+    - explicit output coupling trace
     """
 
     # T36 — Balance thresholds (balance_pressure = autonomic_risk - cognitive_vitality)
@@ -85,6 +110,12 @@ class BrainstemFunctionalController:
     COGNITIVE_PRESERVATION_THRESHOLD: float = 0.55
     PHI_COLLAPSE_THRESHOLD: float = 0.10
     ENERGY_CRITICAL_LOW: float = 0.10
+
+    # T39 — Protective escape
+    PROTECTIVE_ESCAPE_TICKS: int = 3
+    PROTECTIVE_ESCAPE_VITALITY: float = 0.45
+    PROTECTIVE_ESCAPE_RISK: float = 0.65
+    PROTECTIVE_ESCAPE_ENERGY: float = 0.15
 
     def __init__(
         self,
@@ -135,6 +166,99 @@ class BrainstemFunctionalController:
         self._last_cognitive_preservation_applied: bool = False
         self._last_suppression_cost: float = 0.0
         self._last_useful_activity_preserved: bool = False
+
+        # T39 — Gain input coupling
+        self._gain_vector: Dict[str, float] = {}
+        self._last_adjusted_vitality: float = 0.0
+        self._last_adjusted_risk: float = 0.0
+        self._last_adjusted_balance_pressure: float = 0.0
+        self._protective_consecutive_ticks: int = 0
+        self._protective_escape_count: int = 0
+        self._coupling_traces: List[BrainstemCouplingTrace] = []
+        self._last_coupling_delta: float = 0.0
+        self._last_suppression_cost_after_coupling: float = 0.0
+        self._state_transition_count: int = 0
+
+    # ------------------------------------------------------------------ #
+    # T39 — Gain-coupled input scoring
+    # ------------------------------------------------------------------ #
+
+    def apply_gain_to_input_scores(
+        self,
+        vitality: float,
+        risk: float,
+        gain_vector: Optional[Dict[str, float]] = None,
+    ) -> tuple[float, float, float]:
+        """Adjust vitality and risk by gain vector.
+
+        Returns (adjusted_vitality, adjusted_risk, adjusted_balance_pressure).
+        """
+        gv = gain_vector or self._gain_vector or {}
+        cog_pres = max(1.0, min(1.5, gv.get("cognitive_preservation_gain", 1.0)))
+        emg = max(0.4, min(1.2, gv.get("emergency_gain", 1.0)))
+
+        adjusted_vitality = min(1.0, vitality * cog_pres)
+        adjusted_risk = min(1.0, risk * emg)
+        adjusted_pressure = max(0.0, adjusted_risk - adjusted_vitality)
+
+        self._last_adjusted_vitality = round(adjusted_vitality, 4)
+        self._last_adjusted_risk = round(adjusted_risk, 4)
+        self._last_adjusted_balance_pressure = round(adjusted_pressure, 4)
+        return adjusted_vitality, adjusted_risk, adjusted_pressure
+
+    # ------------------------------------------------------------------ #
+    # T39 — Dynamic state thresholds
+    # ------------------------------------------------------------------ #
+
+    def compute_adjusted_thresholds(
+        self,
+        gain_vector: Optional[Dict[str, float]] = None,
+    ) -> Dict[str, float]:
+        """Compute state thresholds adjusted by gain vector."""
+        gv = gain_vector or self._gain_vector or {}
+        cog_pres = max(1.0, min(1.5, gv.get("cognitive_preservation_gain", 1.0)))
+        emg = max(0.4, min(1.2, gv.get("emergency_gain", 1.0)))
+
+        # protective_threshold_adjusted = base + 0.10 * (cog_pres - 1.0)
+        protective = self.BALANCE_PRESSURE_PROTECTIVE + 0.10 * (cog_pres - 1.0)
+        # emergency_threshold_adjusted = base + 0.10 * (1.0 - emg)
+        emergency = self.BALANCE_PRESSURE_EMERGENCY + 0.10 * (1.0 - emg)
+        # corrective_threshold_adjusted = base + 0.05 * (cog_pres - emg)
+        corrective = self.BALANCE_PRESSURE_CORRECTIVE + 0.05 * (cog_pres - emg)
+
+        return {
+            "stable": self._clamp(self.BALANCE_PRESSURE_STABLE, 0.0, 1.0),
+            "watchful": self._clamp(self.BALANCE_PRESSURE_WATCHFUL, 0.0, 1.0),
+            "corrective": self._clamp(corrective, -0.20, 0.40),
+            "protective": self._clamp(protective, 0.10, 0.60),
+            "emergency": self._clamp(emergency, 0.35, 0.90),
+        }
+
+    # ------------------------------------------------------------------ #
+    # T39 — Protective escape rule
+    # ------------------------------------------------------------------ #
+
+    def protective_escape(
+        self,
+        raw_state: BrainstemFunctionalState,
+        energy: float,
+    ) -> tuple[BrainstemFunctionalState, bool]:
+        """Escape from protective if conditions allow."""
+        if raw_state == BrainstemFunctionalState.PROTECTIVE:
+            self._protective_consecutive_ticks += 1
+        else:
+            self._protective_consecutive_ticks = 0
+
+        if raw_state == BrainstemFunctionalState.PROTECTIVE:
+            if (
+                self._protective_consecutive_ticks >= self.PROTECTIVE_ESCAPE_TICKS
+                and self._last_adjusted_vitality > self.PROTECTIVE_ESCAPE_VITALITY
+                and self._last_adjusted_risk < self.PROTECTIVE_ESCAPE_RISK
+                and energy >= self.PROTECTIVE_ESCAPE_ENERGY
+            ):
+                self._protective_escape_count += 1
+                return BrainstemFunctionalState.CORRECTIVE, True
+        return raw_state, False
 
     # ------------------------------------------------------------------ #
     # T36 — Cognitive / Autonomic Scoring
@@ -215,8 +339,19 @@ class BrainstemFunctionalController:
     # State evaluation
     # ------------------------------------------------------------------ #
 
-    def evaluate_state(self, metrics: Dict[str, Any]) -> BrainstemFunctionalState:
-        vitality, risk, pressure = self.compute_balance_pressure(metrics)
+    def evaluate_state(
+        self,
+        metrics: Dict[str, Any],
+        gain_vector: Optional[Dict[str, float]] = None,
+    ) -> BrainstemFunctionalState:
+        vitality, risk, raw_pressure = self.compute_balance_pressure(metrics)
+
+        # T39 — Apply gain-coupled scoring
+        self.apply_gain_to_input_scores(vitality, risk, gain_vector)
+        adjusted_vitality = self._last_adjusted_vitality
+        adjusted_risk = self._last_adjusted_risk
+        pressure = self._last_adjusted_balance_pressure
+
         phi = metrics.get("mean_region_phi", 0.0)
         energy = metrics.get("mean_energy", 0.0)
         instability = metrics.get("region_instability_mean", 0.0)
@@ -237,29 +372,32 @@ class BrainstemFunctionalController:
             or (extreme_instability and many_unstable)
         )
 
+        # T39 — Dynamic thresholds
+        thresholds = self.compute_adjusted_thresholds(gain_vector)
+
         # T36 — Cognitive preservation rule
         # If cognition is productive and no hard limit is breached, cap at corrective
         self._last_cognitive_preservation_applied = False
-        if vitality > self.COGNITIVE_PRESERVATION_THRESHOLD and not absolute_emergency:
+        if adjusted_vitality > self.COGNITIVE_PRESERVATION_THRESHOLD and not absolute_emergency:
             self._last_cognitive_preservation_applied = True
             # Cap state at corrective regardless of pressure
-            if pressure < self.BALANCE_PRESSURE_STABLE:
+            if pressure < thresholds["stable"]:
                 return BrainstemFunctionalState.STABLE
-            if pressure < self.BALANCE_PRESSURE_WATCHFUL:
+            if pressure < thresholds["watchful"]:
                 return BrainstemFunctionalState.WATCHFUL
             return BrainstemFunctionalState.CORRECTIVE
 
-        # Normal T36 balance-pressure driven state selection
+        # Normal T39 balance-pressure driven state selection with adjusted thresholds
         if absolute_emergency:
             return BrainstemFunctionalState.EMERGENCY
 
-        if pressure >= self.BALANCE_PRESSURE_EMERGENCY:
+        if pressure >= thresholds["emergency"]:
             return BrainstemFunctionalState.EMERGENCY
-        if pressure >= self.BALANCE_PRESSURE_PROTECTIVE:
+        if pressure >= thresholds["protective"]:
             return BrainstemFunctionalState.PROTECTIVE
-        if pressure >= self.BALANCE_PRESSURE_CORRECTIVE:
+        if pressure >= thresholds["corrective"]:
             return BrainstemFunctionalState.CORRECTIVE
-        if pressure >= self.BALANCE_PRESSURE_WATCHFUL:
+        if pressure >= thresholds["watchful"]:
             return BrainstemFunctionalState.WATCHFUL
         return BrainstemFunctionalState.STABLE
 
@@ -298,17 +436,33 @@ class BrainstemFunctionalController:
         self,
         metrics: Dict[str, Any],
         memory: Optional[MorphologicalMemory] = None,
+        gain_vector: Optional[Dict[str, float]] = None,
     ) -> BrainstemDecision:
-        raw_state = self.evaluate_state(metrics)
+        # T39 — Store gain vector for later use (filter out non-numeric fields like 'reason')
+        if gain_vector is not None:
+            self._gain_vector = {
+                k: float(v)
+                for k, v in gain_vector.items()
+                if isinstance(v, (int, float)) and not isinstance(v, bool)
+            }
+
+        raw_state = self.evaluate_state(metrics, gain_vector)
         state = self._apply_hysteresis(raw_state)
-        vitality = self._last_cognitive_vitality
-        pressure = self._last_balance_pressure
+
+        # T39 — Protective escape
+        energy = metrics.get("mean_energy", 0.0)
+        state, escape_applied = self.protective_escape(state, energy)
+
+        vitality = self._last_adjusted_vitality
+        pressure = self._last_adjusted_balance_pressure
 
         reasons: List[str] = []
         reasons.append(f"vitality={vitality:.2f}")
         reasons.append(f"pressure={pressure:.2f}")
         if self._last_cognitive_preservation_applied:
             reasons.append("cognitive_preservation_applied")
+        if escape_applied:
+            reasons.append("protective_escape_applied")
 
         if state == BrainstemFunctionalState.STABLE:
             reasons.append("system_stable")
@@ -376,10 +530,13 @@ class BrainstemFunctionalController:
         self,
         metrics: Dict[str, Any],
         memory: Optional[MorphologicalMemory] = None,
+        gain_vector: Optional[Dict[str, float]] = None,
     ) -> BrainstemModulationResult:
-        decision = self.decide(metrics, memory)
+        decision = self.decide(metrics, memory, gain_vector)
         state = decision.state
         state_changed = self._previous_state != state
+        if state_changed:
+            self._state_transition_count += 1
         self._previous_state = state
         self._decisions_count += 1
         self._state_ticks[state.value] = self._state_ticks.get(state.value, 0) + 1
@@ -426,6 +583,53 @@ class BrainstemFunctionalController:
             homeostatic_gain = -0.08
         elif state == BrainstemFunctionalState.EMERGENCY:
             homeostatic_gain = -0.15
+
+        # T39 — Output coupling trace
+        raw_modulations = {
+            "routing_suppression_multiplier": 0.70 if self._last_balance_pressure >= self.BALANCE_PRESSURE_PROTECTIVE else (
+                0.85 if self._last_balance_pressure >= self.BALANCE_PRESSURE_CORRECTIVE else 1.0
+            ),
+            "plasticity_suppression_multiplier": 0.75 if self._last_balance_pressure >= self.BALANCE_PRESSURE_PROTECTIVE else (
+                0.90 if self._last_balance_pressure >= self.BALANCE_PRESSURE_CORRECTIVE else 1.0
+            ),
+            "decay_boost_multiplier": 1.20 if self._last_balance_pressure >= self.BALANCE_PRESSURE_PROTECTIVE else (
+                1.10 if self._last_balance_pressure >= self.BALANCE_PRESSURE_CORRECTIVE else 1.0
+            ),
+            "energy_recovery_multiplier": 1.0,
+        }
+        final_modulations = {
+            "routing_suppression_multiplier": decision.routing_suppression_multiplier,
+            "plasticity_suppression_multiplier": decision.plasticity_suppression_multiplier,
+            "decay_boost_multiplier": decision.decay_boost_multiplier,
+            "energy_recovery_multiplier": decision.energy_recovery_multiplier,
+        }
+        coupling_delta = sum(
+            abs(final_modulations[k] - raw_modulations[k])
+            for k in raw_modulations if k in final_modulations
+        ) / len(raw_modulations)
+        self._last_coupling_delta = round(coupling_delta, 4)
+
+        trace = BrainstemCouplingTrace(
+            tick_id=self._decisions_count,
+            state_before=self._previous_state.value if self._previous_state and not state_changed else state.value,
+            state_after=state.value,
+            raw_vitality=round(self._last_cognitive_vitality, 4),
+            raw_risk=round(self._last_autonomic_risk, 4),
+            adjusted_vitality=round(self._last_adjusted_vitality, 4),
+            adjusted_risk=round(self._last_adjusted_risk, 4),
+            raw_balance_pressure=round(self._last_balance_pressure, 4),
+            adjusted_balance_pressure=round(self._last_adjusted_balance_pressure, 4),
+            gain_vector=dict(self._gain_vector),
+            raw_modulations=raw_modulations,
+            final_modulations=final_modulations,
+            coupling_delta=self._last_coupling_delta,
+            protective_escape_applied=(
+                state == BrainstemFunctionalState.CORRECTIVE
+                and self._protective_consecutive_ticks >= self.PROTECTIVE_ESCAPE_TICKS
+            ),
+        )
+        self._coupling_traces.append(trace)
+        self._last_suppression_cost_after_coupling = suppression_cost
 
         result = BrainstemModulationResult(
             decision=decision,
@@ -552,6 +756,63 @@ class BrainstemFunctionalController:
                     "state": state.value,
                 },
             )
+            # T39 — New events
+            if self._gain_vector:
+                memory.create_event(
+                    event_type=MorphologyEventType.BRAINSTEM_GAIN_INPUT_COUPLED,
+                    region_id="brainstem_homeostatic",
+                    metadata={
+                        "raw_vitality": round(self._last_cognitive_vitality, 4),
+                        "adjusted_vitality": round(self._last_adjusted_vitality, 4),
+                        "raw_risk": round(self._last_autonomic_risk, 4),
+                        "adjusted_risk": round(self._last_adjusted_risk, 4),
+                        "gain_vector": dict(self._gain_vector),
+                    },
+                )
+                memory.create_event(
+                    event_type=MorphologyEventType.BRAINSTEM_STATE_THRESHOLD_ADJUSTED,
+                    region_id="brainstem_homeostatic",
+                    metadata={
+                        "thresholds": self.compute_adjusted_thresholds(self._gain_vector),
+                    },
+                )
+                memory.create_event(
+                    event_type=MorphologyEventType.BRAINSTEM_OUTPUT_COUPLED,
+                    region_id="brainstem_homeostatic",
+                    metadata={
+                        "raw_modulations": raw_modulations,
+                        "final_modulations": final_modulations,
+                        "coupling_delta": self._last_coupling_delta,
+                    },
+                )
+                memory.create_event(
+                    event_type=MorphologyEventType.BRAINSTEM_COUPLING_TRACE_RECORDED,
+                    region_id="brainstem_homeostatic",
+                    metadata={
+                        "trace_id": trace.tick_id,
+                        "coupling_delta": trace.coupling_delta,
+                    },
+                )
+            if trace.protective_escape_applied:
+                memory.create_event(
+                    event_type=MorphologyEventType.BRAINSTEM_PROTECTIVE_ESCAPE,
+                    region_id="brainstem_homeostatic",
+                    metadata={
+                        "consecutive_protective_ticks": self._protective_consecutive_ticks,
+                        "adjusted_vitality": trace.adjusted_vitality,
+                        "adjusted_risk": trace.adjusted_risk,
+                    },
+                )
+            if coupling_delta > 0.01:
+                memory.create_event(
+                    event_type=MorphologyEventType.BRAINSTEM_SUPPRESSION_RELEASED,
+                    region_id="brainstem_homeostatic",
+                    metadata={
+                        "coupling_delta": coupling_delta,
+                        "state_before": trace.state_before,
+                        "state_after": trace.state_after,
+                    },
+                )
 
         return result
 
@@ -560,6 +821,7 @@ class BrainstemFunctionalController:
     # ------------------------------------------------------------------ #
 
     def get_modulation_summary(self) -> Dict[str, Any]:
+        total_ticks = max(1, sum(self._state_ticks.values()))
         return {
             "previous_state": self._previous_state.value if self._previous_state else None,
             "decisions_count": self._decisions_count,
@@ -574,4 +836,20 @@ class BrainstemFunctionalController:
             "useful_activity_preserved": self._last_useful_activity_preserved,
             "in_emergency": self._in_emergency,
             "consecutive_emergency_ticks": self._consecutive_emergency_ticks,
+            # T39
+            "adjusted_cognitive_vitality": self._last_adjusted_vitality,
+            "adjusted_autonomic_risk": self._last_adjusted_risk,
+            "adjusted_balance_pressure": self._last_adjusted_balance_pressure,
+            "gain_vector": dict(self._gain_vector),
+            "protective_escape_count": self._protective_escape_count,
+            "protective_state_ratio": round(self._state_ticks.get("protective", 0) / total_ticks, 4),
+            "corrective_state_ratio": round(self._state_ticks.get("corrective", 0) / total_ticks, 4),
+            "emergency_state_ratio": round(self._state_ticks.get("emergency", 0) / total_ticks, 4),
+            "coupling_delta": self._last_coupling_delta,
+            "suppression_cost_after_coupling": self._last_suppression_cost_after_coupling,
+            "state_transition_count": self._state_transition_count,
         }
+
+    @staticmethod
+    def _clamp(value: float, min_val: float, max_val: float) -> float:
+        return max(min_val, min(max_val, value))

@@ -167,6 +167,18 @@ class BenchmarkMetrics(BaseModel):
     net_gain_vs_t36: float = 0.0
     net_gain_vs_t34b: float = 0.0
     gain_vector_distance: float = 0.0
+    # T39 — Gain Input Coupling Redesign metrics
+    gain_input_coupling_strength: float = 0.0
+    adjusted_cognitive_vitality_score: float = 0.0
+    adjusted_autonomic_risk_score: float = 0.0
+    adjusted_balance_pressure: float = 0.0
+    protective_escape_count: int = 0
+    protective_state_ratio: float = 0.0
+    corrective_state_ratio: float = 0.0
+    emergency_state_ratio: float = 0.0
+    coupling_delta_mean: float = 0.0
+    suppression_cost_after_coupling: float = 0.0
+    brainstem_state_transition_count: int = 0
 
 
 class BenchmarkResult(BaseModel):
@@ -793,6 +805,18 @@ class NeuroFunctionalBenchmark:
         autonomic_balance_score = 0.0
         suppression_cost = 0.0
         useful_activity_preserved = False
+        # T39 — defaults for gain input coupling metrics
+        adjusted_cognitive_vitality_score = 0.0
+        adjusted_autonomic_risk_score = 0.0
+        adjusted_balance_pressure = 0.0
+        protective_escape_count = 0
+        protective_state_ratio = 0.0
+        corrective_state_ratio = 0.0
+        emergency_state_ratio = 0.0
+        coupling_delta_mean = 0.0
+        suppression_cost_after_coupling = 0.0
+        brainstem_state_transition_count = 0
+        gain_input_coupling_strength = 0.0
         bsc = getattr(self.orch, "_brainstem_controller", None)
         bsr = getattr(self.orch, "_last_brainstem_result", None)
         if bsc is not None and bsr is not None:
@@ -820,6 +844,22 @@ class NeuroFunctionalBenchmark:
             autonomic_balance_score = max(0.0, 1.0 - balance_pressure)
             suppression_cost = summary.get("suppression_cost", 0.0)
             useful_activity_preserved = summary.get("useful_activity_preserved", False)
+            # T39 — Gain Input Coupling metrics
+            adjusted_cognitive_vitality_score = summary.get("adjusted_cognitive_vitality", 0.0)
+            adjusted_autonomic_risk_score = summary.get("adjusted_autonomic_risk", 0.0)
+            adjusted_balance_pressure = summary.get("adjusted_balance_pressure", 0.0)
+            protective_escape_count = summary.get("protective_escape_count", 0)
+            total_state_ticks = max(1, sum(brainstem_state_distribution.values()))
+            protective_state_ratio = round(brainstem_state_distribution.get("protective", 0) / total_state_ticks, 4)
+            corrective_state_ratio = round(brainstem_state_distribution.get("corrective", 0) / total_state_ticks, 4)
+            emergency_state_ratio = round(brainstem_state_distribution.get("emergency", 0) / total_state_ticks, 4)
+            coupling_delta_mean = summary.get("coupling_delta", 0.0)
+            suppression_cost_after_coupling = summary.get("suppression_cost_after_coupling", 0.0)
+            brainstem_state_transition_count = summary.get("state_transition_count", 0)
+            gain_input_coupling_strength = round(
+                abs(adjusted_cognitive_vitality_score - cognitive_vitality_score)
+                + abs(adjusted_autonomic_risk_score - autonomic_risk_score), 4
+            )
 
         # T37/T38 — Adaptive Brainstem Gain Controller metrics
         brainstem_gain_reward = 0.0
@@ -1036,6 +1076,18 @@ class NeuroFunctionalBenchmark:
             net_gain_vs_t36=0.0,
             net_gain_vs_t34b=0.0,
             gain_vector_distance=gain_vector_distance,
+            # T39
+            gain_input_coupling_strength=gain_input_coupling_strength,
+            adjusted_cognitive_vitality_score=adjusted_cognitive_vitality_score,
+            adjusted_autonomic_risk_score=adjusted_autonomic_risk_score,
+            adjusted_balance_pressure=adjusted_balance_pressure,
+            protective_escape_count=protective_escape_count,
+            protective_state_ratio=protective_state_ratio,
+            corrective_state_ratio=corrective_state_ratio,
+            emergency_state_ratio=emergency_state_ratio,
+            coupling_delta_mean=coupling_delta_mean,
+            suppression_cost_after_coupling=suppression_cost_after_coupling,
+            brainstem_state_transition_count=brainstem_state_transition_count,
         )
 
     def generate_json_report(self, result: BenchmarkResult) -> Path:
