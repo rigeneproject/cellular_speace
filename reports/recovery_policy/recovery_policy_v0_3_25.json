@@ -1,0 +1,79 @@
+{
+  "policy": {
+    "policy_id": "recovery_policy_lh_109e4ad6",
+    "source_audit_id": "lh_109e4ad6",
+    "source_tag": "v0.3.24-t40-long-horizon-adaptation-audit",
+    "selected_profile": "brainstem_no_gain",
+    "selected_profile_id": "lh3",
+    "selected_horizon": 250,
+    "created_at": "2026-05-16T21:52:03.407324+00:00",
+    "cognitive_score": 0.37907682732836434,
+    "coherence_phi": 0.34224206618628883,
+    "energy_efficiency": 0.20974999999999927,
+    "suppression_cost": 0.25,
+    "state_entropy": 1.8483,
+    "long_horizon_recovery_score": 0.2774,
+    "net_gain_slope": 0.000123,
+    "cognitive_score_slope": 0.000036,
+    "phi_slope": 0.000419,
+    "energy_slope": 0.000103,
+    "suppression_cost_slope": 0.000272,
+    "frozen_flags": {
+      "deep_regions_enabled": true,
+      "inter_region_plasticity_enabled": true,
+      "region_signal_routing_enabled": true,
+      "region_stability_controller_enabled": true,
+      "brainstem_controller_enabled": true,
+      "brainstem_gain_controller_enabled": false,
+      "deep_region_routing_calibrator_enabled": false
+    },
+    "frozen_gain_profile": {
+      "profile_name": "balanced",
+      "routing_gain": 1.0,
+      "plasticity_gain": 1.0,
+      "decay_gain": 1.0,
+      "energy_recovery_gain": 1.0,
+      "emergency_gain": 1.0,
+      "cognitive_preservation_gain": 1.0,
+      "global_brainstem_gain": 1.0
+    },
+    "frozen_brainstem_thresholds": {
+      "phi_threshold_stable": 0.25,
+      "phi_threshold_watchful": 0.2,
+      "phi_threshold_corrective": 0.15,
+      "phi_threshold_protective": 0.1,
+      "energy_threshold_emergency": 0.1,
+      "instability_threshold_watchful": 0.15,
+      "instability_threshold_corrective": 0.3,
+      "instability_threshold_protective": 0.5,
+      "instability_threshold_emergency": 0.85
+    },
+    "frozen_energy_profile": {
+      "profile_name": "energy_medium",
+      "ltp_rate": 0.05,
+      "ltd_rate": 0.03,
+      "energy_cost_per_update": 0.001,
+      "energy_modulation_strength": 1.0
+    },
+    "regression_guard_thresholds": {
+      "min_cognitive_score": 0.3412,
+      "min_phi": 0.308,
+      "min_energy_efficiency": 0.1888,
+      "max_suppression_cost": 0.3,
+      "min_long_horizon_recovery_score": 0.2219,
+      "max_emergency_state_ratio": 0.0,
+      "min_state_entropy": 1.4786
+    }
+  },
+  "runner_up_profiles": [
+    "brainstem_gain_t38"
+  ],
+  "selection_reason": "Selected 'brainstem_no_gain' (lh3) with policy score 0.3267 from audit lh_109e4ad6. Recovery score: 0.2774.",
+  "profile_scores": {
+    "lh2": -0.0002,
+    "lh3": 0.3267,
+    "lh4": 0.2779,
+    "lh5": 0.2723,
+    "lh6": 0.2654
+  }
+}
