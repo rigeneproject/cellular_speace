@@ -67,6 +67,16 @@ class PathwayCalibrationResult(BaseModel):
     tuning_skipped_updates: int = 0
     tuning_rolled_back_updates: int = 0
     tuning_pathway_utility_score: float = 0.0
+    # T30 — utility learning metrics
+    mean_pathway_utility: float = 0.0
+    best_pathway_utility: float = 0.0
+    worst_pathway_utility: float = 0.0
+    rewarded_pathways: int = 0
+    penalized_pathways: int = 0
+    pathway_reward_mean: float = 0.0
+    pathway_cost_mean: float = 0.0
+    utility_gated_updates: int = 0
+    utility_skipped_updates: int = 0
     passed: bool = True
     failure_reason: Optional[str] = None
 
@@ -215,6 +225,25 @@ class PathwayCalibrator:
                 tuner_profile_id="t9",
                 description="Routing + T29 adaptive full-guard tuning (all guards + rollback)",
             ),
+            # T30 — Pathway Utility Learning profiles
+            PathwayCalibrationProfile(
+                profile_id="p11",
+                name="routing_plus_tuning_with_utility_learning",
+                inter_region_plasticity_enabled=True,
+                region_signal_routing_enabled=True,
+                trigger_mode="hybrid",
+                tuner_profile_id="t9",
+                description="Routing + T29 tuning + T30 utility learning reward modulation",
+            ),
+            PathwayCalibrationProfile(
+                profile_id="p12",
+                name="routing_plus_tuning_utility_negative_penalty",
+                inter_region_plasticity_enabled=True,
+                region_signal_routing_enabled=True,
+                trigger_mode="hybrid",
+                tuner_profile_id="t9",
+                description="Routing + T29 tuning + T30 aggressive utility penalty on negative pathways",
+            ),
         ]
 
     # ------------------------------------------------------------------ #
@@ -322,6 +351,15 @@ class PathwayCalibrator:
             tuning_skipped_updates=m.pathway_tuning_skipped_updates,
             tuning_rolled_back_updates=m.pathway_tuning_rolled_back_updates,
             tuning_pathway_utility_score=0.0,
+            mean_pathway_utility=m.mean_pathway_utility,
+            best_pathway_utility=m.best_pathway_utility,
+            worst_pathway_utility=m.worst_pathway_utility,
+            rewarded_pathways=m.rewarded_pathways,
+            penalized_pathways=m.penalized_pathways,
+            pathway_reward_mean=m.pathway_reward_mean,
+            pathway_cost_mean=m.pathway_cost_mean,
+            utility_gated_updates=m.utility_gated_updates,
+            utility_skipped_updates=m.utility_skipped_updates,
             regression_score=0.0,
             distance_from_baseline=0.0,
             passed=True,

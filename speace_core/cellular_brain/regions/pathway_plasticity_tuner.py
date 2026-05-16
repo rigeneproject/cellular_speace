@@ -40,6 +40,10 @@ class PathwayTuningProfile(BaseModel):
     rollback_on_phi_drop: bool = True
     rollback_on_cognitive_drop: bool = True
 
+    # T30 — Utility gating
+    utility_guard_enabled: bool = False
+    min_utility_for_ltp: float = 0.0
+
     # Throttling
     max_pathway_updates_per_tick: int = 8
 
@@ -55,6 +59,10 @@ class PathwayTuningResult(BaseModel):
 
     ltp_updates: int = 0
     ltd_updates: int = 0
+
+    # T30 — utility gating counters
+    utility_gated_updates: int = 0
+    utility_skipped_updates: int = 0
 
     cognitive_score_before: float = 0.0
     cognitive_score_after: float = 0.0
@@ -199,6 +207,9 @@ class PathwayPlasticityTuner:
         profile: PathwayTuningProfile,
         metrics: Optional[SystemMetrics] = None,
         confidence_state: Any = None,
+        utility_learner = None,
+        pathway_id: str = "",
+        update_type: str = "",
     ) -> tuple[bool, str]:
         """Return (should_proceed, reason)."""
         # Causal score guard
@@ -216,6 +227,12 @@ class PathwayPlasticityTuner:
             uncertainty = getattr(confidence_state, "uncertainty_score", 1.0)
             if confidence < profile.min_confidence or uncertainty > profile.max_uncertainty:
                 return False, "confidence_guarded"
+
+        # T30 — Utility gate
+        if profile.utility_guard_enabled and utility_learner is not None and pathway_id:
+            proceed, reason = utility_learner.apply_utility_gate(pathway_id, update_type)
+            if not proceed:
+                return False, reason
 
         return True, "passed"
 
@@ -272,16 +289,20 @@ class PathwayPlasticityTuner:
         metrics: Optional[SystemMetrics] = None,
         confidence_state: Any = None,
         memory: Optional[MorphologicalMemory] = None,
+        utility_learner = None,
+        pathway_id: str = "",
     ) -> tuple[bool, bool, str]:
         """Return (accepted, rolled_back, reason)."""
         # Gate check
+        update_type = trigger_result.recommended_update or "ltp"
         proceed, gate_reason = self.gate_update(
-            trigger_result, profile, metrics, confidence_state
+            trigger_result, profile, metrics, confidence_state, utility_learner, pathway_id, update_type
         )
         if not proceed:
             if memory is not None:
+                event_type = MorphologyEventType.PATHWAY_UTILITY_GATE_APPLIED if gate_reason.startswith("utility") else MorphologyEventType.REGION_PLASTICITY_UPDATE_SKIPPED
                 memory.create_event(
-                    event_type=MorphologyEventType.REGION_PLASTICITY_UPDATE_SKIPPED,
+                    event_type=event_type,
                     source_id=trigger_result.source_region_id,
                     target_id=trigger_result.target_region_id,
                     metadata={
@@ -294,7 +315,6 @@ class PathwayPlasticityTuner:
 
         # Apply scaled update
         old_strength = pathway.pathway_strength
-        update_type = trigger_result.recommended_update or "ltp"
         self.apply_scaled_update(pathway, update_type, profile)
 
         # Simple phi-guard rollback proxy (optional: compare metrics before/after)
@@ -375,6 +395,7 @@ class PathwayPlasticityTuner:
         confidence_state: Any = None,
         routing_result: Any = None,
         tick: int = 0,
+        utility_learner = None,
     ) -> PathwayTuningResult:
         result = PathwayTuningResult(profile_id=profile.profile_id)
         if registry is None or registry.connectome is None:
@@ -425,6 +446,8 @@ class PathwayPlasticityTuner:
                 metrics,
                 confidence_state,
                 memory,
+                utility_learner=utility_learner,
+                pathway_id=f"{conn.source_region_id}->{conn.target_region_id}",
             )
 
             if accepted and not rolled_back:
@@ -441,6 +464,8 @@ class PathwayPlasticityTuner:
                 conn.strength = pw.pathway_strength
             elif not accepted:
                 result.skipped_updates += 1
+                if reason.startswith("utility"):
+                    result.utility_skipped_updates += 1
             elif rolled_back:
                 result.rolled_back_updates += 1
 

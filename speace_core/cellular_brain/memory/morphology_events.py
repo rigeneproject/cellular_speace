@@ -42,6 +42,12 @@ class MorphologyEventType(str, Enum):
     REGION_PLASTICITY_UPDATE_ROLLED_BACK = "region_plasticity_update_rolled_back"
     REGION_PATHWAY_UTILITY_UPDATED = "region_pathway_utility_updated"
     PATHWAY_TUNING_PROFILE_APPLIED = "pathway_tuning_profile_applied"
+    # T30 — Pathway Utility Learning
+    PATHWAY_REWARD_COMPUTED = "pathway_reward_computed"
+    PATHWAY_UTILITY_UPDATED = "pathway_utility_updated"
+    PATHWAY_UTILITY_POSITIVE = "pathway_utility_positive"
+    PATHWAY_UTILITY_NEGATIVE = "pathway_utility_negative"
+    PATHWAY_UTILITY_GATE_APPLIED = "pathway_utility_gate_applied"
 
 
 class MorphologyEvent(BaseModel):
