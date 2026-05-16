@@ -67,6 +67,9 @@ class MorphologyEventType(str, Enum):
     DEEP_REGION_SIGNAL_BOOSTED = "deep_region_signal_boosted"
     FLOW_MEMORY_RECORDED = "flow_memory_recorded"
     STABILITY_AWARE_ROUTING_CORRECTED = "stability_aware_routing_corrected"
+    # T34B-FIX — Activation explosion detection
+    REGION_ACTIVATION_EXPLOSION_DETECTED = "region_activation_explosion_detected"
+    REGION_ACTIVATION_CLAMPED = "region_activation_clamped"
 
 
 class MorphologyEvent(BaseModel):

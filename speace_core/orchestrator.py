@@ -216,11 +216,16 @@ class CellularBrainOrchestrator(BaseModel):
         # T33 — Region-Level Stability Controller (pre-routing check)
         routing_multiplier_map = None
         plasticity_multiplier_map = None
+        # T34B-FIX: Extract flow memory from router for stability controller
+        flow_memory = None
+        if self._region_signal_router is not None:
+            flow_memory = getattr(self._region_signal_router, "_t34_flow_memory", None)
         if self.region_stability_controller_enabled and self._region_registry is not None:
             pre_result = self._region_stability_controller.pre_routing_stability_check(
                 registry=self._region_registry,
                 circuit=self.circuit,
                 memory=self._memory,
+                flow_memory=flow_memory,
             )
             routing_multiplier_map = {
                 rid: self._region_stability_controller.get_routing_multiplier(rid)
@@ -268,6 +273,7 @@ class CellularBrainOrchestrator(BaseModel):
                 registry=self._region_registry,
                 circuit=self.circuit,
                 memory=self._memory,
+                flow_memory=flow_memory,
             )
 
         # Record morphological snapshot every tick

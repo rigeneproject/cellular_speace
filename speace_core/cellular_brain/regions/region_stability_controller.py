@@ -65,6 +65,34 @@ class RegionLevelStabilityController:
     # Stability state computation
     # ------------------------------------------------------------------ #
 
+    # ------------------------------------------------------------------ #
+    # T34B-FIX: Read actual neuron activations from circuit
+    # ------------------------------------------------------------------ #
+
+    @staticmethod
+    def _read_region_neuron_metrics(region: BrainRegion, circuit) -> Dict[str, float]:
+        """Return actual activation metrics for neurons in this region."""
+        if circuit is None:
+            return {"mean": 0.0, "max": 0.0, "count": 0}
+        all_neurons = (
+            getattr(circuit, "input_neurons", [])
+            + getattr(circuit, "hidden_neurons", [])
+            + getattr(circuit, "output_neurons", [])
+        )
+        region_neurons = [
+            n for n in all_neurons
+            if getattr(n, "region", None) == region.region_id or n.cell_id in region.neuron_ids
+        ]
+        if not region_neurons:
+            return {"mean": 0.0, "max": 0.0, "count": 0}
+        activations = [getattr(n, "activation", 0.0) for n in region_neurons]
+        abs_acts = [abs(a) for a in activations]
+        return {
+            "mean": sum(abs_acts) / len(abs_acts),
+            "max": max(abs_acts) if abs_acts else 0.0,
+            "count": len(region_neurons),
+        }
+
     @classmethod
     def compute_region_stability_state(
         cls,
@@ -73,23 +101,39 @@ class RegionLevelStabilityController:
         pathway_utility: Optional[float] = None,
         previous_activation: float = 0.0,
         previous_state: Optional[RegionStabilityState] = None,
+        flow_memory: Optional[Dict[str, Any]] = None,
     ) -> RegionStabilityState:
+        max_activation = 0.0
+        mean_activation = 0.0
         if circuit is None and previous_state is not None:
             phi = previous_state.phi
             energy = previous_state.energy
             activation = previous_state.activation
             signal_inflow = previous_state.signal_inflow
             signal_outflow = previous_state.signal_outflow
+            max_activation = getattr(previous_state, "max_activation", 0.0)
+            mean_activation = activation
         else:
             profile = region.compute_local_metrics(circuit)
             phi = profile.local_phi
             energy = profile.mean_energy
 
-            # Activation proxy: input buffer size normalized by neuron count
+            # T34B-FIX: Read actual neuron activations
             n_neurons = max(1, len(region.neuron_ids))
-            activation = min(1.0, len(region._input_buffer) / n_neurons)
-            signal_inflow = min(1.0, len(region._input_buffer) / (n_neurons * 2.0))
-            signal_outflow = min(1.0, len(region._output_buffer) / (n_neurons * 2.0))
+            neuron_metrics = cls._read_region_neuron_metrics(region, circuit)
+            mean_activation = neuron_metrics["mean"]
+            max_activation = neuron_metrics["max"]
+            # Clamp activation to [0,1] for state representation
+            activation = min(1.0, mean_activation)
+
+            # Signal inflow/outflow: prefer flow memory, fallback to buffer
+            if flow_memory and region.region_id in flow_memory:
+                mem = flow_memory[region.region_id]
+                signal_inflow = min(1.0, abs(getattr(mem, "last_signal_inflow", 0.0)))
+                signal_outflow = min(1.0, abs(getattr(mem, "last_signal_outflow", 0.0)))
+            else:
+                signal_inflow = min(1.0, len(region._input_buffer) / (n_neurons * 2.0))
+                signal_outflow = min(1.0, len(region._output_buffer) / (n_neurons * 2.0))
 
         # Activation volatility: absolute change from previous tick
         activation_volatility = abs(activation - previous_activation)
@@ -110,6 +154,8 @@ class RegionLevelStabilityController:
             signal_overflow=signal_overflow,
             energy_stress=energy_stress,
             negative_utility_pressure=negative_utility_pressure,
+            max_activation=max_activation,
+            mean_activation=mean_activation,
         )
 
         return RegionStabilityState(
@@ -135,6 +181,8 @@ class RegionLevelStabilityController:
         signal_overflow: float,
         energy_stress: float,
         negative_utility_pressure: float,
+        max_activation: float = 0.0,
+        mean_activation: float = 0.0,
     ) -> float:
         score = (
             0.35 * max(0.0, phi_baseline - phi)
@@ -143,6 +191,11 @@ class RegionLevelStabilityController:
             + 0.10 * energy_stress
             + 0.10 * negative_utility_pressure
         )
+        # T34B-FIX: Activation explosion guards
+        if max_activation > 5.0:
+            score += 0.40
+        if abs(mean_activation) > 1.0:
+            score += 0.30
         return round(max(0.0, min(1.0, score)), 4)
 
     # ------------------------------------------------------------------ #
@@ -230,16 +283,18 @@ class RegionLevelStabilityController:
         registry: RegionRegistry,
         circuit,
         memory: Optional[MorphologicalMemory] = None,
+        flow_memory: Optional[Dict[str, Any]] = None,
     ) -> RegionStabilityResult:
-        return self._run_stability_check(registry, circuit, memory, phase="pre")
+        return self._run_stability_check(registry, circuit, memory, phase="pre", flow_memory=flow_memory)
 
     def post_routing_stability_check(
         self,
         registry: RegionRegistry,
         circuit,
         memory: Optional[MorphologicalMemory] = None,
+        flow_memory: Optional[Dict[str, Any]] = None,
     ) -> RegionStabilityResult:
-        return self._run_stability_check(registry, circuit, memory, phase="post")
+        return self._run_stability_check(registry, circuit, memory, phase="post", flow_memory=flow_memory)
 
     def _run_stability_check(
         self,
@@ -247,6 +302,7 @@ class RegionLevelStabilityController:
         circuit,
         memory: Optional[MorphologicalMemory],
         phase: str = "pre",
+        flow_memory: Optional[Dict[str, Any]] = None,
     ) -> RegionStabilityResult:
         regions = list(registry.regions.values())
         states: List[RegionStabilityState] = []
@@ -279,6 +335,7 @@ class RegionLevelStabilityController:
                 circuit=circuit,
                 previous_activation=prev_activation,
                 previous_state=prev,
+                flow_memory=flow_memory,
             )
             if prev is not None:
                 state.cooldown_remaining = prev.cooldown_remaining
@@ -296,6 +353,7 @@ class RegionLevelStabilityController:
                         "phase": phase,
                         "instability_score": state.instability_score,
                         "phi": state.phi,
+                        "activation": state.activation,
                     },
                 )
 
@@ -305,6 +363,17 @@ class RegionLevelStabilityController:
                 if action is not None:
                     actions.append(action)
                     self.apply_stability_action(region, action, memory)
+                    # T34B-FIX: Log activation explosion if triggered by high activation
+                    if state.activation >= 1.0 and memory is not None:
+                        memory.create_event(
+                            event_type=MorphologyEventType.REGION_ACTIVATION_EXPLOSION_DETECTED,
+                            region_id=region.region_id,
+                            metadata={
+                                "instability_score": state.instability_score,
+                                "activation": state.activation,
+                                "action_type": action.action_type,
+                            },
+                        )
 
         # Brainstem override if many regions unstable
         if (

@@ -369,3 +369,224 @@ def test_region_stability_result_model():
     assert result.unstable_regions == 0
     assert result.mean_damping_factor == 1.0
     assert result.phi_guard_triggered is False
+
+
+# ---------------------------------------------------------------------------
+# 11. T34B-FIX — Actual neuron activation sensing
+# ---------------------------------------------------------------------------
+
+def test_read_region_neuron_metrics_empty():
+    metrics = RegionLevelStabilityController._read_region_neuron_metrics(
+        region=BrainRegion(region_id="empty", region_type="test"),
+        circuit=None,
+    )
+    assert metrics == {"mean": 0.0, "max": 0.0, "count": 0}
+
+
+def test_read_region_neuron_metrics_real_activations():
+    from speace_core.cellular_brain.circuits.neural_circuit import NeuralCircuit
+    from speace_core.cellular_brain.cells.digital_neuron import DigitalNeuron
+
+    n1 = DigitalNeuron(cell_id="n1", role="digital_neuron", region="sensory", activation=0.5)
+    n2 = DigitalNeuron(cell_id="n2", role="digital_neuron", region="sensory", activation=-0.3)
+    n3 = DigitalNeuron(cell_id="n3", role="digital_neuron", region="motor", activation=0.8)
+    circuit = NeuralCircuit(
+        circuit_id="test",
+        input_neurons=[],
+        hidden_neurons=[n1, n2, n3],
+        output_neurons=[],
+        synapses=[],
+        astrocytes=[],
+        microglia=[],
+        oligodendrocytes=[],
+    )
+    region = BrainRegion(
+        region_id="sensory",
+        region_type="sensory",
+        neuron_ids=["n1", "n2"],
+    )
+    metrics = RegionLevelStabilityController._read_region_neuron_metrics(region, circuit)
+    assert metrics["count"] == 2
+    assert metrics["mean"] == (0.5 + 0.3) / 2  # abs values
+    assert metrics["max"] == 0.5
+
+
+# ---------------------------------------------------------------------------
+# 12. T34B-FIX — Activation explosion guard
+# ---------------------------------------------------------------------------
+
+def test_compute_instability_score_explosion_max():
+    score = RegionLevelStabilityController.compute_instability_score(
+        phi_baseline=0.25,
+        phi=0.25,
+        activation_volatility=0.0,
+        signal_overflow=0.0,
+        energy_stress=0.0,
+        negative_utility_pressure=0.0,
+        max_activation=6.0,
+        mean_activation=0.0,
+    )
+    assert score == 0.40
+
+
+def test_compute_instability_score_explosion_mean():
+    score = RegionLevelStabilityController.compute_instability_score(
+        phi_baseline=0.25,
+        phi=0.25,
+        activation_volatility=0.0,
+        signal_overflow=0.0,
+        energy_stress=0.0,
+        negative_utility_pressure=0.0,
+        max_activation=0.0,
+        mean_activation=1.5,
+    )
+    assert score == 0.30
+
+
+def test_compute_instability_score_explosion_both():
+    score = RegionLevelStabilityController.compute_instability_score(
+        phi_baseline=0.25,
+        phi=0.25,
+        activation_volatility=0.0,
+        signal_overflow=0.0,
+        energy_stress=0.0,
+        negative_utility_pressure=0.0,
+        max_activation=6.0,
+        mean_activation=1.5,
+    )
+    assert score == 0.70
+
+
+def test_compute_instability_score_explosion_clamped():
+    score = RegionLevelStabilityController.compute_instability_score(
+        phi_baseline=0.25,
+        phi=0.0,
+        activation_volatility=0.5,
+        signal_overflow=0.5,
+        energy_stress=1.0,
+        negative_utility_pressure=1.0,
+        max_activation=6.0,
+        mean_activation=2.0,
+    )
+    # Base: 0.35*0.25 + 0.25*0.5 + 0.20*0.5 + 0.10*1.0 + 0.10*1.0 = 0.0875+0.125+0.1+0.1+0.1 = 0.5125
+    # +0.40 +0.30 = 1.2125 -> clamped to 1.0
+    assert score == 1.0
+
+
+# ---------------------------------------------------------------------------
+# 13. T34B-FIX — Exploding region triggers action
+# ---------------------------------------------------------------------------
+
+def test_exploding_region_triggers_hard_damping(registry):
+    from speace_core.cellular_brain.circuits.neural_circuit import NeuralCircuit
+    from speace_core.cellular_brain.cells.digital_neuron import DigitalNeuron
+
+    # Create neurons with explosive activation
+    n1 = DigitalNeuron(cell_id="n_sensory_1", role="digital_neuron", region="sensory", activation=6.0)
+    n2 = DigitalNeuron(cell_id="n_sensory_2", role="digital_neuron", region="sensory", activation=5.0)
+    circuit = NeuralCircuit(
+        circuit_id="test",
+        input_neurons=[],
+        hidden_neurons=[n1, n2],
+        output_neurons=[],
+        synapses=[],
+        astrocytes=[],
+        microglia=[],
+        oligodendrocytes=[],
+    )
+    controller = RegionLevelStabilityController()
+    mem = MorphologicalMemory()
+    result = controller.pre_routing_stability_check(registry, circuit=circuit, memory=mem)
+    assert result.actions_applied > 0
+    assert result.unstable_regions > 0
+    assert any(e.event_type == MorphologyEventType.REGION_ACTIVATION_EXPLOSION_DETECTED for e in mem.events)
+
+
+def test_exploding_region_triggers_routing_block_or_cooldown(registry):
+    from speace_core.cellular_brain.circuits.neural_circuit import NeuralCircuit
+    from speace_core.cellular_brain.cells.digital_neuron import DigitalNeuron
+
+    # Extreme explosion -> routing block
+    neurons = [
+        DigitalNeuron(cell_id=f"n_{rid}_1", role="digital_neuron", region=rid, activation=10.0)
+        for rid in registry.regions
+    ]
+    circuit = NeuralCircuit(
+        circuit_id="test",
+        input_neurons=[],
+        hidden_neurons=neurons,
+        output_neurons=[],
+        synapses=[],
+        astrocytes=[],
+        microglia=[],
+        oligodendrocytes=[],
+    )
+    controller = RegionLevelStabilityController()
+    mem = MorphologicalMemory()
+    result = controller.pre_routing_stability_check(registry, circuit=circuit, memory=mem)
+    assert result.actions_applied > 0
+    # Should trigger brainstem override when many regions explode
+    assert result.brainstem_override_triggered is True
+
+
+# ---------------------------------------------------------------------------
+# 14. T34B-FIX — Flow memory integration
+# ---------------------------------------------------------------------------
+
+def test_stability_check_uses_router_flow_memory(registry):
+    controller = RegionLevelStabilityController()
+    mem = MorphologicalMemory()
+    flow_mem = {
+        "sensory": type("FakeFlow", (), {"last_signal_inflow": 0.8, "last_signal_outflow": 0.2})(),
+    }
+    result = controller.pre_routing_stability_check(registry, circuit=None, memory=mem, flow_memory=flow_mem)
+    assert result.regions_checked == 5
+    # sensory should have higher instability due to signal_overflow = 0.8 - 0.2 = 0.6
+    sensory_state = controller._region_states.get("sensory")
+    assert sensory_state is not None
+    assert sensory_state.signal_inflow == 0.8
+    assert sensory_state.signal_outflow == 0.2
+
+
+def test_flow_memory_fallback_to_buffer(registry):
+    controller = RegionLevelStabilityController()
+    mem = MorphologicalMemory()
+    # No flow memory provided -> falls back to empty buffers (0.0)
+    result = controller.pre_routing_stability_check(registry, circuit=None, memory=mem, flow_memory=None)
+    assert result.regions_checked == 5
+    sensory_state = controller._region_states.get("sensory")
+    assert sensory_state is not None
+    assert sensory_state.signal_inflow == 0.0
+    assert sensory_state.signal_outflow == 0.0
+
+
+# ---------------------------------------------------------------------------
+# 15. T34B-FIX — No zero instability with high activation
+# ---------------------------------------------------------------------------
+
+def test_high_activation_produces_instability(registry):
+    from speace_core.cellular_brain.circuits.neural_circuit import NeuralCircuit
+    from speace_core.cellular_brain.cells.digital_neuron import DigitalNeuron
+
+    neurons = [
+        DigitalNeuron(cell_id=f"n_{rid}_1", role="digital_neuron", region=rid, activation=2.0)
+        for rid in ["sensory", "limbic"]
+    ]
+    circuit = NeuralCircuit(
+        circuit_id="test",
+        input_neurons=[],
+        hidden_neurons=neurons,
+        output_neurons=[],
+        synapses=[],
+        astrocytes=[],
+        microglia=[],
+        oligodendrocytes=[],
+    )
+    controller = RegionLevelStabilityController()
+    mem = MorphologicalMemory()
+    result = controller.pre_routing_stability_check(registry, circuit=circuit, memory=mem)
+
+    # At least one region should be unstable (mean_activation=2.0 > 1.0 => +0.30)
+    assert result.unstable_regions > 0
+    assert result.mean_instability_score > 0.0
+
