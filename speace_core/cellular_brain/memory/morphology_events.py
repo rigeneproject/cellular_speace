@@ -60,6 +60,13 @@ class MorphologyEventType(str, Enum):
     REGION_COOLDOWN_STARTED = "region_cooldown_started"
     BRAINSTEM_STABILITY_OVERRIDE = "brainstem_stability_override"
     REGION_STABILITY_RECOVERED = "region_stability_recovered"
+    # T34 — Deep Region Routing Calibration
+    DEEP_REGION_ROUTING_CALIBRATED = "deep_region_routing_calibrated"
+    TOP_K_ROUTING_APPLIED = "top_k_routing_applied"
+    REGIONAL_GAIN_APPLIED = "regional_gain_applied"
+    DEEP_REGION_SIGNAL_BOOSTED = "deep_region_signal_boosted"
+    FLOW_MEMORY_RECORDED = "flow_memory_recorded"
+    STABILITY_AWARE_ROUTING_CORRECTED = "stability_aware_routing_corrected"
 
 
 class MorphologyEvent(BaseModel):

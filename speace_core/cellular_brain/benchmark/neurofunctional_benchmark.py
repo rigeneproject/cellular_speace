@@ -107,6 +107,16 @@ class BenchmarkMetrics(BaseModel):
     brainstem_override_count: int = 0
     phi_recovery_score: float = 0.0
     stability_controller_active: bool = False
+    # T34 — Deep Region Routing Calibration metrics
+    top_k_routing_active: bool = False
+    mean_deep_region_activation: float = 0.0
+    deep_region_routing_efficiency: float = 0.0
+    regional_gain_applied: bool = False
+    flow_memory_enabled: bool = False
+    stability_aware_routing_active: bool = False
+    deep_region_targeted_signals: int = 0
+    mean_regional_signal_gain: float = 0.0
+    deep_region_phi_recovery: float = 0.0
 
 
 class BenchmarkResult(BaseModel):
@@ -663,6 +673,52 @@ class NeuroFunctionalBenchmark:
             # Approximate using baseline vs final if controller was active
             phi_recovery_score = max(0.0, final.coherence_phi - baseline.coherence_phi)
 
+        # T34 — Deep Region Routing Calibration metrics
+        top_k_routing_active = False
+        mean_deep_region_activation = 0.0
+        deep_region_routing_efficiency = 0.0
+        regional_gain_applied = False
+        flow_memory_enabled = False
+        stability_aware_routing_active = False
+        deep_region_targeted_signals = 0
+        mean_regional_signal_gain = 0.0
+        deep_region_phi_recovery = 0.0
+        router = getattr(self.orch, "_region_signal_router", None)
+        if router is not None:
+            t34_profile = getattr(router, "_t34_profile", None)
+            if t34_profile is not None:
+                top_k_routing_active = t34_profile.top_k_routing_active
+                flow_memory_enabled = t34_profile.flow_memory_enabled
+                stability_aware_routing_active = t34_profile.stability_aware_routing
+                regional_gain_applied = bool(t34_profile.regional_gain_map)
+                gain_map = getattr(router, "_t34_gain_map", {})
+                if gain_map:
+                    mean_regional_signal_gain = sum(gain_map.values()) / len(gain_map)
+
+        # Deep region activation proxy from last routing result
+        last_routing = getattr(self.orch, "last_routing_result", None)
+        if last_routing is not None:
+            deep_region_targeted_signals = getattr(last_routing, "deep_region_targeted_signals", 0) or 0
+            # Efficiency = delivered / (routed + 1e-12)
+            if last_routing.routed_signals > 0:
+                deep_region_routing_efficiency = last_routing.delivered_signals / last_routing.routed_signals
+
+        # Deep region activation proxy: mean activation of deep-region neurons
+        region_registry = self.orch.region_registry
+        if region_registry is not None:
+            deep_regions = {"limbic", "hippocampus", "default_mode", "prefrontal", "cerebellar", "brainstem_homeostatic"}
+            all_neurons = self.orch.circuit.input_neurons + self.orch.circuit.hidden_neurons + self.orch.circuit.output_neurons
+            deep_activations = [
+                abs(getattr(n, "activation", 0.0))
+                for n in all_neurons
+                if getattr(n, "region", None) in deep_regions
+            ]
+            if deep_activations:
+                mean_deep_region_activation = sum(deep_activations) / len(deep_activations)
+
+        # Phi recovery specific to deep region calibration
+        deep_region_phi_recovery = max(0.0, final.coherence_phi - baseline.coherence_phi)
+
         return BenchmarkMetrics(
             accuracy_score=final.accuracy,
             coherence_phi=final.coherence_phi,
@@ -739,6 +795,15 @@ class NeuroFunctionalBenchmark:
             brainstem_override_count=brainstem_override_count,
             phi_recovery_score=phi_recovery_score,
             stability_controller_active=stability_controller_active,
+            top_k_routing_active=top_k_routing_active,
+            mean_deep_region_activation=mean_deep_region_activation,
+            deep_region_routing_efficiency=deep_region_routing_efficiency,
+            regional_gain_applied=regional_gain_applied,
+            flow_memory_enabled=flow_memory_enabled,
+            stability_aware_routing_active=stability_aware_routing_active,
+            deep_region_targeted_signals=deep_region_targeted_signals,
+            mean_regional_signal_gain=mean_regional_signal_gain,
+            deep_region_phi_recovery=deep_region_phi_recovery,
         )
 
     def generate_json_report(self, result: BenchmarkResult) -> Path:

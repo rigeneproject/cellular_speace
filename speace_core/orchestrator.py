@@ -45,6 +45,10 @@ from speace_core.cellular_brain.regions.region_signal_router import (
 from speace_core.cellular_brain.regions.region_stability_controller import (
     RegionLevelStabilityController,
 )
+from speace_core.cellular_brain.regions.deep_region_routing_calibrator import (
+    DeepRegionRoutingCalibrator,
+    DeepRegionRoutingProfile,
+)
 from speace_core.dna.models import SharedGenome
 
 
@@ -87,8 +91,11 @@ class CellularBrainOrchestrator(BaseModel):
     region_architecture_enabled: bool = True
     deep_regions_enabled: bool = True
     region_stability_controller_enabled: bool = False
+    deep_region_routing_calibrator_enabled: bool = False
     _region_registry: RegionRegistry | None = None
     _region_stability_controller: RegionLevelStabilityController | None = None
+    _deep_region_routing_calibrator: DeepRegionRoutingCalibrator | None = None
+    _deep_region_routing_profile: DeepRegionRoutingProfile | None = None
 
     class Config:
         arbitrary_types_allowed = True
@@ -124,6 +131,16 @@ class CellularBrainOrchestrator(BaseModel):
             self._region_stability_controller = RegionLevelStabilityController()
         else:
             self._region_stability_controller = None
+
+        if self.deep_region_routing_calibrator_enabled:
+            profile = self._deep_region_routing_profile or DeepRegionRoutingProfile(
+                profile_id="orch_default",
+                name="orchestrator_default",
+            )
+            self._deep_region_routing_calibrator = DeepRegionRoutingCalibrator(profile=profile)
+            self._deep_region_routing_calibrator.apply_profile_to_router(self._region_signal_router)
+        else:
+            self._deep_region_routing_calibrator = None
 
     async def run_ticks(self, n_ticks: int) -> None:
         for _ in range(n_ticks):
@@ -226,6 +243,7 @@ class CellularBrainOrchestrator(BaseModel):
                 memory=self._memory,
                 confidence_score=confidence_score,
                 routing_multiplier_map=routing_multiplier_map,
+                current_tick=self.current_tick,
             )
 
         # Inter-Region Plasticity (T23)

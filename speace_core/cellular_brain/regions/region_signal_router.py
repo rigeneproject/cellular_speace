@@ -102,6 +102,20 @@ class RegionSignalRouter:
             * self.signal_gain
             * confidence_weight
         )
+
+        # T34 — regional gain multipliers
+        gain_map = getattr(self, "_t34_gain_map", None)
+        if gain_map is not None:
+            regional_gain = gain_map.get(target_region_id, 1.0)
+            signal_strength *= regional_gain
+
+        # T34 — deep-region signal boost
+        t34_profile = getattr(self, "_t34_profile", None)
+        if t34_profile is not None:
+            deep_types = getattr(self, "_t34_deep_region_types", set())
+            if target_region_id in deep_types:
+                signal_strength *= t34_profile.deep_region_signal_boost
+
         energy_cost = self.energy_cost_per_signal
 
         return RegionSignal(
@@ -130,12 +144,53 @@ class RegionSignalRouter:
             signal.reason = "no_target_neurons"
             return False
 
+        # T34 — top-k targeting if profile is active
+        t34_profile = getattr(self, "_t34_profile", None)
+        if t34_profile is not None and t34_profile.top_k_routing_active:
+            from speace_core.cellular_brain.regions.deep_region_routing_calibrator import (
+                DeepRegionRoutingCalibrator,
+            )
+            k = max(t34_profile.top_k_min, int(t34_profile.top_k_ratio * len(target_neurons)))
+            k = min(k, len(target_neurons))
+            target_neurons = DeepRegionRoutingCalibrator.select_top_k_neurons(target_neurons, k)
+
         increment = signal.signal_strength / len(target_neurons)
         for n in target_neurons:
             n.activation = getattr(n, "activation", 0.0) + increment
 
         signal.delivered = True
         signal.reason = "delivered"
+        return True
+
+    def route_signal_top_k(
+        self,
+        signal: RegionSignal,
+        target_region_id: str,
+        circuit: NeuralCircuit,
+        k: int,
+    ) -> bool:
+        """Deliver signal to top-k most active neurons in target region."""
+        all_neurons = circuit.input_neurons + circuit.hidden_neurons + circuit.output_neurons
+        target_neurons = [
+            n for n in all_neurons if getattr(n, "region", None) == target_region_id
+        ]
+        if not target_neurons:
+            signal.delivered = False
+            signal.reason = "no_target_neurons"
+            return False
+
+        if len(target_neurons) > k:
+            from speace_core.cellular_brain.regions.deep_region_routing_calibrator import (
+                DeepRegionRoutingCalibrator,
+            )
+            target_neurons = DeepRegionRoutingCalibrator.select_top_k_neurons(target_neurons, k)
+
+        increment = signal.signal_strength / len(target_neurons)
+        for n in target_neurons:
+            n.activation = getattr(n, "activation", 0.0) + increment
+
+        signal.delivered = True
+        signal.reason = "delivered_top_k"
         return True
 
     # ------------------------------------------------------------------ #
@@ -150,6 +205,7 @@ class RegionSignalRouter:
         memory: Optional[MorphologicalMemory] = None,
         confidence_score: float = 0.0,
         routing_multiplier_map: Optional[Dict[str, float]] = None,
+        current_tick: int = 0,
     ) -> RegionRoutingResult:
         result = RegionRoutingResult()
         if region_connectome is None or not region_connectome.connections:
@@ -159,12 +215,29 @@ class RegionSignalRouter:
         global_energy = metrics.mean_energy if metrics else 0.5
         multiplier_map = routing_multiplier_map or {}
 
+        # T34 — stability-aware routing multiplier correction
+        t34_profile = getattr(self, "_t34_profile", None)
+        t34_calibrator = None
+        if t34_profile is not None and t34_profile.stability_aware_routing:
+            from speace_core.cellular_brain.regions.deep_region_routing_calibrator import (
+                DeepRegionRoutingCalibrator,
+            )
+            t34_calibrator = DeepRegionRoutingCalibrator(profile=t34_profile)
+
         signals_routed = 0
+        deep_targeted = 0
         for conn in region_connectome.connections:
             if signals_routed >= self.max_signals_per_tick:
                 break
 
             multiplier = multiplier_map.get(conn.source_region_id, 1.0)
+
+            # T34 — stability-aware correction (don't fully suppress deep regions)
+            if t34_calibrator is not None:
+                multiplier = t34_calibrator.correct_routing_multiplier(
+                    conn.target_region_id, multiplier
+                )
+
             if multiplier <= 0.0:
                 result.blocked_signals += 1
                 continue
@@ -228,6 +301,13 @@ class RegionSignalRouter:
                 confidence_weight=confidence_weight,
             )
 
+            # Apply stability multiplier to signal strength
+            signal.signal_strength *= multiplier
+
+            # T34 — deep-region targeting tracking
+            if t34_calibrator is not None and t34_calibrator.is_deep_region(conn.target_region_id):
+                deep_targeted += 1
+
             if memory is not None:
                 memory.create_event(
                     event_type=MorphologyEventType.REGION_SIGNAL_ROUTED,
@@ -237,10 +317,37 @@ class RegionSignalRouter:
                         "signal_strength": signal.signal_strength,
                         "pathway_strength": conn.strength,
                         "confidence_weight": confidence_weight,
+                        "routing_multiplier": multiplier,
                     },
                 )
 
+            # T34 — snapshot pre-route activation for flow delta tracking
+            if t34_profile is not None and t34_profile.flow_memory_enabled:
+                all_neurons = circuit.input_neurons + circuit.hidden_neurons + circuit.output_neurons
+                for n in all_neurons:
+                    if getattr(n, "region", None) == conn.target_region_id:
+                        n._pre_route_activation = getattr(n, "activation", 0.0)
+
             delivered = self.route_signal(signal, conn.target_region_id, circuit)
+
+            # T34 — flow memory tracking
+            if delivered and t34_profile is not None and t34_profile.flow_memory_enabled:
+                flow_mem = getattr(self, "_t34_flow_memory", None)
+                if flow_mem is not None:
+                    from speace_core.cellular_brain.regions.deep_region_routing_calibrator import (
+                        DeepRegionRoutingCalibrator,
+                    )
+                    cal = DeepRegionRoutingCalibrator(profile=t34_profile)
+                    cal._flow_memory = flow_mem
+                    cal.record_inflow(conn.target_region_id, signal.signal_strength, current_tick)
+                    cal.record_outflow(conn.source_region_id, signal.signal_strength, current_tick)
+                    # Activation delta tracking
+                    all_neurons = circuit.input_neurons + circuit.hidden_neurons + circuit.output_neurons
+                    pre_activations = {n.cell_id: getattr(n, "_pre_route_activation", getattr(n, "activation", 0.0)) for n in all_neurons if getattr(n, "region", None) == conn.target_region_id}
+                    post_activations = {n.cell_id: getattr(n, "activation", 0.0) for n in all_neurons if getattr(n, "region", None) == conn.target_region_id}
+                    if pre_activations and post_activations:
+                        deltas = [abs(post_activations.get(cid, 0.0) - pre_activations.get(cid, 0.0)) for cid in pre_activations]
+                        cal.record_activation_delta(conn.target_region_id, sum(deltas) / len(deltas))
 
             if delivered:
                 result.delivered_signals += 1
@@ -284,6 +391,7 @@ class RegionSignalRouter:
                     "total_signal_strength": result.total_signal_strength,
                     "mean_signal_strength": result.mean_signal_strength,
                     "regional_signal_flow_score": result.regional_signal_flow_score,
+                    "deep_region_targeted_signals": deep_targeted,
                 },
             )
 
