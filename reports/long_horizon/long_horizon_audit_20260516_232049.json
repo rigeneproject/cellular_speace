@@ -1,0 +1,772 @@
+{
+  "audit_id": "lh_109e4ad6",
+  "created_at": "2026-05-16T21:20:49.106873+00:00",
+  "profile_results": [
+    {
+      "profile": {
+        "profile_id": "lh0",
+        "name": "baseline_four_region",
+        "deep_regions_enabled": false,
+        "inter_region_plasticity_enabled": true,
+        "region_signal_routing_enabled": false,
+        "trigger_mode": "hard_spike",
+        "ltp_rate": 0.05,
+        "ltd_rate": 0.03,
+        "min_strength": 0.0,
+        "max_strength": 1.0,
+        "stdp_window": 1,
+        "energy_cost_per_update": 0.001,
+        "confidence_modulation_strength": 1.0,
+        "energy_modulation_strength": 1.0,
+        "tuner_profile_id": null,
+        "region_stability_controller_enabled": false,
+        "description": "4-region baseline without deep regions"
+      },
+      "trajectory_points": [
+        {
+          "tick": 5,
+          "cognitive_score": 0.4508477277829832,
+          "phi": 0.24821585154905046,
+          "energy_efficiency": 0.21549999999999966,
+          "suppression_cost": 0.0,
+          "net_gain": 0.0,
+          "brainstem_state": "stable",
+          "state_distribution": {},
+          "functional_improvement": 0.19253038315448823
+        },
+        {
+          "tick": 25,
+          "cognitive_score": 0.3450784273223516,
+          "phi": 0.17568276161175833,
+          "energy_efficiency": 0.19961249999999967,
+          "suppression_cost": 0.0,
+          "net_gain": 0.0,
+          "brainstem_state": "stable",
+          "state_distribution": {},
+          "functional_improvement": 0.0
+        },
+        {
+          "tick": 50,
+          "cognitive_score": 0.41314274667743356,
+          "phi": 0.25437844602130166,
+          "energy_efficiency": 0.18924999999999975,
+          "suppression_cost": 0.0,
+          "net_gain": 0.0,
+          "brainstem_state": "stable",
+          "state_distribution": {},
+          "functional_improvement": 0.09253038315448825
+        },
+        {
+          "tick": 100,
+          "cognitive_score": 0.38973775988919146,
+          "phi": 0.2835012994459575,
+          "energy_efficiency": 0.22024999999999967,
+          "suppression_cost": 0.0,
+          "net_gain": 0.0,
+          "brainstem_state": "stable",
+          "state_distribution": {},
+          "functional_improvement": 0.0
+        }
+      ],
+      "net_gain_slope": 0.0,
+      "cognitive_score_slope": 0.0,
+      "phi_slope": 0.0,
+      "energy_slope": 0.0,
+      "suppression_cost_slope": 0.0,
+      "protective_state_ratio_over_time": 0.0,
+      "corrective_state_ratio_over_time": 0.0,
+      "emergency_state_ratio_over_time": 0.0,
+      "state_entropy": 0.0,
+      "recovery_latency_ticks": -1,
+      "stabilization_tick": -1,
+      "gain_effect_accumulation": 0.0,
+      "long_horizon_recovery_score": 0.0,
+      "passed": false,
+      "failure_reason": "(34, 'Result too large')"
+    },
+    {
+      "profile": {
+        "profile_id": "lh1",
+        "name": "deep_regions_static",
+        "deep_regions_enabled": true,
+        "inter_region_plasticity_enabled": false,
+        "region_signal_routing_enabled": false,
+        "trigger_mode": "hard_spike",
+        "ltp_rate": 0.05,
+        "ltd_rate": 0.03,
+        "min_strength": 0.0,
+        "max_strength": 1.0,
+        "stdp_window": 1,
+        "energy_cost_per_update": 0.001,
+        "confidence_modulation_strength": 1.0,
+        "energy_modulation_strength": 1.0,
+        "tuner_profile_id": null,
+        "region_stability_controller_enabled": false,
+        "description": "Deep regions present but routing and plasticity disabled"
+      },
+      "trajectory_points": [
+        {
+          "tick": 5,
+          "cognitive_score": 0.45171698669655225,
+          "phi": 0.2506871461168957,
+          "energy_efficiency": 0.21799999999999967,
+          "suppression_cost": 0.0,
+          "net_gain": 0.001258990153067374,
+          "brainstem_state": "stable",
+          "state_distribution": {},
+          "functional_improvement": 0.19253038315448823
+        },
+        {
+          "tick": 25,
+          "cognitive_score": 0.40800118178605327,
+          "phi": 0.2358893715644006,
+          "energy_efficiency": 0.1796249999999997,
+          "suppression_cost": 0.0,
+          "net_gain": 0.05987421862772396,
+          "brainstem_state": "stable",
+          "state_distribution": {},
+          "functional_improvement": 0.09253038315448825
+        },
+        {
+          "tick": 50,
+          "cognitive_score": 0.38466511860570307,
+          "phi": 0.28800684302851565,
+          "energy_efficiency": 0.1804249999999997,
+          "suppression_cost": 0.0,
+          "net_gain": -0.023796410011372875,
+          "brainstem_state": "stable",
+          "state_distribution": {},
+          "functional_improvement": 0.0
+        },
+        {
+          "tick": 100,
+          "cognitive_score": 0.38522180146498963,
+          "phi": 0.2914451881009177,
+          "energy_efficiency": 0.17912499999999965,
+          "suppression_cost": 0.0,
+          "net_gain": -0.004030681437538641,
+          "brainstem_state": "stable",
+          "state_distribution": {},
+          "functional_improvement": 0.0006401384480606565
+        }
+      ],
+      "net_gain_slope": -0.000315,
+      "cognitive_score_slope": 0.0,
+      "phi_slope": 0.0,
+      "energy_slope": 0.0,
+      "suppression_cost_slope": 0.0,
+      "protective_state_ratio_over_time": 0.0,
+      "corrective_state_ratio_over_time": 0.0,
+      "emergency_state_ratio_over_time": 0.0,
+      "state_entropy": 0.0,
+      "recovery_latency_ticks": -1,
+      "stabilization_tick": -1,
+      "gain_effect_accumulation": 0.0,
+      "long_horizon_recovery_score": 0.0,
+      "passed": false,
+      "failure_reason": "(34, 'Result too large')"
+    },
+    {
+      "profile": {
+        "profile_id": "lh2",
+        "name": "deep_regions_routing_stability",
+        "deep_regions_enabled": true,
+        "inter_region_plasticity_enabled": true,
+        "region_signal_routing_enabled": true,
+        "trigger_mode": "hybrid",
+        "ltp_rate": 0.05,
+        "ltd_rate": 0.03,
+        "min_strength": 0.0,
+        "max_strength": 1.0,
+        "stdp_window": 1,
+        "energy_cost_per_update": 0.001,
+        "confidence_modulation_strength": 1.0,
+        "energy_modulation_strength": 1.0,
+        "tuner_profile_id": "t9",
+        "region_stability_controller_enabled": true,
+        "description": "Deep regions + routing + stability controller"
+      },
+      "trajectory_points": [
+        {
+          "tick": 5,
+          "cognitive_score": 0.40681767553515547,
+          "phi": 0.23506261760035962,
+          "energy_efficiency": 0.25470864197530835,
+          "suppression_cost": 0.0,
+          "net_gain": -0.03918096780116432,
+          "brainstem_state": "stable",
+          "state_distribution": {},
+          "functional_improvement": 0.09253038315448825
+        },
+        {
+          "tick": 25,
+          "cognitive_score": 0.47367546324780785,
+          "phi": 0.4556968464722667,
+          "energy_efficiency": 0.2015374999999997,
+          "suppression_cost": 0.0,
+          "net_gain": 0.18065582726107077,
+          "brainstem_state": "stable",
+          "state_distribution": {},
+          "functional_improvement": 0.2629556993974418
+        },
+        {
+          "tick": 50,
+          "cognitive_score": 0.3710522630937997,
+          "phi": 0.27948153120458197,
+          "energy_efficiency": 0.20924999999999963,
+          "suppression_cost": 0.0,
+          "net_gain": -0.02917102294771283,
+          "brainstem_state": "stable",
+          "state_distribution": {},
+          "functional_improvement": 0.0
+        },
+        {
+          "tick": 100,
+          "cognitive_score": 0.5171522531094903,
+          "phi": 0.484421085338676,
+          "energy_efficiency": 0.2135124999999996,
+          "suppression_cost": 0.0,
+          "net_gain": 0.18412200219037553,
+          "brainstem_state": "stable",
+          "state_distribution": {},
+          "functional_improvement": 0.3861464188403072
+        },
+        {
+          "tick": 250,
+          "cognitive_score": 0.3701025109119721,
+          "phi": 0.19088235827087563,
+          "energy_efficiency": 0.21344999999999903,
+          "suppression_cost": 0.0,
+          "net_gain": 0.0,
+          "brainstem_state": "stable",
+          "state_distribution": {},
+          "functional_improvement": 0.0
+        }
+      ],
+      "net_gain_slope": -0.000109,
+      "cognitive_score_slope": -0.000188,
+      "phi_slope": -0.000486,
+      "energy_slope": -0.000064,
+      "suppression_cost_slope": 0.0,
+      "protective_state_ratio_over_time": 0.0,
+      "corrective_state_ratio_over_time": 0.0,
+      "emergency_state_ratio_over_time": 0.0,
+      "state_entropy": -0.0,
+      "recovery_latency_ticks": -1,
+      "stabilization_tick": 1,
+      "gain_effect_accumulation": 0.0,
+      "long_horizon_recovery_score": -0.0002,
+      "passed": true,
+      "failure_reason": null
+    },
+    {
+      "profile": {
+        "profile_id": "lh3",
+        "name": "brainstem_no_gain",
+        "deep_regions_enabled": true,
+        "inter_region_plasticity_enabled": true,
+        "region_signal_routing_enabled": true,
+        "trigger_mode": "hybrid",
+        "ltp_rate": 0.05,
+        "ltd_rate": 0.03,
+        "min_strength": 0.0,
+        "max_strength": 1.0,
+        "stdp_window": 1,
+        "energy_cost_per_update": 0.001,
+        "confidence_modulation_strength": 1.0,
+        "energy_modulation_strength": 1.0,
+        "tuner_profile_id": "t9",
+        "region_stability_controller_enabled": true,
+        "description": "Brainstem enabled without adaptive gain controller",
+        "brainstem_controller_enabled": true,
+        "brainstem_gain_controller_enabled": false
+      },
+      "trajectory_points": [
+        {
+          "tick": 5,
+          "cognitive_score": 0.3502921116309968,
+          "phi": 0.24897517803802527,
+          "energy_efficiency": 0.2185185185185182,
+          "suppression_cost": 0.12,
+          "net_gain": -0.08326442042519597,
+          "brainstem_state": "protective",
+          "state_distribution": {
+            "stable": 1,
+            "watchful": 0,
+            "corrective": 3,
+            "protective": 2,
+            "emergency": 6
+          },
+          "functional_improvement": 0.0
+        },
+        {
+          "tick": 25,
+          "cognitive_score": 0.40454490399511955,
+          "phi": 0.23087985760973206,
+          "energy_efficiency": 0.16326249999999967,
+          "suppression_cost": 0.25,
+          "net_gain": 0.055430265133136654,
+          "brainstem_state": "emergency",
+          "state_distribution": {
+            "stable": 1,
+            "watchful": 0,
+            "corrective": 8,
+            "protective": 11,
+            "emergency": 32
+          },
+          "functional_improvement": 0.09253038315448825
+        },
+        {
+          "tick": 50,
+          "cognitive_score": 0.35478713259735073,
+          "phi": 0.255341912986754,
+          "energy_efficiency": 0.15812499999999968,
+          "suppression_cost": 0.25,
+          "net_gain": -0.04763773622557184,
+          "brainstem_state": "emergency",
+          "state_distribution": {
+            "stable": 1,
+            "watchful": 4,
+            "corrective": 18,
+            "protective": 26,
+            "emergency": 53
+          },
+          "functional_improvement": 0.0
+        },
+        {
+          "tick": 100,
+          "cognitive_score": 0.36175870901333607,
+          "phi": 0.25129354506668033,
+          "energy_efficiency": 0.20999999999999966,
+          "suppression_cost": 0.25,
+          "net_gain": -0.021667511488954214,
+          "brainstem_state": "emergency",
+          "state_distribution": {
+            "stable": 1,
+            "watchful": 19,
+            "corrective": 37,
+            "protective": 59,
+            "emergency": 86
+          },
+          "functional_improvement": 0.0
+        },
+        {
+          "tick": 250,
+          "cognitive_score": 0.37907682732836434,
+          "phi": 0.34224206618628883,
+          "energy_efficiency": 0.20974999999999927,
+          "suppression_cost": 0.25,
+          "net_gain": 0.0,
+          "brainstem_state": "emergency",
+          "state_distribution": {
+            "stable": 3,
+            "watchful": 51,
+            "corrective": 85,
+            "protective": 141,
+            "emergency": 222
+          },
+          "functional_improvement": 0.0514370165334318
+        }
+      ],
+      "net_gain_slope": 0.000123,
+      "cognitive_score_slope": 0.000036,
+      "phi_slope": 0.000419,
+      "energy_slope": 0.000103,
+      "suppression_cost_slope": 0.000272,
+      "protective_state_ratio_over_time": 0.0,
+      "corrective_state_ratio_over_time": 1.0,
+      "emergency_state_ratio_over_time": 0.0,
+      "state_entropy": 1.8483,
+      "recovery_latency_ticks": -1,
+      "stabilization_tick": 1,
+      "gain_effect_accumulation": 0.0,
+      "long_horizon_recovery_score": 0.2774,
+      "passed": true,
+      "failure_reason": null
+    },
+    {
+      "profile": {
+        "profile_id": "lh4",
+        "name": "brainstem_gain_t38",
+        "deep_regions_enabled": true,
+        "inter_region_plasticity_enabled": true,
+        "region_signal_routing_enabled": true,
+        "trigger_mode": "hybrid",
+        "ltp_rate": 0.05,
+        "ltd_rate": 0.03,
+        "min_strength": 0.0,
+        "max_strength": 1.0,
+        "stdp_window": 1,
+        "energy_cost_per_update": 0.001,
+        "confidence_modulation_strength": 1.0,
+        "energy_modulation_strength": 1.0,
+        "tuner_profile_id": "t9",
+        "region_stability_controller_enabled": true,
+        "description": "Brainstem with T38 gain sensitivity tuning (balanced)",
+        "brainstem_controller_enabled": true,
+        "brainstem_gain_controller_enabled": true,
+        "brainstem_gain_profile": "balanced"
+      },
+      "trajectory_points": [
+        {
+          "tick": 5,
+          "cognitive_score": 0.34904174212207945,
+          "phi": 0.23901962678973454,
+          "energy_efficiency": 0.22345679012345646,
+          "suppression_cost": 0.12,
+          "net_gain": -0.08582214735578765,
+          "brainstem_state": "protective",
+          "state_distribution": {
+            "stable": 4,
+            "watchful": 0,
+            "corrective": 0,
+            "protective": 2,
+            "emergency": 6
+          },
+          "functional_improvement": 0.0
+        },
+        {
+          "tick": 25,
+          "cognitive_score": 0.3499508693369657,
+          "phi": 0.2274762216848285,
+          "energy_efficiency": 0.16303749999999964,
+          "suppression_cost": 0.25,
+          "net_gain": 0.011483463924843871,
+          "brainstem_state": "emergency",
+          "state_distribution": {
+            "stable": 8,
+            "watchful": 0,
+            "corrective": 0,
+            "protective": 8,
+            "emergency": 36
+          },
+          "functional_improvement": 0.0
+        },
+        {
+          "tick": 50,
+          "cognitive_score": 0.42965075248446305,
+          "phi": 0.4230416914991625,
+          "energy_efficiency": 0.2121249999999996,
+          "suppression_cost": 0.0,
+          "net_gain": 0.0598231657209919,
+          "brainstem_state": "stable",
+          "state_distribution": {
+            "stable": 21,
+            "watchful": 0,
+            "corrective": 0,
+            "protective": 19,
+            "emergency": 62
+          },
+          "functional_improvement": 0.13223664184630546
+        },
+        {
+          "tick": 100,
+          "cognitive_score": 0.42273178068233985,
+          "phi": 0.47286359164781133,
+          "energy_efficiency": 0.20874999999999969,
+          "suppression_cost": 0.0,
+          "net_gain": 0.0974495908063711,
+          "brainstem_state": "stable",
+          "state_distribution": {
+            "stable": 50,
+            "watchful": 0,
+            "corrective": 0,
+            "protective": 45,
+            "emergency": 107
+          },
+          "functional_improvement": 0.1820585419949543
+        },
+        {
+          "tick": 250,
+          "cognitive_score": 0.35402529341896516,
+          "phi": 0.27323569078930365,
+          "energy_efficiency": 0.23849999999999935,
+          "suppression_cost": 0.25,
+          "net_gain": 0.0,
+          "brainstem_state": "emergency",
+          "state_distribution": {
+            "stable": 142,
+            "watchful": 0,
+            "corrective": 0,
+            "protective": 141,
+            "emergency": 219
+          },
+          "functional_improvement": 0.0
+        }
+      ],
+      "net_gain_slope": 0.000141,
+      "cognitive_score_slope": -0.000029,
+      "phi_slope": 0.000077,
+      "energy_slope": 0.000164,
+      "suppression_cost_slope": 0.000415,
+      "protective_state_ratio_over_time": 0.0,
+      "corrective_state_ratio_over_time": 1.0,
+      "emergency_state_ratio_over_time": 0.0,
+      "state_entropy": 1.552,
+      "recovery_latency_ticks": -1,
+      "stabilization_tick": 1,
+      "gain_effect_accumulation": 0.0,
+      "long_horizon_recovery_score": 0.2328,
+      "passed": true,
+      "failure_reason": null
+    },
+    {
+      "profile": {
+        "profile_id": "lh5",
+        "name": "brainstem_gain_coupling_t39",
+        "deep_regions_enabled": true,
+        "inter_region_plasticity_enabled": true,
+        "region_signal_routing_enabled": true,
+        "trigger_mode": "hybrid",
+        "ltp_rate": 0.05,
+        "ltd_rate": 0.03,
+        "min_strength": 0.0,
+        "max_strength": 1.0,
+        "stdp_window": 1,
+        "energy_cost_per_update": 0.001,
+        "confidence_modulation_strength": 1.0,
+        "energy_modulation_strength": 1.0,
+        "tuner_profile_id": "t9",
+        "region_stability_controller_enabled": true,
+        "description": "Brainstem with T39 gain input coupling (cognitive preserving)",
+        "brainstem_controller_enabled": true,
+        "brainstem_gain_controller_enabled": true,
+        "brainstem_gain_profile": "cognitive_preserving"
+      },
+      "trajectory_points": [
+        {
+          "tick": 5,
+          "cognitive_score": 0.37562895745795644,
+          "phi": 0.28621496272837876,
+          "energy_efficiency": 0.20444444444444412,
+          "suppression_cost": 0.12,
+          "net_gain": -0.06396030103788317,
+          "brainstem_state": "protective",
+          "state_distribution": {
+            "stable": 4,
+            "watchful": 0,
+            "corrective": 0,
+            "protective": 2,
+            "emergency": 6
+          },
+          "functional_improvement": 0.0
+        },
+        {
+          "tick": 25,
+          "cognitive_score": 0.3474080114325987,
+          "phi": 0.21291505716299364,
+          "energy_efficiency": 0.16549999999999968,
+          "suppression_cost": 0.12,
+          "net_gain": 0.006945136737420015,
+          "brainstem_state": "protective",
+          "state_distribution": {
+            "stable": 12,
+            "watchful": 0,
+            "corrective": 0,
+            "protective": 9,
+            "emergency": 31
+          },
+          "functional_improvement": 0.0
+        },
+        {
+          "tick": 50,
+          "cognitive_score": 0.4145722212881022,
+          "phi": 0.44250908751129303,
+          "energy_efficiency": 0.20599999999999968,
+          "suppression_cost": 0.0,
+          "net_gain": 0.06118565488808829,
+          "brainstem_state": "stable",
+          "state_distribution": {
+            "stable": 25,
+            "watchful": 0,
+            "corrective": 0,
+            "protective": 23,
+            "emergency": 54
+          },
+          "functional_improvement": 0.151704037858436
+        },
+        {
+          "tick": 100,
+          "cognitive_score": 0.4021921304349435,
+          "phi": 0.21893786480885147,
+          "energy_efficiency": 0.1634999999999995,
+          "suppression_cost": 0.12,
+          "net_gain": 0.0022946847172095504,
+          "brainstem_state": "protective",
+          "state_distribution": {
+            "stable": 53,
+            "watchful": 0,
+            "corrective": 0,
+            "protective": 53,
+            "emergency": 96
+          },
+          "functional_improvement": 0.09253038315448825
+        },
+        {
+          "tick": 250,
+          "cognitive_score": 0.3809893118019425,
+          "phi": 0.32847222836554757,
+          "energy_efficiency": 0.20912499999999962,
+          "suppression_cost": 0.25,
+          "net_gain": 0.0,
+          "brainstem_state": "emergency",
+          "state_distribution": {
+            "stable": 148,
+            "watchful": 0,
+            "corrective": 0,
+            "protective": 144,
+            "emergency": 210
+          },
+          "functional_improvement": 0.03766717871269054
+        }
+      ],
+      "net_gain_slope": 0.000067,
+      "cognitive_score_slope": 0.000041,
+      "phi_slope": 0.000125,
+      "energy_slope": 0.000065,
+      "suppression_cost_slope": 0.000663,
+      "protective_state_ratio_over_time": 0.0,
+      "corrective_state_ratio_over_time": 0.0,
+      "emergency_state_ratio_over_time": 0.0,
+      "state_entropy": 1.5623,
+      "recovery_latency_ticks": -1,
+      "stabilization_tick": 1,
+      "gain_effect_accumulation": 0.0,
+      "long_horizon_recovery_score": 0.2344,
+      "passed": true,
+      "failure_reason": null
+    },
+    {
+      "profile": {
+        "profile_id": "lh6",
+        "name": "full_organism_gain_coupled",
+        "deep_regions_enabled": true,
+        "inter_region_plasticity_enabled": true,
+        "region_signal_routing_enabled": true,
+        "trigger_mode": "hybrid",
+        "ltp_rate": 0.05,
+        "ltd_rate": 0.03,
+        "min_strength": 0.0,
+        "max_strength": 1.0,
+        "stdp_window": 1,
+        "energy_cost_per_update": 0.001,
+        "confidence_modulation_strength": 1.0,
+        "energy_modulation_strength": 1.0,
+        "tuner_profile_id": "t9",
+        "region_stability_controller_enabled": true,
+        "description": "Full organism: deep regions + routing + stability + T34 + T39 gain coupling",
+        "deep_region_routing_calibrator_enabled": true,
+        "brainstem_controller_enabled": true,
+        "brainstem_gain_controller_enabled": true,
+        "brainstem_gain_profile": "cognitive_preserving",
+        "t34_profile_id": "p3"
+      },
+      "trajectory_points": [
+        {
+          "tick": 5,
+          "cognitive_score": 0.4572009662751192,
+          "phi": 0.27698204400973037,
+          "energy_efficiency": 0.21949999999999967,
+          "suppression_cost": 0.12,
+          "net_gain": 0.01045050543663117,
+          "brainstem_state": "protective",
+          "state_distribution": {
+            "stable": 3,
+            "watchful": 0,
+            "corrective": 0,
+            "protective": 2,
+            "emergency": 7
+          },
+          "functional_improvement": 0.19253038315448823
+        },
+        {
+          "tick": 25,
+          "cognitive_score": 0.3999409262098991,
+          "phi": 0.19427559368362934,
+          "energy_efficiency": 0.1813749999999997,
+          "suppression_cost": 0.12,
+          "net_gain": 0.046018659148261754,
+          "brainstem_state": "protective",
+          "state_distribution": {
+            "stable": 14,
+            "watchful": 0,
+            "corrective": 0,
+            "protective": 13,
+            "emergency": 25
+          },
+          "functional_improvement": 0.09253038315448825
+        },
+        {
+          "tick": 50,
+          "cognitive_score": 0.37536184294674246,
+          "phi": 0.22446546473371265,
+          "energy_efficiency": 0.20312499999999972,
+          "suppression_cost": 0.25,
+          "net_gain": -0.0415982286316059,
+          "brainstem_state": "emergency",
+          "state_distribution": {
+            "stable": 26,
+            "watchful": 0,
+            "corrective": 0,
+            "protective": 25,
+            "emergency": 51
+          },
+          "functional_improvement": 0.0
+        },
+        {
+          "tick": 100,
+          "cognitive_score": 0.421945470443709,
+          "phi": 0.3045505597860716,
+          "energy_efficiency": 0.17187499999999944,
+          "suppression_cost": 0.12,
+          "net_gain": 0.036173463492101966,
+          "brainstem_state": "protective",
+          "state_distribution": {
+            "stable": 63,
+            "watchful": 0,
+            "corrective": 0,
+            "protective": 59,
+            "emergency": 80
+          },
+          "functional_improvement": 0.10627589328770282
+        },
+        {
+          "tick": 250,
+          "cognitive_score": 0.3756880579121946,
+          "phi": 0.30945770959160146,
+          "energy_efficiency": 0.2128749999999992,
+          "suppression_cost": 0.25,
+          "net_gain": 0.0,
+          "brainstem_state": "emergency",
+          "state_distribution": {
+            "stable": 146,
+            "watchful": 0,
+            "corrective": 0,
+            "protective": 145,
+            "emergency": 211
+          },
+          "functional_improvement": 0.01865265993874443
+        }
+      ],
+      "net_gain_slope": -0.000043,
+      "cognitive_score_slope": -0.000192,
+      "phi_slope": 0.000327,
+      "energy_slope": 0.00003,
+      "suppression_cost_slope": 0.00043,
+      "protective_state_ratio_over_time": 0.0,
+      "corrective_state_ratio_over_time": 0.0,
+      "emergency_state_ratio_over_time": 0.0,
+      "state_entropy": 1.5613,
+      "recovery_latency_ticks": -1,
+      "stabilization_tick": 1,
+      "gain_effect_accumulation": 0.0,
+      "long_horizon_recovery_score": 0.2342,
+      "passed": true,
+      "failure_reason": null
+    }
+  ],
+  "baseline_profile_id": "lh0",
+  "verdict": "LONG_HORIZON_RECOVERY_VALIDATED",
+  "json_report_path": null,
+  "markdown_report_path": null
+}
