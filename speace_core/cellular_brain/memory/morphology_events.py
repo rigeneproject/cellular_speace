@@ -84,6 +84,14 @@ class MorphologyEventType(str, Enum):
     BRAINSTEM_EMERGENCY_HYSTERESIS_APPLIED = "brainstem_emergency_hysteresis_applied"
     BRAINSTEM_SUPPRESSION_SOFTENED = "brainstem_suppression_softened"
     BRAINSTEM_STATE_EXITED_EMERGENCY = "brainstem_state_exited_emergency"
+    # T37 — Adaptive Brainstem Gain Controller
+    BRAINSTEM_GAIN_EVALUATED = "brainstem_gain_evaluated"
+    BRAINSTEM_GAIN_ADJUSTED = "brainstem_gain_adjusted"
+    BRAINSTEM_OVER_SUPPRESSION_DETECTED = "brainstem_over_suppression_detected"
+    BRAINSTEM_USEFUL_STABILIZATION_DETECTED = "brainstem_useful_stabilization_detected"
+    BRAINSTEM_TRUE_INSTABILITY_DETECTED = "brainstem_true_instability_detected"
+    BRAINSTEM_COGNITIVE_GAIN_BOOSTED = "brainstem_cognitive_gain_boosted"
+    BRAINSTEM_EMERGENCY_GAIN_REDUCED = "brainstem_emergency_gain_reduced"
 
 
 class MorphologyEvent(BaseModel):

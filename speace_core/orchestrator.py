@@ -50,6 +50,10 @@ from speace_core.cellular_brain.regions.deep_region_routing_calibrator import (
     DeepRegionRoutingProfile,
 )
 from speace_core.cellular_brain.regions.brainstem_controller import BrainstemFunctionalController
+from speace_core.cellular_brain.regions.brainstem_gain_controller import (
+    AdaptiveBrainstemGainController,
+    BrainstemGainUpdateResult,
+)
 from speace_core.dna.models import SharedGenome
 
 
@@ -94,12 +98,15 @@ class CellularBrainOrchestrator(BaseModel):
     region_stability_controller_enabled: bool = False
     deep_region_routing_calibrator_enabled: bool = False
     brainstem_controller_enabled: bool = False
+    brainstem_gain_controller_enabled: bool = False
     _region_registry: RegionRegistry | None = None
     _region_stability_controller: RegionLevelStabilityController | None = None
     _deep_region_routing_calibrator: DeepRegionRoutingCalibrator | None = None
     _deep_region_routing_profile: DeepRegionRoutingProfile | None = None
     _brainstem_controller: BrainstemFunctionalController | None = None
     _last_brainstem_result = None
+    _brainstem_gain_controller = None
+    _last_brainstem_gain_result = None
 
     class Config:
         arbitrary_types_allowed = True
@@ -150,6 +157,11 @@ class CellularBrainOrchestrator(BaseModel):
             self._brainstem_controller = BrainstemFunctionalController()
         else:
             self._brainstem_controller = None
+
+        if self.brainstem_gain_controller_enabled:
+            self._brainstem_gain_controller = AdaptiveBrainstemGainController()
+        else:
+            self._brainstem_gain_controller = None
 
     async def run_ticks(self, n_ticks: int) -> None:
         for _ in range(n_ticks):
@@ -312,11 +324,42 @@ class CellularBrainOrchestrator(BaseModel):
                     rid: decision.plasticity_suppression_multiplier
                     for rid in self._region_registry.regions
                 } if self._region_registry is not None else None
-            # Apply decay boost if requested
-            if decision.decay_boost_multiplier > 1.0:
-                decay_factor = 1.0 / decision.decay_boost_multiplier
-                for n in all_neurons:
-                    n.activation = getattr(n, "activation", 0.0) * decay_factor
+            # T37 — Apply Adaptive Brainstem Gain Controller on top of T36 modulations
+            if self.brainstem_gain_controller_enabled and self._brainstem_gain_controller is not None:
+                gain_metrics = {
+                    "cognitive_score_delta": 0.0,
+                    "coherence_phi_delta": 0.0,
+                    "energy_efficiency_delta": 0.0,
+                    "functional_improvement_delta": 0.0,
+                    "suppression_cost": getattr(self._brainstem_controller, "_last_suppression_cost", 0.0) if self._brainstem_controller else 0.0,
+                    "emergency_ticks": getattr(self._brainstem_controller, "_state_ticks", {}).get("emergency", 0) if self._brainstem_controller else 0,
+                    "protective_ticks": getattr(self._brainstem_controller, "_state_ticks", {}).get("protective", 0) if self._brainstem_controller else 0,
+                    "total_ticks": self.current_tick,
+                    "mean_region_energy": metrics.mean_energy,
+                    "mean_region_phi": metrics.coherence_phi,
+                }
+                self._last_brainstem_gain_result = self._brainstem_gain_controller.evaluate(gain_metrics)
+                # Apply gain multipliers to brainstem modulations
+                g = self._last_brainstem_gain_result.decision
+                if routing_multiplier_map is not None:
+                    for rid in routing_multiplier_map:
+                        routing_multiplier_map[rid] = 1.0 - (1.0 - routing_multiplier_map[rid]) * g.routing_gain
+                if plasticity_multiplier_map is not None:
+                    for rid in plasticity_multiplier_map:
+                        plasticity_multiplier_map[rid] = 1.0 - (1.0 - plasticity_multiplier_map[rid]) * g.plasticity_gain
+                # Re-apply decay with adjusted gain
+                adjusted_decay = 1.0 + (decision.decay_boost_multiplier - 1.0) * g.decay_gain
+                if adjusted_decay > 1.0:
+                    decay_factor = 1.0 / adjusted_decay
+                    for n in all_neurons:
+                        n.activation = getattr(n, "activation", 0.0) * decay_factor
+                # If original decay was already applied, skip re-applying
+            else:
+                # Apply decay boost if requested (original T35/T36 path)
+                if decision.decay_boost_multiplier > 1.0:
+                    decay_factor = 1.0 / decision.decay_boost_multiplier
+                    for n in all_neurons:
+                        n.activation = getattr(n, "activation", 0.0) * decay_factor
 
         # Regional Signal Routing (T25)
         if self.region_signal_routing_enabled and self._region_registry is not None:
