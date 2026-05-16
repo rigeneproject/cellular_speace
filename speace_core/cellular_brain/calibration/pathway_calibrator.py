@@ -32,6 +32,8 @@ class PathwayCalibrationProfile(BaseModel):
     energy_cost_per_update: float = 0.001
     confidence_modulation_strength: float = 1.0
     energy_modulation_strength: float = 1.0
+    # T29 — tuning profile ID (e.g. "t0", "t1", ...)
+    tuner_profile_id: Optional[str] = None
     description: str = ""
 
 
@@ -60,6 +62,11 @@ class PathwayCalibrationResult(BaseModel):
     trigger_to_update_ratio: float = 0.0
     regression_score: float = 0.0
     distance_from_baseline: float = 0.0
+    # T29 — tuning metrics
+    tuning_accepted_updates: int = 0
+    tuning_skipped_updates: int = 0
+    tuning_rolled_back_updates: int = 0
+    tuning_pathway_utility_score: float = 0.0
     passed: bool = True
     failure_reason: Optional[str] = None
 
@@ -180,6 +187,34 @@ class PathwayCalibrator:
                 energy_modulation_strength=1.5,
                 description="Routing + conservative energy pathways (hybrid trigger)",
             ),
+            # T29 — Pathway Plasticity Sensitivity Tuning profiles
+            PathwayCalibrationProfile(
+                profile_id="p8",
+                name="routing_plus_tuning_default",
+                inter_region_plasticity_enabled=True,
+                region_signal_routing_enabled=True,
+                trigger_mode="hybrid",
+                tuner_profile_id="t0",
+                description="Routing + T29 default hybrid tuning (no guards)",
+            ),
+            PathwayCalibrationProfile(
+                profile_id="p9",
+                name="routing_plus_tuning_conservative_phi",
+                inter_region_plasticity_enabled=True,
+                region_signal_routing_enabled=True,
+                trigger_mode="hybrid",
+                tuner_profile_id="t1",
+                description="Routing + T29 conservative phi-guarded tuning",
+            ),
+            PathwayCalibrationProfile(
+                profile_id="p10",
+                name="routing_plus_tuning_full_guard",
+                inter_region_plasticity_enabled=True,
+                region_signal_routing_enabled=True,
+                trigger_mode="hybrid",
+                tuner_profile_id="t9",
+                description="Routing + T29 adaptive full-guard tuning (all guards + rollback)",
+            ),
         ]
 
     # ------------------------------------------------------------------ #
@@ -206,6 +241,7 @@ class PathwayCalibrator:
     def apply_pathway_profile(
         profile: PathwayCalibrationProfile, orch: CellularBrainOrchestrator
     ) -> None:
+        from speace_core.cellular_brain.regions.pathway_plasticity_tuner import PathwayPlasticityTuner
         orch.inter_region_plasticity_enabled = profile.inter_region_plasticity_enabled
         orch.region_signal_routing_enabled = profile.region_signal_routing_enabled
         if profile.inter_region_plasticity_enabled and orch._inter_region_plasticity is not None:
@@ -220,6 +256,15 @@ class PathwayCalibrator:
             engine.energy_modulation_strength = profile.energy_modulation_strength
             engine.trigger_mode = profile.trigger_mode
             engine._trigger.trigger_mode = profile.trigger_mode
+            # T29 — attach tuning profile if specified
+            if profile.tuner_profile_id is not None:
+                all_tuner_profiles = PathwayPlasticityTuner.default_profiles()
+                tuner_profile = next(
+                    (p for p in all_tuner_profiles if p.profile_id == profile.tuner_profile_id), None
+                )
+                engine.tuner_profile = tuner_profile
+            else:
+                engine.tuner_profile = None
 
     # ------------------------------------------------------------------ #
     # Single profile run
@@ -273,6 +318,10 @@ class PathwayCalibrator:
             blocked_signals=m.blocked_signals,
             routing_energy_cost=m.routing_energy_cost,
             active_inter_region_pathways=m.active_inter_region_pathways,
+            tuning_accepted_updates=m.pathway_tuning_accepted_updates,
+            tuning_skipped_updates=m.pathway_tuning_skipped_updates,
+            tuning_rolled_back_updates=m.pathway_tuning_rolled_back_updates,
+            tuning_pathway_utility_score=0.0,
             regression_score=0.0,
             distance_from_baseline=0.0,
             passed=True,
@@ -494,8 +543,8 @@ class PathwayCalibrator:
             "",
             "## Comparative Results",
             "",
-            "| Profile | Cognitive | Phi | Energy | Flow | Routed | Delivered | Plasticity Events | Reg Score | Distance | Passed |",
-            "|---|---|---|---|---|---|---|---|---|---|---|---|",
+            "| Profile | Cognitive | Phi | Energy | Flow | Routed | Delivered | Plasticity Events | Accepted | Skipped | Rolled Back | Reg Score | Distance | Passed |",
+            "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|",
         ]
 
         for r in report.profile_results:
@@ -508,6 +557,9 @@ class PathwayCalibrator:
                 f"{r.routed_signals} | "
                 f"{r.delivered_signals} | "
                 f"{r.inter_region_plasticity_events} | "
+                f"{r.tuning_accepted_updates} | "
+                f"{r.tuning_skipped_updates} | "
+                f"{r.tuning_rolled_back_updates} | "
                 f"{r.regression_score:.4f} | "
                 f"{r.distance_from_baseline:.4f} | "
                 f"{'PASS' if r.passed else 'FAIL'} |"

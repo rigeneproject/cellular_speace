@@ -55,6 +55,7 @@ class InterRegionPlasticityEngine:
         confidence_modulation_strength: float = 1.0,
         energy_modulation_strength: float = 1.0,
         trigger_mode: str = "hard_spike",
+        tuner_profile: Any = None,
     ):
         self.ltp_rate = ltp_rate
         self.ltd_rate = ltd_rate
@@ -66,6 +67,7 @@ class InterRegionPlasticityEngine:
         self.energy_modulation_strength = energy_modulation_strength
         self.trigger_mode = trigger_mode
         self._trigger = RegionPlasticityTrigger(trigger_mode=trigger_mode)
+        self.tuner_profile = tuner_profile
 
     # ------------------------------------------------------------------ #
     # Activation tracking
@@ -175,6 +177,49 @@ class InterRegionPlasticityEngine:
 
         connections = registry.connectome.connections
         if not connections:
+            return result
+
+        # T29 — PathwayPlasticityTuner integration
+        if self.tuner_profile is not None:
+            from speace_core.cellular_brain.regions.pathway_plasticity_tuner import PathwayPlasticityTuner
+            tuner = PathwayPlasticityTuner()
+            tuning_result = tuner.tune_all_pathways(
+                engine=self,
+                registry=registry,
+                circuit=circuit,
+                profile=self.tuner_profile,
+                metrics=metrics,
+                memory=memory,
+                confidence_state=None,
+                routing_result=routing_result,
+                tick=tick,
+            )
+            result.updated_pathways = tuning_result.accepted_updates
+            result.reinforced_pathways = tuning_result.ltp_updates
+            result.weakened_pathways = tuning_result.ltd_updates
+            if connections:
+                strengths = [
+                    getattr(c, "_pathway_state", None).pathway_strength
+                    for c in connections
+                    if hasattr(c, "_pathway_state") and getattr(c, "_pathway_state", None) is not None
+                ]
+                result.mean_pathway_strength = sum(strengths) / len(strengths) if strengths else 0.0
+            if memory is not None and tuning_result.accepted_updates > 0:
+                memory.create_event(
+                    event_type=MorphologyEventType.INTER_REGION_PLASTICITY_APPLIED,
+                    source_id="inter_region_plasticity_engine",
+                    metadata={
+                        "updated_pathways": tuning_result.accepted_updates,
+                        "reinforced": tuning_result.ltp_updates,
+                        "weakened": tuning_result.ltd_updates,
+                        "skipped": tuning_result.skipped_updates,
+                        "rolled_back": tuning_result.rolled_back_updates,
+                        "mean_pathway_strength": result.mean_pathway_strength,
+                        "tick": tick,
+                        "trigger_mode": self.trigger_mode,
+                        "tuner_profile": self.tuner_profile.profile_id,
+                    },
+                )
             return result
 
         global_energy = metrics.mean_energy if metrics else 0.5

@@ -36,6 +36,12 @@ class MorphologyEventType(str, Enum):
     REGION_PLASTICITY_TRIGGER_SKIPPED = "region_plasticity_trigger_skipped"
     REGION_CAUSAL_CORRELATION_DETECTED = "region_causal_correlation_detected"
     REGION_SOFT_ACTIVATION_TRACE = "region_soft_activation_trace"
+    # T29 — Pathway Plasticity Sensitivity Tuning
+    REGION_PLASTICITY_UPDATE_ACCEPTED = "region_plasticity_update_accepted"
+    REGION_PLASTICITY_UPDATE_SKIPPED = "region_plasticity_update_skipped"
+    REGION_PLASTICITY_UPDATE_ROLLED_BACK = "region_plasticity_update_rolled_back"
+    REGION_PATHWAY_UTILITY_UPDATED = "region_pathway_utility_updated"
+    PATHWAY_TUNING_PROFILE_APPLIED = "pathway_tuning_profile_applied"
 
 
 class MorphologyEvent(BaseModel):
