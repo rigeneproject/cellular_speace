@@ -247,12 +247,21 @@ class CellularBrainOrchestrator(BaseModel):
 
         # T35 — Brainstem Functional Integration
         if self.brainstem_controller_enabled and self._brainstem_controller is not None:
+            # T36 — Compute mean deep-region activation from circuit at tick time
+            deep_regions = {"limbic", "hippocampus", "default_mode", "prefrontal", "cerebellar", "brainstem_homeostatic"}
+            deep_activations = [
+                abs(getattr(n, "activation", 0.0))
+                for n in all_neurons
+                if getattr(n, "region", None) in deep_regions
+            ]
+            mean_deep_activation = sum(deep_activations) / len(deep_activations) if deep_activations else 0.0
+
             brainstem_metrics = {
                 "mean_region_phi": metrics.coherence_phi,
                 "mean_energy": metrics.mean_energy,
                 "region_instability_mean": 0.0,
                 "unstable_region_count": 0,
-                "mean_deep_region_activation": 0.0,
+                "mean_deep_region_activation": mean_deep_activation,
                 "regional_signal_flow": 0.0,
                 "deep_region_signal_flow": 0.0,
                 "stability_actions_applied": 0,
@@ -260,6 +269,10 @@ class CellularBrainOrchestrator(BaseModel):
                 "cooldowns_started": 0,
                 "mean_pathway_utility": 0.0,
                 "energy_state": metrics.mean_energy,
+                "region_count": len(self._region_registry.regions) if self._region_registry is not None else 4,
+                # T36 — placeholder for benchmark-level metrics; brainstem uses proxies when zero
+                "cognitive_score": 0.0,
+                "functional_improvement": 0.0,
             }
             # Enrich with stability controller data if available
             if self._region_stability_controller is not None:

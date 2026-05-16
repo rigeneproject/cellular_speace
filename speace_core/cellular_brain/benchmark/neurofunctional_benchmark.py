@@ -128,6 +128,19 @@ class BenchmarkMetrics(BaseModel):
     brainstem_emergency_count: int = 0
     brainstem_homeostatic_gain: float = 0.0
     brainstem_phi_recovery_contribution: float = 0.0
+    # T36 — Cognitive/Autonomic Balance Tuning metrics
+    cognitive_vitality_score: float = 0.0
+    autonomic_risk_score: float = 0.0
+    balance_pressure: float = 0.0
+    brainstem_state_distribution: Dict[str, int] = Field(default_factory=dict)
+    emergency_ticks: int = 0
+    protective_ticks: int = 0
+    watchful_ticks: int = 0
+    corrective_ticks: int = 0
+    cognitive_preservation_score: float = 0.0
+    autonomic_balance_score: float = 0.0
+    suppression_cost: float = 0.0
+    useful_activity_preserved: bool = False
 
 
 class BenchmarkResult(BaseModel):
@@ -741,6 +754,19 @@ class NeuroFunctionalBenchmark:
         brainstem_emergency_count = 0
         brainstem_homeostatic_gain = 0.0
         brainstem_phi_recovery_contribution = 0.0
+        # T36 — Cognitive/Autonomic Balance Tuning metrics
+        cognitive_vitality_score = 0.0
+        autonomic_risk_score = 0.0
+        balance_pressure = 0.0
+        brainstem_state_distribution: Dict[str, int] = {}
+        emergency_ticks = 0
+        protective_ticks = 0
+        watchful_ticks = 0
+        corrective_ticks = 0
+        cognitive_preservation_score = 0.0
+        autonomic_balance_score = 0.0
+        suppression_cost = 0.0
+        useful_activity_preserved = False
         bsc = getattr(self.orch, "_brainstem_controller", None)
         bsr = getattr(self.orch, "_last_brainstem_result", None)
         if bsc is not None and bsr is not None:
@@ -754,6 +780,20 @@ class NeuroFunctionalBenchmark:
             brainstem_emergency_count = bsr.emergency_count
             brainstem_homeostatic_gain = bsr.homeostatic_gain
             brainstem_phi_recovery_contribution = bsr.phi_recovery_contribution
+            # T36 extraction from controller state
+            summary = bsc.get_modulation_summary()
+            cognitive_vitality_score = summary.get("cognitive_vitality", 0.0)
+            autonomic_risk_score = summary.get("autonomic_risk", 0.0)
+            balance_pressure = summary.get("balance_pressure", 0.0)
+            brainstem_state_distribution = summary.get("state_ticks", {})
+            emergency_ticks = brainstem_state_distribution.get("emergency", 0)
+            protective_ticks = brainstem_state_distribution.get("protective", 0)
+            watchful_ticks = brainstem_state_distribution.get("watchful", 0)
+            corrective_ticks = brainstem_state_distribution.get("corrective", 0)
+            cognitive_preservation_score = 1.0 if summary.get("cognitive_preservation_applied", False) else 0.0
+            autonomic_balance_score = max(0.0, 1.0 - balance_pressure)
+            suppression_cost = summary.get("suppression_cost", 0.0)
+            useful_activity_preserved = summary.get("useful_activity_preserved", False)
 
         return BenchmarkMetrics(
             accuracy_score=final.accuracy,
@@ -851,6 +891,19 @@ class NeuroFunctionalBenchmark:
             brainstem_emergency_count=brainstem_emergency_count,
             brainstem_homeostatic_gain=brainstem_homeostatic_gain,
             brainstem_phi_recovery_contribution=brainstem_phi_recovery_contribution,
+            # T36
+            cognitive_vitality_score=cognitive_vitality_score,
+            autonomic_risk_score=autonomic_risk_score,
+            balance_pressure=balance_pressure,
+            brainstem_state_distribution=brainstem_state_distribution,
+            emergency_ticks=emergency_ticks,
+            protective_ticks=protective_ticks,
+            watchful_ticks=watchful_ticks,
+            corrective_ticks=corrective_ticks,
+            cognitive_preservation_score=cognitive_preservation_score,
+            autonomic_balance_score=autonomic_balance_score,
+            suppression_cost=suppression_cost,
+            useful_activity_preserved=useful_activity_preserved,
         )
 
     def generate_json_report(self, result: BenchmarkResult) -> Path:

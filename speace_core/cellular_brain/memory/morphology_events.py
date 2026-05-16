@@ -78,6 +78,12 @@ class MorphologyEventType(str, Enum):
     BRAINSTEM_ROUTING_SUPPRESSED = "brainstem_routing_suppressed"
     BRAINSTEM_PLASTICITY_SUPPRESSED = "brainstem_plasticity_suppressed"
     BRAINSTEM_ENERGY_RECOVERY_BOOSTED = "brainstem_energy_recovery_boosted"
+    # T36 — Cognitive/Autonomic Balance Tuning
+    BRAINSTEM_BALANCE_EVALUATED = "brainstem_balance_evaluated"
+    BRAINSTEM_COGNITIVE_ACTIVITY_PRESERVED = "brainstem_cognitive_activity_preserved"
+    BRAINSTEM_EMERGENCY_HYSTERESIS_APPLIED = "brainstem_emergency_hysteresis_applied"
+    BRAINSTEM_SUPPRESSION_SOFTENED = "brainstem_suppression_softened"
+    BRAINSTEM_STATE_EXITED_EMERGENCY = "brainstem_state_exited_emergency"
 
 
 class MorphologyEvent(BaseModel):
