@@ -283,3 +283,57 @@ def test_signal_flow_score_zero_when_no_routing():
     result = RegionRoutingResult()
     score = RegionSignalRouter.compute_regional_signal_flow_score(result)
     assert score == 0.0
+
+
+# ---------------------------------------------------------------------------
+# 13. T35 — Homeostatic activation clamp
+# ---------------------------------------------------------------------------
+
+def test_router_clamps_max_activation_after_routing(router, registry, circuit):
+    circuit.input_neurons[0].activation = 10.0
+    circuit.hidden_neurons[0].activation = 10.0
+    mem = MorphologicalMemory()
+    metrics = SystemMetrics(tick=1, mean_energy=0.5, coherence_phi=0.2)
+    router.route_all(
+        region_connectome=registry.connectome,
+        circuit=circuit,
+        metrics=metrics,
+        memory=mem,
+    )
+    assert abs(circuit.input_neurons[0].activation) <= RegionSignalRouter.MAX_REGION_NEURON_ACTIVATION
+    assert abs(circuit.hidden_neurons[0].activation) <= RegionSignalRouter.MAX_REGION_NEURON_ACTIVATION
+
+
+def test_router_clamps_mean_activation_after_routing(router, registry, circuit):
+    # Two neurons in hippocampus with activation 2.0 each -> mean 2.0 > 1.0
+    circuit.hidden_neurons[0].activation = 2.0
+    n4 = DigitalNeuron(cell_id="n4", role="digital_neuron", threshold=0.5)
+    n4.region = "hippocampus"
+    n4.activation = 2.0
+    circuit.hidden_neurons.append(n4)
+    mem = MorphologicalMemory()
+    metrics = SystemMetrics(tick=1, mean_energy=0.5, coherence_phi=0.2)
+    router.route_all(
+        region_connectome=registry.connectome,
+        circuit=circuit,
+        metrics=metrics,
+        memory=mem,
+    )
+    # After clamp, mean should be scaled down to ~1.0
+    acts = [n.activation for n in circuit.hidden_neurons if getattr(n, "region", None) == "hippocampus"]
+    mean_act = sum(abs(a) for a in acts) / len(acts)
+    assert mean_act <= RegionSignalRouter.MAX_MEAN_REGION_ACTIVATION + 0.01
+
+
+def test_router_records_clamp_event(router, registry, circuit):
+    circuit.hidden_neurons[0].activation = 10.0
+    mem = MorphologicalMemory()
+    metrics = SystemMetrics(tick=1, mean_energy=0.5, coherence_phi=0.2)
+    router.route_all(
+        region_connectome=registry.connectome,
+        circuit=circuit,
+        metrics=metrics,
+        memory=mem,
+    )
+    types = [e.event_type for e in mem.events]
+    assert MorphologyEventType.REGION_ACTIVATION_CLAMPED in types

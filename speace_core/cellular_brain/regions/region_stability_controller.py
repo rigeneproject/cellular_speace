@@ -244,6 +244,7 @@ class RegionLevelStabilityController:
         region: BrainRegion,
         action: RegionStabilityAction,
         memory: Optional[MorphologicalMemory] = None,
+        circuit=None,
     ) -> None:
         state = self._region_states.get(region.region_id)
         if state is None:
@@ -251,6 +252,10 @@ class RegionLevelStabilityController:
         state.damping_factor = action.damping_factor
         state.cooldown_remaining = action.cooldown_ticks
         state.routing_allowed = action.routing_multiplier > 0.0
+
+        # T35 — Forced activation decay on hard damping / routing block
+        if circuit is not None and action.action_type in {"hard_damping", "routing_block"}:
+            self._force_activation_decay(region, action, circuit, memory)
 
         if memory is not None:
             if action.action_type == "routing_block":
@@ -271,6 +276,43 @@ class RegionLevelStabilityController:
                     "plasticity_multiplier": action.plasticity_multiplier,
                     "routing_multiplier": action.routing_multiplier,
                     "cooldown_ticks": action.cooldown_ticks,
+                },
+            )
+
+    @staticmethod
+    def _force_activation_decay(
+        region: BrainRegion,
+        action: RegionStabilityAction,
+        circuit,
+        memory: Optional[MorphologicalMemory] = None,
+    ) -> None:
+        """Scale down existing neuron activations in the region by damping factor."""
+        if circuit is None:
+            return
+        all_neurons = (
+            getattr(circuit, "input_neurons", [])
+            + getattr(circuit, "hidden_neurons", [])
+            + getattr(circuit, "output_neurons", [])
+        )
+        region_neurons = [
+            n for n in all_neurons
+            if getattr(n, "region", None) == region.region_id or getattr(n, "cell_id", None) in region.neuron_ids
+        ]
+        if not region_neurons:
+            return
+        decay = action.damping_factor if action.damping_factor > 0 else 0.5
+        for n in region_neurons:
+            n.activation = getattr(n, "activation", 0.0) * decay
+        if memory is not None:
+            memory.create_event(
+                event_type=MorphologyEventType.REGION_ACTIVATION_CLAMPED,
+                region_id=region.region_id,
+                metadata={
+                    "reason": "forced_decay_after_stability_action",
+                    "action_type": action.action_type,
+                    "damping_factor": action.damping_factor,
+                    "decay_applied": decay,
+                    "neurons_affected": len(region_neurons),
                 },
             )
 
@@ -362,7 +404,7 @@ class RegionLevelStabilityController:
                 action = self.decide_stability_action(state)
                 if action is not None:
                     actions.append(action)
-                    self.apply_stability_action(region, action, memory)
+                    self.apply_stability_action(region, action, memory, circuit)
                     # T34B-FIX: Log activation explosion if triggered by high activation
                     if state.activation >= 1.0 and memory is not None:
                         memory.create_event(

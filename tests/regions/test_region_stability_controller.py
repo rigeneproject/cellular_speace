@@ -590,3 +590,102 @@ def test_high_activation_produces_instability(registry):
     assert result.unstable_regions > 0
     assert result.mean_instability_score > 0.0
 
+
+# ---------------------------------------------------------------------------
+# 16. T35 — Forced activation decay on stability action
+# ---------------------------------------------------------------------------
+
+def test_hard_damping_forces_activation_decay(registry):
+    from speace_core.cellular_brain.circuits.neural_circuit import NeuralCircuit
+    from speace_core.cellular_brain.cells.digital_neuron import DigitalNeuron
+
+    n1 = DigitalNeuron(cell_id="n_sensory_1", role="digital_neuron", region="sensory", activation=6.0)
+    n2 = DigitalNeuron(cell_id="n_sensory_2", role="digital_neuron", region="sensory", activation=5.0)
+    circuit = NeuralCircuit(
+        circuit_id="test",
+        input_neurons=[],
+        hidden_neurons=[n1, n2],
+        output_neurons=[],
+        synapses=[],
+        astrocytes=[],
+        microglia=[],
+        oligodendrocytes=[],
+    )
+    controller = RegionLevelStabilityController()
+    controller._region_states["sensory"] = RegionStabilityState(region_id="sensory")
+    mem = MorphologicalMemory()
+    region = registry.regions["sensory"]
+    action = RegionStabilityAction(
+        region_id="sensory",
+        action_type="hard_damping",
+        reason="test",
+        damping_factor=0.6,
+        cooldown_ticks=2,
+        routing_multiplier=0.4,
+    )
+    controller.apply_stability_action(region, action, memory=mem, circuit=circuit)
+    assert n1.activation == 6.0 * 0.6
+    assert n2.activation == 5.0 * 0.6
+    types = [e.event_type for e in mem.events]
+    assert MorphologyEventType.REGION_ACTIVATION_CLAMPED in types
+
+
+def test_routing_block_forces_activation_decay(registry):
+    from speace_core.cellular_brain.circuits.neural_circuit import NeuralCircuit
+    from speace_core.cellular_brain.cells.digital_neuron import DigitalNeuron
+
+    n1 = DigitalNeuron(cell_id="n_sensory_1", role="digital_neuron", region="sensory", activation=10.0)
+    circuit = NeuralCircuit(
+        circuit_id="test",
+        input_neurons=[],
+        hidden_neurons=[n1],
+        output_neurons=[],
+        synapses=[],
+        astrocytes=[],
+        microglia=[],
+        oligodendrocytes=[],
+    )
+    controller = RegionLevelStabilityController()
+    controller._region_states["sensory"] = RegionStabilityState(region_id="sensory")
+    mem = MorphologicalMemory()
+    region = registry.regions["sensory"]
+    action = RegionStabilityAction(
+        region_id="sensory",
+        action_type="routing_block",
+        reason="test",
+        damping_factor=0.3,
+        routing_multiplier=0.0,
+        cooldown_ticks=3,
+    )
+    controller.apply_stability_action(region, action, memory=mem, circuit=circuit)
+    assert n1.activation == 10.0 * 0.3
+
+
+def test_soft_damping_does_not_force_decay(registry):
+    from speace_core.cellular_brain.circuits.neural_circuit import NeuralCircuit
+    from speace_core.cellular_brain.cells.digital_neuron import DigitalNeuron
+
+    n1 = DigitalNeuron(cell_id="n_sensory_1", role="digital_neuron", region="sensory", activation=6.0)
+    circuit = NeuralCircuit(
+        circuit_id="test",
+        input_neurons=[],
+        hidden_neurons=[n1],
+        output_neurons=[],
+        synapses=[],
+        astrocytes=[],
+        microglia=[],
+        oligodendrocytes=[],
+    )
+    controller = RegionLevelStabilityController()
+    mem = MorphologicalMemory()
+    region = registry.regions["sensory"]
+    action = RegionStabilityAction(
+        region_id="sensory",
+        action_type="soft_damping",
+        reason="test",
+        damping_factor=0.85,
+        routing_multiplier=0.75,
+    )
+    controller.apply_stability_action(region, action, memory=mem, circuit=circuit)
+    assert n1.activation == 6.0  # unchanged
+

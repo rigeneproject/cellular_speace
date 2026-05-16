@@ -395,7 +395,71 @@ class RegionSignalRouter:
                 },
             )
 
+        # T35 — Homeostatic activation clamp after routing
+        self._clamp_circuit_activations(circuit, memory)
+
         return result
+
+    # ------------------------------------------------------------------ #
+    # Homeostatic activation clamp (T35)
+    # ------------------------------------------------------------------ #
+
+    MAX_REGION_NEURON_ACTIVATION: float = 5.0
+    MAX_MEAN_REGION_ACTIVATION: float = 1.0
+
+    @classmethod
+    def _clamp_circuit_activations(
+        cls,
+        circuit: NeuralCircuit,
+        memory: Optional[MorphologicalMemory] = None,
+    ) -> None:
+        """Clamp neuron activations to biologically plausible bounds per region."""
+        if circuit is None:
+            return
+        all_neurons = circuit.input_neurons + circuit.hidden_neurons + circuit.output_neurons
+        # Group neurons by region
+        region_neurons: Dict[str, List[Any]] = {}
+        for n in all_neurons:
+            rid = getattr(n, "region", None)
+            if rid is None:
+                continue
+            region_neurons.setdefault(rid, []).append(n)
+
+        for rid, neurons in region_neurons.items():
+            if not neurons:
+                continue
+            activations = [getattr(n, "activation", 0.0) for n in neurons]
+            max_act = max(abs(a) for a in activations) if activations else 0.0
+            mean_act = sum(abs(a) for a in activations) / len(activations) if activations else 0.0
+            clamped = False
+
+            # Clamp individual neurons to max bound
+            if max_act > cls.MAX_REGION_NEURON_ACTIVATION:
+                scale = cls.MAX_REGION_NEURON_ACTIVATION / max_act
+                for n in neurons:
+                    n.activation = getattr(n, "activation", 0.0) * scale
+                clamped = True
+
+            # After max clamp, recompute mean and scale if mean still too high
+            activations = [getattr(n, "activation", 0.0) for n in neurons]
+            mean_act = sum(abs(a) for a in activations) / len(activations) if activations else 0.0
+            if mean_act > cls.MAX_MEAN_REGION_ACTIVATION:
+                scale = cls.MAX_MEAN_REGION_ACTIVATION / mean_act
+                for n in neurons:
+                    n.activation = getattr(n, "activation", 0.0) * scale
+                clamped = True
+
+            if clamped and memory is not None:
+                memory.create_event(
+                    event_type=MorphologyEventType.REGION_ACTIVATION_CLAMPED,
+                    region_id=rid,
+                    metadata={
+                        "max_activation_before": max_act,
+                        "mean_activation_before": mean_act,
+                        "max_activation_after": cls.MAX_REGION_NEURON_ACTIVATION if max_act > cls.MAX_REGION_NEURON_ACTIVATION else max_act,
+                        "mean_activation_after": cls.MAX_MEAN_REGION_ACTIVATION if mean_act > cls.MAX_MEAN_REGION_ACTIVATION else mean_act,
+                    },
+                )
 
     # ------------------------------------------------------------------ #
     # Scoring
