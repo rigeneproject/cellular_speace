@@ -49,6 +49,7 @@ from speace_core.cellular_brain.regions.deep_region_routing_calibrator import (
     DeepRegionRoutingCalibrator,
     DeepRegionRoutingProfile,
 )
+from speace_core.cellular_brain.regions.brainstem_controller import BrainstemFunctionalController
 from speace_core.dna.models import SharedGenome
 
 
@@ -92,10 +93,13 @@ class CellularBrainOrchestrator(BaseModel):
     deep_regions_enabled: bool = True
     region_stability_controller_enabled: bool = False
     deep_region_routing_calibrator_enabled: bool = False
+    brainstem_controller_enabled: bool = False
     _region_registry: RegionRegistry | None = None
     _region_stability_controller: RegionLevelStabilityController | None = None
     _deep_region_routing_calibrator: DeepRegionRoutingCalibrator | None = None
     _deep_region_routing_profile: DeepRegionRoutingProfile | None = None
+    _brainstem_controller: BrainstemFunctionalController | None = None
+    _last_brainstem_result = None
 
     class Config:
         arbitrary_types_allowed = True
@@ -141,6 +145,11 @@ class CellularBrainOrchestrator(BaseModel):
             self._deep_region_routing_calibrator.apply_profile_to_router(self._region_signal_router)
         else:
             self._deep_region_routing_calibrator = None
+
+        if self.brainstem_controller_enabled:
+            self._brainstem_controller = BrainstemFunctionalController()
+        else:
+            self._brainstem_controller = None
 
     async def run_ticks(self, n_ticks: int) -> None:
         for _ in range(n_ticks):
@@ -235,6 +244,66 @@ class CellularBrainOrchestrator(BaseModel):
                 rid: self._region_stability_controller.get_plasticity_multiplier(rid)
                 for rid in self._region_registry.regions
             }
+
+        # T35 — Brainstem Functional Integration
+        if self.brainstem_controller_enabled and self._brainstem_controller is not None:
+            brainstem_metrics = {
+                "mean_region_phi": metrics.coherence_phi,
+                "mean_energy": metrics.mean_energy,
+                "region_instability_mean": 0.0,
+                "unstable_region_count": 0,
+                "mean_deep_region_activation": 0.0,
+                "regional_signal_flow": 0.0,
+                "deep_region_signal_flow": 0.0,
+                "stability_actions_applied": 0,
+                "routing_blocks_applied": 0,
+                "cooldowns_started": 0,
+                "mean_pathway_utility": 0.0,
+                "energy_state": metrics.mean_energy,
+            }
+            # Enrich with stability controller data if available
+            if self._region_stability_controller is not None:
+                summary = self._region_stability_controller.summarize_stability()
+                region_states = summary.get("region_states", {})
+                instability_scores = [s.get("instability_score", 0.0) for s in region_states.values()]
+                if instability_scores:
+                    brainstem_metrics["region_instability_mean"] = sum(instability_scores) / len(instability_scores)
+                brainstem_metrics["unstable_region_count"] = sum(
+                    1 for s in region_states.values() if s.get("instability_score", 0.0) >= 0.25
+                )
+                brainstem_metrics["mean_region_damping_factor"] = summary.get("mean_damping_factor", 1.0)
+            # Enrich with routing data if available
+            if self.last_routing_result is not None:
+                brainstem_metrics["regional_signal_flow"] = getattr(
+                    self.last_routing_result, "regional_signal_flow_score", 0.0
+                )
+            self._last_brainstem_result = self._brainstem_controller.apply(
+                metrics=brainstem_metrics,
+                memory=self._memory,
+            )
+            # Compose brainstem modulations with stability multipliers
+            decision = self._last_brainstem_result.decision
+            if routing_multiplier_map is not None:
+                for rid in routing_multiplier_map:
+                    routing_multiplier_map[rid] *= decision.routing_suppression_multiplier
+            else:
+                routing_multiplier_map = {
+                    rid: decision.routing_suppression_multiplier
+                    for rid in self._region_registry.regions
+                } if self._region_registry is not None else None
+            if plasticity_multiplier_map is not None:
+                for rid in plasticity_multiplier_map:
+                    plasticity_multiplier_map[rid] *= decision.plasticity_suppression_multiplier
+            else:
+                plasticity_multiplier_map = {
+                    rid: decision.plasticity_suppression_multiplier
+                    for rid in self._region_registry.regions
+                } if self._region_registry is not None else None
+            # Apply decay boost if requested
+            if decision.decay_boost_multiplier > 1.0:
+                decay_factor = 1.0 / decision.decay_boost_multiplier
+                for n in all_neurons:
+                    n.activation = getattr(n, "activation", 0.0) * decay_factor
 
         # Regional Signal Routing (T25)
         if self.region_signal_routing_enabled and self._region_registry is not None:

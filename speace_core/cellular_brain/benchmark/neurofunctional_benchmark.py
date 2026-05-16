@@ -117,6 +117,17 @@ class BenchmarkMetrics(BaseModel):
     deep_region_targeted_signals: int = 0
     mean_regional_signal_gain: float = 0.0
     deep_region_phi_recovery: float = 0.0
+    # T35 — Brainstem Functional Integration metrics
+    brainstem_state: str = "stable"
+    brainstem_decisions_count: int = 0
+    brainstem_energy_modulation: float = 1.0
+    brainstem_routing_modulation: float = 1.0
+    brainstem_plasticity_modulation: float = 1.0
+    brainstem_decay_modulation: float = 1.0
+    brainstem_recovery_actions: int = 0
+    brainstem_emergency_count: int = 0
+    brainstem_homeostatic_gain: float = 0.0
+    brainstem_phi_recovery_contribution: float = 0.0
 
 
 class BenchmarkResult(BaseModel):
@@ -719,6 +730,31 @@ class NeuroFunctionalBenchmark:
         # Phi recovery specific to deep region calibration
         deep_region_phi_recovery = max(0.0, final.coherence_phi - baseline.coherence_phi)
 
+        # T35 — Brainstem Functional Integration metrics
+        brainstem_state = "stable"
+        brainstem_decisions_count = 0
+        brainstem_energy_modulation = 1.0
+        brainstem_routing_modulation = 1.0
+        brainstem_plasticity_modulation = 1.0
+        brainstem_decay_modulation = 1.0
+        brainstem_recovery_actions = 0
+        brainstem_emergency_count = 0
+        brainstem_homeostatic_gain = 0.0
+        brainstem_phi_recovery_contribution = 0.0
+        bsc = getattr(self.orch, "_brainstem_controller", None)
+        bsr = getattr(self.orch, "_last_brainstem_result", None)
+        if bsc is not None and bsr is not None:
+            brainstem_state = bsr.decision.state.value
+            brainstem_decisions_count = bsr.decisions_count
+            brainstem_energy_modulation = bsr.decision.energy_recovery_multiplier
+            brainstem_routing_modulation = bsr.decision.routing_suppression_multiplier
+            brainstem_plasticity_modulation = bsr.decision.plasticity_suppression_multiplier
+            brainstem_decay_modulation = bsr.decision.decay_boost_multiplier
+            brainstem_recovery_actions = bsr.recovery_actions
+            brainstem_emergency_count = bsr.emergency_count
+            brainstem_homeostatic_gain = bsr.homeostatic_gain
+            brainstem_phi_recovery_contribution = bsr.phi_recovery_contribution
+
         return BenchmarkMetrics(
             accuracy_score=final.accuracy,
             coherence_phi=final.coherence_phi,
@@ -804,6 +840,17 @@ class NeuroFunctionalBenchmark:
             deep_region_targeted_signals=deep_region_targeted_signals,
             mean_regional_signal_gain=mean_regional_signal_gain,
             deep_region_phi_recovery=deep_region_phi_recovery,
+            # T35
+            brainstem_state=brainstem_state,
+            brainstem_decisions_count=brainstem_decisions_count,
+            brainstem_energy_modulation=brainstem_energy_modulation,
+            brainstem_routing_modulation=brainstem_routing_modulation,
+            brainstem_plasticity_modulation=brainstem_plasticity_modulation,
+            brainstem_decay_modulation=brainstem_decay_modulation,
+            brainstem_recovery_actions=brainstem_recovery_actions,
+            brainstem_emergency_count=brainstem_emergency_count,
+            brainstem_homeostatic_gain=brainstem_homeostatic_gain,
+            brainstem_phi_recovery_contribution=brainstem_phi_recovery_contribution,
         )
 
     def generate_json_report(self, result: BenchmarkResult) -> Path:

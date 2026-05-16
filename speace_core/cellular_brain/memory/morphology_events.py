@@ -70,6 +70,14 @@ class MorphologyEventType(str, Enum):
     # T34B-FIX — Activation explosion detection
     REGION_ACTIVATION_EXPLOSION_DETECTED = "region_activation_explosion_detected"
     REGION_ACTIVATION_CLAMPED = "region_activation_clamped"
+    # T35 — Brainstem Functional Integration
+    BRAINSTEM_STATE_CHANGED = "brainstem_state_changed"
+    BRAINSTEM_MODULATION_APPLIED = "brainstem_modulation_applied"
+    BRAINSTEM_EMERGENCY_TRIGGERED = "brainstem_emergency_triggered"
+    BRAINSTEM_RECOVERY_APPLIED = "brainstem_recovery_applied"
+    BRAINSTEM_ROUTING_SUPPRESSED = "brainstem_routing_suppressed"
+    BRAINSTEM_PLASTICITY_SUPPRESSED = "brainstem_plasticity_suppressed"
+    BRAINSTEM_ENERGY_RECOVERY_BOOSTED = "brainstem_energy_recovery_boosted"
 
 
 class MorphologyEvent(BaseModel):
