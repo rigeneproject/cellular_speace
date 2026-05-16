@@ -48,6 +48,10 @@ class MorphologyEventType(str, Enum):
     PATHWAY_UTILITY_POSITIVE = "pathway_utility_positive"
     PATHWAY_UTILITY_NEGATIVE = "pathway_utility_negative"
     PATHWAY_UTILITY_GATE_APPLIED = "pathway_utility_gate_applied"
+    # T31 — Deep Region Specialization
+    DEEP_REGION_SPECIALIZATION_APPLIED = "deep_region_specialization_applied"
+    DEEP_REGION_PATHWAY_CREATED = "deep_region_pathway_created"
+    DEEP_REGION_METRICS_COMPUTED = "deep_region_metrics_computed"
 
 
 class MorphologyEvent(BaseModel):

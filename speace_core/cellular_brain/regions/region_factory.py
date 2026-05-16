@@ -14,12 +14,19 @@ class RegionFactory:
     # Default pipeline: sensory → hippocampus → prefrontal → motor
     DEFAULT_PIPELINE: List[str] = ["sensory", "hippocampus", "prefrontal", "motor"]
 
+    # T31 — Deep region pipeline with limbic, default_mode, cerebellar
+    DEEP_REGION_PIPELINE: List[str] = [
+        "sensory", "limbic", "hippocampus", "default_mode",
+        "prefrontal", "cerebellar", "motor",
+    ]
+
     @classmethod
     def build_from_genome(
         cls,
         circuit: NeuralCircuit,
         genome_dict: Dict[str, Any],
         seed: int = 42,
+        deep_regions_enabled: bool = True,
     ) -> RegionRegistry:
         random.seed(seed)
         registry = RegionRegistry()
@@ -27,7 +34,7 @@ class RegionFactory:
 
         if not brain_regions:
             # Fallback: assign neurons by role heuristics
-            cls._assign_fallback_regions(circuit, registry)
+            cls._assign_fallback_regions(circuit, registry, deep_regions_enabled=deep_regions_enabled)
             return registry
 
         # 1. Create regions from genome
@@ -62,9 +69,10 @@ class RegionFactory:
             registry.register(region)
 
         # 3. Build inter-region connections based on pipeline
-        for i in range(len(cls.DEFAULT_PIPELINE) - 1):
-            src = cls.DEFAULT_PIPELINE[i]
-            tgt = cls.DEFAULT_PIPELINE[i + 1]
+        pipeline = cls.DEEP_REGION_PIPELINE if deep_regions_enabled else cls.DEFAULT_PIPELINE
+        for i in range(len(pipeline) - 1):
+            src = pipeline[i]
+            tgt = pipeline[i + 1]
             if src in brain_regions and tgt in brain_regions:
                 registry.connectome.add_connection(
                     source_region_id=src,
@@ -86,7 +94,7 @@ class RegionFactory:
 
     @classmethod
     def _assign_fallback_regions(
-        cls, circuit: NeuralCircuit, registry: RegionRegistry
+        cls, circuit: NeuralCircuit, registry: RegionRegistry, deep_regions_enabled: bool = True
     ) -> None:
         """When genome has no brain_regions, assign by neuron role heuristics."""
         assignments: Dict[str, List[str]] = {
@@ -95,6 +103,13 @@ class RegionFactory:
             "prefrontal": [],
             "motor": [],
         }
+        if deep_regions_enabled:
+            assignments.update({
+                "limbic": [],
+                "cerebellar": [],
+                "default_mode": [],
+                "brainstem_homeostatic": [],
+            })
 
         for neuron in circuit.hidden_neurons:
             role = getattr(neuron, "neuron_role", "excitatory")
@@ -106,6 +121,14 @@ class RegionFactory:
                 assignments["prefrontal"].append(neuron.cell_id)
             elif role in {"motor_neuron", "output"}:
                 assignments["motor"].append(neuron.cell_id)
+            elif deep_regions_enabled and role in {"limbic_neuron", "salience"}:
+                assignments["limbic"].append(neuron.cell_id)
+            elif deep_regions_enabled and role in {"cerebellar_neuron", "error_correction"}:
+                assignments["cerebellar"].append(neuron.cell_id)
+            elif deep_regions_enabled and role in {"default_mode_neuron", "consolidation"}:
+                assignments["default_mode"].append(neuron.cell_id)
+            elif deep_regions_enabled and role in {"brainstem_neuron", "homeostasis"}:
+                assignments["brainstem_homeostatic"].append(neuron.cell_id)
             else:
                 # Round-robin
                 smallest = min(assignments, key=lambda k: len(assignments[k]))
@@ -120,9 +143,10 @@ class RegionFactory:
             registry.register(region)
 
         # Default pipeline connections
-        for i in range(len(cls.DEFAULT_PIPELINE) - 1):
-            src = cls.DEFAULT_PIPELINE[i]
-            tgt = cls.DEFAULT_PIPELINE[i + 1]
+        pipeline = cls.DEEP_REGION_PIPELINE if deep_regions_enabled else cls.DEFAULT_PIPELINE
+        for i in range(len(pipeline) - 1):
+            src = pipeline[i]
+            tgt = pipeline[i + 1]
             registry.connectome.add_connection(
                 source_region_id=src,
                 target_region_id=tgt,

@@ -189,7 +189,7 @@ def test_region_factory_build_from_genome_empty():
         output_neurons=[],
         synapses=[],
     )
-    registry = RegionFactory.build_from_genome(circuit, {}, seed=42)
+    registry = RegionFactory.build_from_genome(circuit, {}, seed=42, deep_regions_enabled=False)
     assert len(registry.regions) == 4
     assert "sensory" in registry.regions
     assert "hippocampus" in registry.regions
@@ -267,7 +267,7 @@ def test_region_factory_pipeline_connections():
             "motor": {"dominant_cell_types": ["motor_neuron"]},
         }
     }
-    registry = RegionFactory.build_from_genome(circuit, genome, seed=42)
+    registry = RegionFactory.build_from_genome(circuit, genome, seed=42, deep_regions_enabled=False)
     conns = registry.connectome.connections
     pairs = {(c.source_region_id, c.target_region_id) for c in conns}
     assert ("sensory", "hippocampus") in pairs
