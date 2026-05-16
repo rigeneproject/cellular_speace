@@ -82,6 +82,7 @@ class CellularBrainOrchestrator(BaseModel):
     stabilization_recommended: bool = False
     plasticity_reduction_recommended: bool = False
     region_architecture_enabled: bool = True
+    deep_regions_enabled: bool = True
     _region_registry: RegionRegistry | None = None
 
     class Config:
@@ -109,7 +110,7 @@ class CellularBrainOrchestrator(BaseModel):
         self._confidence = ConfidenceEngine()
         if self.region_architecture_enabled:
             self._region_registry = RegionFactory.build_from_genome(
-                self.circuit, self.genome.model_dump(), seed=42
+                self.circuit, self.genome.model_dump(), seed=42, deep_regions_enabled=self.deep_regions_enabled
             )
         else:
             self._region_registry = None
