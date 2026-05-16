@@ -165,13 +165,39 @@ brainstem_gain_reward =
 - [x] Coverage >= 85% (89.06%)
 - [x] Commit e tag
 
-## 11. Next Step
+## 11. T37B Audit Results
 
-**T37B — Adaptive Brainstem Gain Audit**
+**Audit ID:** t37b_42  
+**Verdict:** `GAIN_PARTIAL_RECOVERY`  
+**Best Profile:** `brainstem_gain_default`  
+**T38 Recommendation:** T38 Gain Sensitivity Tuning
 
-Verificare se il net_gain passa da -0.0284 a >= 0.
+### Baseline T36 (no gain controller)
+- cognitive_score: 0.4569
+- coherence_phi: 0.2754
+- energy_efficiency: 0.2195
+- net_gain: 0.0000
 
-## 12. References
+### Gain-enabled profiles (all converged)
+- cognitive_score: 0.4575 (+0.0006)
+- coherence_phi: 0.2770 (+0.0016)
+- energy_efficiency: 0.2214 (+0.0019)
+- net_gain: 0.0008 (+0.0008 vs T36)
+- gain_adjustments: 7
+- decay_gain: 0.825
+- emergency_gain: 0.65
+- cognitive_preservation_gain: 1.35
+
+### Interpretation
+Il gain controller ha prodotto un recupero parziale: net_gain passa da -0.0284 (T36B) a +0.0008 vs baseline T36. Il reward resta negativo (-0.0309) a causa del suppression cost e dell'emergency tick ratio. Tutti i profili gain convergono allo stesso stato, indicando che il sistema raggiunge rapidamente un equilibrio ma con margine limitato. Il passaggio a T38 e giustificato.
+
+## 12. Next Step
+
+**T38 — Gain Sensitivity Tuning**
+
+Aumentare la sensibilita del gain controller per amplificare il recupero e raggiungere `GAIN_CONTROLLER_VALIDATED` (net_gain > 0.02).
+
+## 13. References
 
 - T36B audit report: `reports/brainstem/t35b_brainstem_audit_20260516_211957.md`
 - `speace_core/cellular_brain/regions/brainstem_gain_controller.py`
