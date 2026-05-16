@@ -92,6 +92,13 @@ class MorphologyEventType(str, Enum):
     BRAINSTEM_TRUE_INSTABILITY_DETECTED = "brainstem_true_instability_detected"
     BRAINSTEM_COGNITIVE_GAIN_BOOSTED = "brainstem_cognitive_gain_boosted"
     BRAINSTEM_EMERGENCY_GAIN_REDUCED = "brainstem_emergency_gain_reduced"
+    # T38 — Gain Sensitivity Tuning
+    BRAINSTEM_GAIN_REWARD_V2_COMPUTED = "brainstem_gain_reward_v2_computed"
+    BRAINSTEM_GAIN_LR_ADAPTED = "brainstem_gain_lr_adapted"
+    BRAINSTEM_GAIN_DIVERSITY_PRESSURE_APPLIED = "brainstem_gain_diversity_pressure_applied"
+    BRAINSTEM_GAIN_CONVERGENCE_DETECTED = "brainstem_gain_convergence_detected"
+    BRAINSTEM_SUPPRESSION_COST_REDUCED = "brainstem_suppression_cost_reduced"
+    BRAINSTEM_COGNITIVE_RECOVERY_IMPROVED = "brainstem_cognitive_recovery_improved"
 
 
 class MorphologyEvent(BaseModel):

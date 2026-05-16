@@ -155,6 +155,18 @@ class BenchmarkMetrics(BaseModel):
     useful_stabilization_detected: bool = False
     true_instability_detected: bool = False
     gain_stability_score: float = 0.0
+    # T38 — Gain Sensitivity Tuning metrics
+    brainstem_gain_reward_v2: float = 0.0
+    adaptive_gain_learning_rate: float = 0.05
+    gain_profile_divergence: float = 0.0
+    gain_convergence_detected: bool = False
+    diversity_pressure_applied: bool = False
+    suppression_cost_reduction: float = 0.0
+    cognitive_recovery_margin: float = 0.0
+    phi_preservation_margin: float = 0.0
+    net_gain_vs_t36: float = 0.0
+    net_gain_vs_t34b: float = 0.0
+    gain_vector_distance: float = 0.0
 
 
 class BenchmarkResult(BaseModel):
@@ -809,8 +821,9 @@ class NeuroFunctionalBenchmark:
             suppression_cost = summary.get("suppression_cost", 0.0)
             useful_activity_preserved = summary.get("useful_activity_preserved", False)
 
-        # T37 — Adaptive Brainstem Gain Controller metrics
+        # T37/T38 — Adaptive Brainstem Gain Controller metrics
         brainstem_gain_reward = 0.0
+        brainstem_gain_reward_v2 = 0.0
         global_brainstem_gain = 1.0
         routing_gain = 1.0
         plasticity_gain = 1.0
@@ -823,6 +836,14 @@ class NeuroFunctionalBenchmark:
         useful_stabilization_detected = False
         true_instability_detected = False
         gain_stability_score = 0.0
+        adaptive_gain_learning_rate = 0.05
+        gain_profile_divergence = 0.0
+        gain_convergence_detected = False
+        diversity_pressure_applied = False
+        suppression_cost_reduction = 0.0
+        cognitive_recovery_margin = 0.0
+        phi_preservation_margin = 0.0
+        gain_vector_distance = 0.0
         bgc = getattr(self.orch, "_brainstem_gain_controller", None)
         if bgc is not None:
             gain_summary = bgc.get_gain_summary()
@@ -834,16 +855,19 @@ class NeuroFunctionalBenchmark:
             emergency_gain = gain_summary.get("emergency_gain", 1.0)
             cognitive_preservation_gain = gain_summary.get("cognitive_preservation_gain", 1.0)
             gain_adjustments_count = gain_summary.get("gain_adjustments_count", 0)
+            adaptive_gain_learning_rate = gain_summary.get("adaptive_lr", 0.05)
             # Compute deltas from baseline for gain evaluation
             cog_delta = final.accuracy - baseline.accuracy
             phi_delta = final.coherence_phi - baseline.coherence_phi
             energy_delta = final.mean_energy - baseline.mean_energy
             func_delta = final.accuracy - baseline.accuracy
+            flow_delta = regional_signal_flow_score - (baseline.coherence_phi if baseline.coherence_phi else 0.0)
             gain_metrics = {
                 "cognitive_score_delta": cog_delta,
                 "coherence_phi_delta": phi_delta,
                 "energy_efficiency_delta": energy_delta,
                 "functional_improvement_delta": func_delta,
+                "regional_signal_flow_delta": flow_delta,
                 "suppression_cost": suppression_cost,
                 "emergency_ticks": emergency_ticks,
                 "protective_ticks": protective_ticks,
@@ -853,10 +877,29 @@ class NeuroFunctionalBenchmark:
             }
             gain_result = bgc.evaluate(gain_metrics)
             brainstem_gain_reward = gain_result.brainstem_gain_reward
+            brainstem_gain_reward_v2 = gain_result.brainstem_gain_reward_v2
             over_suppression_detected = gain_result.over_suppression_detected
             useful_stabilization_detected = gain_result.useful_stabilization_detected
             true_instability_detected = gain_result.true_instability_detected
             gain_stability_score = gain_result.gain_stability_score
+            gain_profile_divergence = gain_result.gain_profile_divergence
+            gain_convergence_detected = gain_result.gain_convergence_detected
+            diversity_pressure_applied = gain_result.diversity_pressure_applied
+            suppression_cost_reduction = gain_result.suppression_cost_reduction
+            cognitive_recovery_margin = gain_result.cognitive_recovery_margin
+            phi_preservation_margin = gain_result.phi_preservation_margin
+            # gain_vector_distance: distance from balanced preset
+            preset_balanced = {
+                "routing_gain": 1.0, "plasticity_gain": 1.0, "decay_gain": 1.0,
+                "emergency_gain": 1.0, "cognitive_preservation_gain": 1.0, "global_brainstem_gain": 1.0,
+            }
+            current = {
+                "routing_gain": routing_gain, "plasticity_gain": plasticity_gain, "decay_gain": decay_gain,
+                "emergency_gain": emergency_gain, "cognitive_preservation_gain": cognitive_preservation_gain,
+                "global_brainstem_gain": global_brainstem_gain,
+            }
+            keys = list(preset_balanced.keys())
+            gain_vector_distance = round(sum(abs(current[k] - preset_balanced[k]) for k in keys) / len(keys), 4)
 
         return BenchmarkMetrics(
             accuracy_score=final.accuracy,
@@ -981,6 +1024,18 @@ class NeuroFunctionalBenchmark:
             useful_stabilization_detected=useful_stabilization_detected,
             true_instability_detected=true_instability_detected,
             gain_stability_score=gain_stability_score,
+            # T38
+            brainstem_gain_reward_v2=brainstem_gain_reward_v2,
+            adaptive_gain_learning_rate=adaptive_gain_learning_rate,
+            gain_profile_divergence=gain_profile_divergence,
+            gain_convergence_detected=gain_convergence_detected,
+            diversity_pressure_applied=diversity_pressure_applied,
+            suppression_cost_reduction=suppression_cost_reduction,
+            cognitive_recovery_margin=cognitive_recovery_margin,
+            phi_preservation_margin=phi_preservation_margin,
+            net_gain_vs_t36=0.0,
+            net_gain_vs_t34b=0.0,
+            gain_vector_distance=gain_vector_distance,
         )
 
     def generate_json_report(self, result: BenchmarkResult) -> Path:
