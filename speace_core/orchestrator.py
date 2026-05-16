@@ -42,6 +42,9 @@ from speace_core.cellular_brain.regions.region_signal_router import (
     RegionSignalRouter,
     RegionRoutingResult,
 )
+from speace_core.cellular_brain.regions.region_stability_controller import (
+    RegionLevelStabilityController,
+)
 from speace_core.dna.models import SharedGenome
 
 
@@ -83,7 +86,9 @@ class CellularBrainOrchestrator(BaseModel):
     plasticity_reduction_recommended: bool = False
     region_architecture_enabled: bool = True
     deep_regions_enabled: bool = True
+    region_stability_controller_enabled: bool = False
     _region_registry: RegionRegistry | None = None
+    _region_stability_controller: RegionLevelStabilityController | None = None
 
     class Config:
         arbitrary_types_allowed = True
@@ -114,6 +119,11 @@ class CellularBrainOrchestrator(BaseModel):
             )
         else:
             self._region_registry = None
+
+        if self.region_stability_controller_enabled:
+            self._region_stability_controller = RegionLevelStabilityController()
+        else:
+            self._region_stability_controller = None
 
     async def run_ticks(self, n_ticks: int) -> None:
         for _ in range(n_ticks):
@@ -186,6 +196,24 @@ class CellularBrainOrchestrator(BaseModel):
             for region in self._region_registry.regions.values():
                 region.regulate_region(self.circuit)
 
+        # T33 — Region-Level Stability Controller (pre-routing check)
+        routing_multiplier_map = None
+        plasticity_multiplier_map = None
+        if self.region_stability_controller_enabled and self._region_registry is not None:
+            pre_result = self._region_stability_controller.pre_routing_stability_check(
+                registry=self._region_registry,
+                circuit=self.circuit,
+                memory=self._memory,
+            )
+            routing_multiplier_map = {
+                rid: self._region_stability_controller.get_routing_multiplier(rid)
+                for rid in self._region_registry.regions
+            }
+            plasticity_multiplier_map = {
+                rid: self._region_stability_controller.get_plasticity_multiplier(rid)
+                for rid in self._region_registry.regions
+            }
+
         # Regional Signal Routing (T25)
         if self.region_signal_routing_enabled and self._region_registry is not None:
             confidence_score = 0.0
@@ -197,6 +225,7 @@ class CellularBrainOrchestrator(BaseModel):
                 metrics=metrics,
                 memory=self._memory,
                 confidence_score=confidence_score,
+                routing_multiplier_map=routing_multiplier_map,
             )
 
         # Inter-Region Plasticity (T23)
@@ -212,6 +241,15 @@ class CellularBrainOrchestrator(BaseModel):
                 tick=self.current_tick,
                 confidence_score=confidence_score,
                 routing_result=self.last_routing_result,
+                plasticity_multiplier_map=plasticity_multiplier_map,
+            )
+
+        # T33 — Region-Level Stability Controller (post-routing check)
+        if self.region_stability_controller_enabled and self._region_registry is not None:
+            self._region_stability_controller.post_routing_stability_check(
+                registry=self._region_registry,
+                circuit=self.circuit,
+                memory=self._memory,
             )
 
         # Record morphological snapshot every tick

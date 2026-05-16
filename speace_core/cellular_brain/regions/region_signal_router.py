@@ -149,6 +149,7 @@ class RegionSignalRouter:
         metrics: Optional[SystemMetrics] = None,
         memory: Optional[MorphologicalMemory] = None,
         confidence_score: float = 0.0,
+        routing_multiplier_map: Optional[Dict[str, float]] = None,
     ) -> RegionRoutingResult:
         result = RegionRoutingResult()
         if region_connectome is None or not region_connectome.connections:
@@ -156,11 +157,17 @@ class RegionSignalRouter:
 
         confidence_weight = max(0.5, 1.0 - confidence_score) if confidence_score > 0.6 else 1.0
         global_energy = metrics.mean_energy if metrics else 0.5
+        multiplier_map = routing_multiplier_map or {}
 
         signals_routed = 0
         for conn in region_connectome.connections:
             if signals_routed >= self.max_signals_per_tick:
                 break
+
+            multiplier = multiplier_map.get(conn.source_region_id, 1.0)
+            if multiplier <= 0.0:
+                result.blocked_signals += 1
+                continue
 
             source_activation = self.compute_soft_region_activation(
                 conn.source_region_id, circuit

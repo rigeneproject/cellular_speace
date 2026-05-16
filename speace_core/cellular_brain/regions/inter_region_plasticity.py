@@ -100,21 +100,21 @@ class InterRegionPlasticityEngine:
     # Core update rules
     # ------------------------------------------------------------------ #
 
-    def apply_pathway_ltp(self, pathway: RegionPathwayState) -> None:
+    def apply_pathway_ltp(self, pathway: RegionPathwayState, multiplier: float = 1.0) -> None:
         pathway.pathway_strength = min(
             self.max_strength,
-            pathway.pathway_strength + self.ltp_rate * pathway.plasticity_rate,
+            pathway.pathway_strength + self.ltp_rate * pathway.plasticity_rate * multiplier,
         )
         pathway.ltp_events += 1
-        pathway.energy_cost += self.energy_cost_per_update
+        pathway.energy_cost += self.energy_cost_per_update * multiplier
 
-    def apply_pathway_ltd(self, pathway: RegionPathwayState) -> None:
+    def apply_pathway_ltd(self, pathway: RegionPathwayState, multiplier: float = 1.0) -> None:
         pathway.pathway_strength = max(
             self.min_strength,
-            pathway.pathway_strength - self.ltd_rate * pathway.plasticity_rate,
+            pathway.pathway_strength - self.ltd_rate * pathway.plasticity_rate * multiplier,
         )
         pathway.ltd_events += 1
-        pathway.energy_cost += self.energy_cost_per_update
+        pathway.energy_cost += self.energy_cost_per_update * multiplier
 
     def modulate_by_energy(
         self,
@@ -170,6 +170,7 @@ class InterRegionPlasticityEngine:
         tick: int = 0,
         confidence_score: float = 0.0,
         routing_result: Any = None,
+        plasticity_multiplier_map: Optional[Dict[str, float]] = None,
     ) -> InterRegionPlasticityResult:
         result = InterRegionPlasticityResult()
         if registry is None or registry.connectome is None:
@@ -178,6 +179,8 @@ class InterRegionPlasticityEngine:
         connections = registry.connectome.connections
         if not connections:
             return result
+
+        multiplier_map = plasticity_multiplier_map or {}
 
         # T29 — PathwayPlasticityTuner integration
         if self.tuner_profile is not None:
@@ -232,6 +235,9 @@ class InterRegionPlasticityEngine:
         for conn in connections:
             if not conn.plasticity_enabled:
                 continue
+            multiplier = multiplier_map.get(conn.source_region_id, 1.0)
+            if multiplier <= 0.0:
+                continue
 
             # Build or recover pathway state stored in connection metadata
             if not hasattr(conn, "_pathway_state"):
@@ -265,7 +271,7 @@ class InterRegionPlasticityEngine:
 
                 # For trigger modes, use recommended update when available
                 if trigger_result.recommended_update == "ltp":
-                    self.apply_pathway_ltp(pw)
+                    self.apply_pathway_ltp(pw, multiplier=multiplier)
                     result.reinforced_pathways += 1
                     if memory is not None:
                         memory.create_event(
@@ -277,10 +283,11 @@ class InterRegionPlasticityEngine:
                                 "trigger_type": trigger_result.trigger_type,
                                 "causal_score": trigger_result.causal_score,
                                 "tick": tick,
+                                "stability_multiplier": multiplier,
                             },
                         )
                 elif trigger_result.recommended_update == "ltd":
-                    self.apply_pathway_ltd(pw)
+                    self.apply_pathway_ltd(pw, multiplier=multiplier)
                     result.weakened_pathways += 1
                     if memory is not None:
                         memory.create_event(
@@ -292,6 +299,7 @@ class InterRegionPlasticityEngine:
                                 "trigger_type": trigger_result.trigger_type,
                                 "causal_score": trigger_result.causal_score,
                                 "tick": tick,
+                                "stability_multiplier": multiplier,
                             },
                         )
             else:
@@ -321,7 +329,7 @@ class InterRegionPlasticityEngine:
                 delta = self.compute_delta_tick(pw, tick)
                 if delta is not None:
                     if delta > 0:
-                        self.apply_pathway_ltp(pw)
+                        self.apply_pathway_ltp(pw, multiplier=multiplier)
                         result.reinforced_pathways += 1
                         if memory is not None:
                             memory.create_event(
@@ -333,10 +341,11 @@ class InterRegionPlasticityEngine:
                                     "pathway_strength": pw.pathway_strength,
                                     "delta_tick": delta,
                                     "tick": tick,
+                                    "stability_multiplier": multiplier,
                                 },
                             )
                     elif delta < 0:
-                        self.apply_pathway_ltd(pw)
+                        self.apply_pathway_ltd(pw, multiplier=multiplier)
                         result.weakened_pathways += 1
                         if memory is not None:
                             memory.create_event(
@@ -348,6 +357,7 @@ class InterRegionPlasticityEngine:
                                     "pathway_strength": pw.pathway_strength,
                                     "delta_tick": delta,
                                     "tick": tick,
+                                    "stability_multiplier": multiplier,
                                 },
                             )
 

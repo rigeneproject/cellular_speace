@@ -52,6 +52,14 @@ class MorphologyEventType(str, Enum):
     DEEP_REGION_SPECIALIZATION_APPLIED = "deep_region_specialization_applied"
     DEEP_REGION_PATHWAY_CREATED = "deep_region_pathway_created"
     DEEP_REGION_METRICS_COMPUTED = "deep_region_metrics_computed"
+    # T33 — Region-Level Stability Controller
+    REGION_STABILITY_CHECKED = "region_stability_checked"
+    REGION_INSTABILITY_DETECTED = "region_instability_detected"
+    REGION_DAMPING_APPLIED = "region_damping_applied"
+    REGION_ROUTING_BLOCKED = "region_routing_blocked"
+    REGION_COOLDOWN_STARTED = "region_cooldown_started"
+    BRAINSTEM_STABILITY_OVERRIDE = "brainstem_stability_override"
+    REGION_STABILITY_RECOVERED = "region_stability_recovered"
 
 
 class MorphologyEvent(BaseModel):

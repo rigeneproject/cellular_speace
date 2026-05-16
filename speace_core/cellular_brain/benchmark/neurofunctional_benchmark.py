@@ -97,6 +97,16 @@ class BenchmarkMetrics(BaseModel):
     deep_region_signal_flow: float = 0.0
     region_specialization_diversity: float = 0.0
     region_role_alignment_score: float = 0.0
+    # T33 — Region stability metrics
+    region_instability_mean: float = 0.0
+    unstable_region_count: int = 0
+    stability_actions_applied: int = 0
+    routing_blocks_applied: int = 0
+    cooldowns_started: int = 0
+    mean_region_damping_factor: float = 1.0
+    brainstem_override_count: int = 0
+    phi_recovery_score: float = 0.0
+    stability_controller_active: bool = False
 
 
 class BenchmarkResult(BaseModel):
@@ -612,6 +622,47 @@ class NeuroFunctionalBenchmark:
             region_specialization_diversity = deep_metrics.get("region_specialization_diversity", 0.0)
             region_role_alignment_score = deep_metrics.get("region_role_alignment_score", 0.0)
 
+        # T33 — Region stability metrics
+        region_instability_mean = 0.0
+        unstable_region_count = 0
+        stability_actions_applied = 0
+        routing_blocks_applied = 0
+        cooldowns_started = 0
+        mean_region_damping_factor = 1.0
+        brainstem_override_count = 0
+        phi_recovery_score = 0.0
+        stability_controller_active = False
+        if (
+            self.orch.region_stability_controller_enabled
+            and self.orch._region_stability_controller is not None
+        ):
+            controller = self.orch._region_stability_controller
+            stability_controller_active = True
+            states = list(controller._region_states.values())
+            if states:
+                region_instability_mean = sum(s.instability_score for s in states) / len(states)
+                unstable_region_count = sum(1 for s in states if s.instability_score >= 0.25)
+                mean_region_damping_factor = sum(s.damping_factor for s in states) / len(states)
+            routing_blocks_applied = sum(
+                1 for e in self.orch.memory.events
+                if e.event_type == MorphologyEventType.REGION_ROUTING_BLOCKED
+            )
+            cooldowns_started = sum(
+                1 for e in self.orch.memory.events
+                if e.event_type == MorphologyEventType.REGION_COOLDOWN_STARTED
+            )
+            brainstem_override_count = sum(
+                1 for e in self.orch.memory.events
+                if e.event_type == MorphologyEventType.BRAINSTEM_STABILITY_OVERRIDE
+            )
+            stability_actions_applied = routing_blocks_applied + cooldowns_started + sum(
+                1 for e in self.orch.memory.events
+                if e.event_type == MorphologyEventType.REGION_DAMPING_APPLIED
+            )
+            # phi_recovery_score: max(0, phi_with_stability - phi_without_stability)
+            # Approximate using baseline vs final if controller was active
+            phi_recovery_score = max(0.0, final.coherence_phi - baseline.coherence_phi)
+
         return BenchmarkMetrics(
             accuracy_score=final.accuracy,
             coherence_phi=final.coherence_phi,
@@ -679,6 +730,15 @@ class NeuroFunctionalBenchmark:
             deep_region_signal_flow=deep_region_signal_flow,
             region_specialization_diversity=region_specialization_diversity,
             region_role_alignment_score=region_role_alignment_score,
+            region_instability_mean=region_instability_mean,
+            unstable_region_count=unstable_region_count,
+            stability_actions_applied=stability_actions_applied,
+            routing_blocks_applied=routing_blocks_applied,
+            cooldowns_started=cooldowns_started,
+            mean_region_damping_factor=mean_region_damping_factor,
+            brainstem_override_count=brainstem_override_count,
+            phi_recovery_score=phi_recovery_score,
+            stability_controller_active=stability_controller_active,
         )
 
     def generate_json_report(self, result: BenchmarkResult) -> Path:
@@ -787,6 +847,15 @@ class NeuroFunctionalBenchmark:
             f"| Deep region signal flow | {m.deep_region_signal_flow:.4f} |",
             f"| Region specialization diversity | {m.region_specialization_diversity:.4f} |",
             f"| Region role alignment | {m.region_role_alignment_score:.4f} |",
+            f"| Stability controller active | {m.stability_controller_active} |",
+            f"| Region instability mean | {m.region_instability_mean:.4f} |",
+            f"| Unstable region count | {m.unstable_region_count} |",
+            f"| Stability actions applied | {m.stability_actions_applied} |",
+            f"| Routing blocks applied | {m.routing_blocks_applied} |",
+            f"| Cooldowns started | {m.cooldowns_started} |",
+            f"| Mean region damping factor | {m.mean_region_damping_factor:.4f} |",
+            f"| Brainstem override count | {m.brainstem_override_count} |",
+            f"| Phi recovery score | {m.phi_recovery_score:.4f} |",
             "",
             "---",
             "*Generated by NeuroFunctionalBenchmark v0.3*",
