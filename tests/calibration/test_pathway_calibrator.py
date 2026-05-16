@@ -45,59 +45,61 @@ def test_inter_region_off_profile(calibrator):
 
 
 # ---------------------------------------------------------------------------
-# 4. current_t23_default la abilita
+# 4. routing_only abilita routing ma non plasticity
 # ---------------------------------------------------------------------------
 
-def test_current_t23_default_profile(calibrator):
+def test_routing_only_profile(calibrator):
     profiles = calibrator.default_profiles()
-    default = next(p for p in profiles if p.name == "current_t23_default")
-    assert default.inter_region_plasticity_enabled is True
+    routing = next(p for p in profiles if p.name == "routing_only")
+    assert routing.inter_region_plasticity_enabled is False
+    assert routing.region_signal_routing_enabled is True
 
 
 # ---------------------------------------------------------------------------
 # 5. low/medium/high modificano LTP/LTD
 # ---------------------------------------------------------------------------
 
-def test_low_plasticity_rates(calibrator):
+def test_routing_plus_low_plasticity_rates(calibrator):
     profiles = calibrator.default_profiles()
-    low = next(p for p in profiles if p.name == "low_plasticity")
+    low = next(p for p in profiles if p.name == "routing_plus_low_plasticity")
     assert low.ltp_rate == pytest.approx(0.02)
     assert low.ltd_rate == pytest.approx(0.01)
 
 
-def test_medium_plasticity_rates(calibrator):
+def test_routing_plus_medium_plasticity_rates(calibrator):
     profiles = calibrator.default_profiles()
-    med = next(p for p in profiles if p.name == "medium_plasticity")
+    med = next(p for p in profiles if p.name == "routing_plus_medium_plasticity")
     assert med.ltp_rate == pytest.approx(0.04)
     assert med.ltd_rate == pytest.approx(0.025)
 
 
-def test_high_plasticity_rates(calibrator):
+def test_routing_plus_high_plasticity_rates(calibrator):
     profiles = calibrator.default_profiles()
-    high = next(p for p in profiles if p.name == "high_plasticity")
+    high = next(p for p in profiles if p.name == "routing_plus_high_plasticity")
     assert high.ltp_rate == pytest.approx(0.08)
     assert high.ltd_rate == pytest.approx(0.06)
 
 
 # ---------------------------------------------------------------------------
-# 6. energy_conservative_pathways riduce costo energetico
+# 6. routing_plus_energy_conservative riduce costo energetico
 # ---------------------------------------------------------------------------
 
-def test_energy_conservative_cost(calibrator):
+def test_routing_plus_energy_conservative_cost(calibrator):
     profiles = calibrator.default_profiles()
-    eco = next(p for p in profiles if p.name == "energy_conservative_pathways")
+    eco = next(p for p in profiles if p.name == "routing_plus_energy_conservative")
     assert eco.energy_cost_per_update == pytest.approx(0.0005)
     assert eco.energy_modulation_strength == pytest.approx(1.5)
 
 
 # ---------------------------------------------------------------------------
-# 7. confidence_guided_pathways usa confidence_score
+# 7. routing_plus_plasticity abilita entrambi
 # ---------------------------------------------------------------------------
 
-def test_confidence_guided_modulation(calibrator):
+def test_routing_plus_plasticity_profile(calibrator):
     profiles = calibrator.default_profiles()
-    conf = next(p for p in profiles if p.name == "confidence_guided_pathways")
-    assert conf.confidence_modulation_strength == pytest.approx(1.5)
+    rp = next(p for p in profiles if p.name == "routing_plus_plasticity")
+    assert rp.inter_region_plasticity_enabled is True
+    assert rp.region_signal_routing_enabled is True
 
 
 # ---------------------------------------------------------------------------
@@ -120,7 +122,7 @@ async def test_run_profile_produces_result(calibrator):
 @pytest.mark.asyncio
 async def test_regional_signal_flow_score_range(calibrator):
     profiles = calibrator.default_profiles()
-    profile = next(p for p in profiles if p.name == "current_t23_default")
+    profile = next(p for p in profiles if p.name == "routing_plus_plasticity")
     result = await calibrator.run_profile(profile)
     assert 0.0 <= result.regional_signal_flow_score <= 1.0
 
@@ -162,7 +164,7 @@ async def test_generate_markdown_report(calibrator, tmp_path):
     assert path.exists()
     assert path.suffix == ".md"
     content = path.read_text(encoding="utf-8")
-    assert "Post-T23 Regional Plasticity Audit" in content
+    assert "Post-T25 T26 Regional Plasticity Audit Report (Routing Enabled)" in content
 
 
 # ---------------------------------------------------------------------------
@@ -175,11 +177,12 @@ async def test_run_suite_produces_verdict(calibrator):
     all_profiles = calibrator.default_profiles()
     report = await calibrator.run_pathway_calibration_suite(profiles=all_profiles[:2])
     assert report.verdict in [
-        "pathway_plasticity_validated",
-        "pathway_plasticity_partially_validated",
+        "routing_plasticity_validated",
+        "routing_validated_plasticity_weak",
+        "routing_active_but_no_plasticity",
         "pathway_overplasticity_detected",
-        "pathway_energy_regression",
-        "pathway_no_effect",
+        "routing_energy_regression",
+        "routing_no_effect",
         "insufficient_evidence",
     ]
 

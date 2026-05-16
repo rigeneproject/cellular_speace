@@ -22,6 +22,7 @@ class PathwayCalibrationProfile(BaseModel):
     profile_id: str
     name: str
     inter_region_plasticity_enabled: bool = True
+    region_signal_routing_enabled: bool = False
     ltp_rate: float = 0.05
     ltd_rate: float = 0.03
     min_strength: float = 0.0
@@ -45,6 +46,11 @@ class PathwayCalibrationResult(BaseModel):
     pathway_energy_cost: float = 0.0
     regional_signal_flow_score: float = 0.0
     inter_region_plasticity_events: int = 0
+    routed_signals: int = 0
+    delivered_signals: int = 0
+    blocked_signals: int = 0
+    routing_energy_cost: float = 0.0
+    active_inter_region_pathways: int = 0
     regression_score: float = 0.0
     distance_from_baseline: float = 0.0
     passed: bool = True
@@ -99,61 +105,67 @@ class PathwayCalibrator:
                 profile_id="p0",
                 name="inter_region_off",
                 inter_region_plasticity_enabled=False,
-                description="Disable inter-region plasticity (baseline)",
+                region_signal_routing_enabled=False,
+                description="Disable inter-region plasticity and routing (baseline)",
             ),
             PathwayCalibrationProfile(
                 profile_id="p1",
-                name="current_t23_default",
-                ltp_rate=0.05,
-                ltd_rate=0.03,
-                description="Current T23 default settings",
+                name="routing_only",
+                inter_region_plasticity_enabled=False,
+                region_signal_routing_enabled=True,
+                description="Enable routing only, no plasticity",
             ),
             PathwayCalibrationProfile(
                 profile_id="p2",
-                name="low_plasticity",
-                ltp_rate=0.02,
-                ltd_rate=0.01,
-                description="Reduced LTP/LTD rates",
+                name="plasticity_without_routing",
+                inter_region_plasticity_enabled=True,
+                region_signal_routing_enabled=False,
+                description="Enable plasticity without routing",
             ),
             PathwayCalibrationProfile(
                 profile_id="p3",
-                name="medium_plasticity",
-                ltp_rate=0.04,
-                ltd_rate=0.025,
-                description="Moderate LTP/LTD rates",
+                name="routing_plus_plasticity",
+                inter_region_plasticity_enabled=True,
+                region_signal_routing_enabled=True,
+                description="Enable both routing and plasticity",
             ),
             PathwayCalibrationProfile(
                 profile_id="p4",
-                name="high_plasticity",
-                ltp_rate=0.08,
-                ltd_rate=0.06,
-                description="Aggressive LTP/LTD rates",
+                name="routing_plus_low_plasticity",
+                inter_region_plasticity_enabled=True,
+                region_signal_routing_enabled=True,
+                ltp_rate=0.02,
+                ltd_rate=0.01,
+                description="Routing + low LTP/LTD",
             ),
             PathwayCalibrationProfile(
                 profile_id="p5",
-                name="energy_conservative_pathways",
+                name="routing_plus_medium_plasticity",
+                inter_region_plasticity_enabled=True,
+                region_signal_routing_enabled=True,
+                ltp_rate=0.04,
+                ltd_rate=0.025,
+                description="Routing + medium LTP/LTD",
+            ),
+            PathwayCalibrationProfile(
+                profile_id="p6",
+                name="routing_plus_high_plasticity",
+                inter_region_plasticity_enabled=True,
+                region_signal_routing_enabled=True,
+                ltp_rate=0.08,
+                ltd_rate=0.06,
+                description="Routing + aggressive LTP/LTD",
+            ),
+            PathwayCalibrationProfile(
+                profile_id="p7",
+                name="routing_plus_energy_conservative",
+                inter_region_plasticity_enabled=True,
+                region_signal_routing_enabled=True,
                 ltp_rate=0.03,
                 ltd_rate=0.02,
                 energy_cost_per_update=0.0005,
                 energy_modulation_strength=1.5,
-                description="Conservative energy use with stronger energy modulation",
-            ),
-            PathwayCalibrationProfile(
-                profile_id="p6",
-                name="confidence_guided_pathways",
-                ltp_rate=0.06,
-                confidence_modulation_strength=1.5,
-                description="Confidence-driven plasticity emphasis",
-            ),
-            PathwayCalibrationProfile(
-                profile_id="p7",
-                name="balanced_pathway_profile",
-                ltp_rate=0.04,
-                ltd_rate=0.025,
-                energy_cost_per_update=0.0008,
-                confidence_modulation_strength=1.2,
-                energy_modulation_strength=1.2,
-                description="Balanced compromise across all dimensions",
+                description="Routing + conservative energy pathways",
             ),
         ]
 
@@ -182,6 +194,7 @@ class PathwayCalibrator:
         profile: PathwayCalibrationProfile, orch: CellularBrainOrchestrator
     ) -> None:
         orch.inter_region_plasticity_enabled = profile.inter_region_plasticity_enabled
+        orch.region_signal_routing_enabled = profile.region_signal_routing_enabled
         if profile.inter_region_plasticity_enabled and orch._inter_region_plasticity is not None:
             engine = orch._inter_region_plasticity
             engine.ltp_rate = profile.ltp_rate
@@ -214,6 +227,7 @@ class PathwayCalibrator:
                 community_detection_enabled=True,
                 confidence_enabled=True,
                 inter_region_plasticity_enabled=profile.inter_region_plasticity_enabled,
+                region_signal_routing_enabled=profile.region_signal_routing_enabled,
                 input_pattern=pattern,
                 target_output=pattern,
                 n_ticks=self.n_adaptive_cycles,
@@ -239,6 +253,11 @@ class PathwayCalibrator:
             pathway_energy_cost=m.pathway_energy_cost,
             regional_signal_flow_score=m.regional_signal_flow_score,
             inter_region_plasticity_events=m.reinforced_pathways + m.weakened_pathways,
+            routed_signals=m.routed_signals,
+            delivered_signals=m.delivered_signals,
+            blocked_signals=m.blocked_signals,
+            routing_energy_cost=m.routing_energy_cost,
+            active_inter_region_pathways=m.active_inter_region_pathways,
             regression_score=0.0,
             distance_from_baseline=0.0,
             passed=True,
@@ -362,39 +381,66 @@ class PathwayCalibrator:
         if not passed:
             return "insufficient_evidence"
 
-        # Check for overplasticity in high_plasticity profile
+        # Baseline reference
+        b_cog = baseline_metrics.get("speace_cognitive_score", 0.0)
+        b_phi = baseline_metrics.get("coherence_phi", 0.0)
+        b_ene = baseline_metrics.get("energy_efficiency", 0.0)
+
+        # Profiles with routing enabled
+        routing_on = [r for r in passed if r.profile.region_signal_routing_enabled]
+        routing_off = [r for r in passed if not r.profile.region_signal_routing_enabled]
+
+        # 1. Check for routing no effect: routing_on vs routing_off identical
+        if routing_on and routing_off:
+            off = routing_off[0]
+            all_same = all(
+                r.delivered_signals == 0 and r.regional_signal_flow_score == 0
+                for r in routing_on
+            )
+            if all_same:
+                return "routing_no_effect"
+
+        # 2. Check for overplasticity in high_plasticity profile
         high_plasticity = next(
-            (r for r in passed if r.profile.name == "high_plasticity"), None
+            (r for r in passed if r.profile.name == "routing_plus_high_plasticity"), None
         )
         if high_plasticity is not None:
-            b_phi = baseline_metrics.get("coherence_phi", 0.0)
-            if high_plasticity.coherence_phi < b_phi * 0.8:
+            if high_plasticity.coherence_phi < b_phi * 0.8 or high_plasticity.speace_cognitive_score < b_cog * 0.8:
                 return "pathway_overplasticity_detected"
 
-        # Check for energy regression
+        # 3. Check for energy regression caused by routing/plasticity
         for r in passed:
-            if r.pathway_energy_cost > 0.01:
-                b_ene = baseline_metrics.get("energy_efficiency", 0.0)
-                if r.energy_efficiency < b_ene * 0.8:
-                    return "pathway_energy_regression"
+            total_routing_cost = r.routing_energy_cost + r.pathway_energy_cost
+            if total_routing_cost > 0.01 and r.energy_efficiency < b_ene * 0.8:
+                return "routing_energy_regression"
 
-        # Check for validated improvement
+        # 4. Check for routing active but no plasticity events
+        routing_active = any(r.delivered_signals > 0 for r in routing_on)
+        plasticity_events = any(
+            r.inter_region_plasticity_events > 0
+            for r in passed
+            if r.profile.inter_region_plasticity_enabled
+        )
+        if routing_active and not plasticity_events:
+            return "routing_active_but_no_plasticity"
+
+        # 5. Check for validated improvement with routing
         has_improver = any(r.regression_score > 0.0 for r in passed)
         if has_improver:
             best = max(passed, key=lambda r: r.regression_score)
             if (
-                best.energy_efficiency >= baseline_metrics.get("energy_efficiency", 0.0) * 0.9
+                best.energy_efficiency >= b_ene * 0.9
                 and best.regional_signal_flow_score > 0
+                and best.inter_region_plasticity_events > 0
             ):
-                return "pathway_plasticity_validated"
-            return "pathway_plasticity_partially_validated"
+                return "routing_plasticity_validated"
+            # Routing works, plasticity weak but present
+            if best.regional_signal_flow_score > 0 and best.delivered_signals > 0:
+                return "routing_validated_plasticity_weak"
 
-        # Check for no effect (events present but no functional delta)
-        has_events = any(
-            r.inter_region_plasticity_events > 0 for r in passed if r.profile.inter_region_plasticity_enabled
-        )
-        if has_events:
-            return "pathway_no_effect"
+        # 6. Fallback: routing works but insufficient functional evidence
+        if routing_active and plasticity_events:
+            return "routing_validated_plasticity_weak"
 
         return "insufficient_evidence"
 
@@ -416,7 +462,7 @@ class PathwayCalibrator:
 
         b = report.baseline_metrics
         lines: List[str] = [
-            "# SPEACE Post-T23 Regional Plasticity Audit Report",
+            "# SPEACE Post-T25 T26 Regional Plasticity Audit Report (Routing Enabled)",
             "",
             f"**Audit ID:** {report.audit_id}",
             f"**Date:** {report.created_at}",
@@ -433,8 +479,8 @@ class PathwayCalibrator:
             "",
             "## Comparative Results",
             "",
-            "| Profile | Cognitive | Phi | Energy | Flow | Reg Score | Distance | Passed |",
-            "|---|---|---|---|---|---|---|---|",
+            "| Profile | Cognitive | Phi | Energy | Flow | Routed | Delivered | Plasticity Events | Reg Score | Distance | Passed |",
+            "|---|---|---|---|---|---|---|---|---|---|---|---|",
         ]
 
         for r in report.profile_results:
@@ -444,6 +490,9 @@ class PathwayCalibrator:
                 f"{r.coherence_phi:.4f} | "
                 f"{r.energy_efficiency:.4f} | "
                 f"{r.regional_signal_flow_score:.4f} | "
+                f"{r.routed_signals} | "
+                f"{r.delivered_signals} | "
+                f"{r.inter_region_plasticity_events} | "
                 f"{r.regression_score:.4f} | "
                 f"{r.distance_from_baseline:.4f} | "
                 f"{'PASS' if r.passed else 'FAIL'} |"
@@ -461,7 +510,7 @@ class PathwayCalibrator:
         lines.extend([
             "",
             "---",
-            "*Generated by PathwayCalibrator v0.3*",
+            "*Generated by PathwayCalibrator v0.4*",
         ])
 
         path.write_text("\n".join(lines), encoding="utf-8")
