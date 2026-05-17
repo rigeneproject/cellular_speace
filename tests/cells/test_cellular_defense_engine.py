@@ -59,8 +59,13 @@ def test_defense_activations_only_when_threshold_met():
     damage_result = damage_engine.evaluate(circuit, stress_result)
     defense_engine = CellularDefenseEngine(
         quarantine_stress_threshold=0.99,
+        quarantine_damage_threshold=0.99,
         firewall_stress_threshold=0.99,
         snooze_stress_threshold=0.99,
+        routing_block_stress_threshold=0.99,
+        plasticity_lock_stress_threshold=0.99,
+        input_filter_stress_threshold=0.99,
+        immune_alert_damage_threshold=0.99,
     )
     result = defense_engine.run(circuit, stress_result.per_cell, damage_result.per_cell)
     assert result.defense_activation_count == 0
@@ -73,10 +78,15 @@ def test_snooze_applied_for_high_stress():
     stress_result = stress_engine.evaluate(circuit)
     damage_engine = CellularDamageEngine()
     damage_result = damage_engine.evaluate(circuit, stress_result)
-    # Raise firewall threshold so only snooze triggers
     defense_engine = CellularDefenseEngine(
         snooze_stress_threshold=0.3,
         firewall_stress_threshold=1.0,
+        quarantine_stress_threshold=1.0,
+        quarantine_damage_threshold=1.0,
+        routing_block_stress_threshold=1.0,
+        plasticity_lock_stress_threshold=1.0,
+        input_filter_stress_threshold=1.0,
+        immune_alert_damage_threshold=1.0,
     )
     result = defense_engine.run(circuit, stress_result.per_cell, damage_result.per_cell)
     assert result.snooze_count >= 1
@@ -103,7 +113,6 @@ def test_protected_neurons_skipped():
     damage_result = damage_engine.evaluate(circuit, stress_result)
     defense_engine = CellularDefenseEngine(snooze_stress_threshold=0.1)
     result = defense_engine.run(circuit, stress_result.per_cell, damage_result.per_cell)
-    # critical neuron should not be snoozed
     actions_for_n = [a for a in result.actions if a.cell_id == "n_in"]
     assert len(actions_for_n) == 0
 
@@ -155,3 +164,58 @@ def test_firewall_clears_targets():
     result = defense_engine.run(circuit, stress_result.per_cell, damage_result.per_cell)
     if result.firewall_count > 0:
         assert n.targets == []
+
+
+# ------------------------------------------------------------------ #
+# T42B new defense actions
+# ------------------------------------------------------------------ #
+
+def test_plasticity_lock_applied():
+    n = DigitalNeuron(cell_id="n", role="digital_neuron", energy=0.2, activation=2.0, consecutive_fires=5, apoptosis_risk=0.9)
+    circuit = NeuralCircuit(circuit_id="t", input_neurons=[], hidden_neurons=[n], output_neurons=[])
+    stress_engine = CellularStressEngine()
+    stress_result = stress_engine.evaluate(circuit)
+    damage_engine = CellularDamageEngine()
+    damage_result = damage_engine.evaluate(circuit, stress_result)
+    defense_engine = CellularDefenseEngine(
+        plasticity_lock_stress_threshold=0.1,
+        quarantine_stress_threshold=1.0,
+        quarantine_damage_threshold=1.0,
+        firewall_stress_threshold=1.0,
+    )
+    result = defense_engine.run(circuit, stress_result.per_cell, damage_result.per_cell)
+    assert result.plasticity_lock_count >= 1
+
+
+def test_immune_alert_on_critical_damage():
+    n = DigitalNeuron(cell_id="n", role="digital_neuron", energy=0.2, activation=2.0, consecutive_fires=5, apoptosis_risk=0.9)
+    circuit = NeuralCircuit(circuit_id="t", input_neurons=[], hidden_neurons=[n], output_neurons=[])
+    stress_engine = CellularStressEngine()
+    stress_result = stress_engine.evaluate(circuit)
+    damage_engine = CellularDamageEngine()
+    damage_result = damage_engine.evaluate(circuit, stress_result)
+    defense_engine = CellularDefenseEngine(
+        immune_alert_damage_threshold=0.1,
+        quarantine_stress_threshold=1.0,
+        quarantine_damage_threshold=1.0,
+    )
+    result = defense_engine.run(circuit, stress_result.per_cell, damage_result.per_cell)
+    assert result.immune_alert_count >= 1
+
+
+def test_quarantine_event_type():
+    from speace_core.cellular_brain.memory.morphological_memory import MorphologicalMemory
+    n = DigitalNeuron(cell_id="n", role="digital_neuron", energy=0.1, activation=2.0, consecutive_fires=5, apoptosis_risk=0.9)
+    circuit = NeuralCircuit(circuit_id="t", input_neurons=[], hidden_neurons=[n], output_neurons=[])
+    circuit.memory = MorphologicalMemory()
+    stress_engine = CellularStressEngine()
+    stress_result = stress_engine.evaluate(circuit)
+    damage_engine = CellularDamageEngine()
+    damage_result = damage_engine.evaluate(circuit, stress_result)
+    defense_engine = CellularDefenseEngine(
+        quarantine_stress_threshold=0.1,
+        quarantine_damage_threshold=0.1,
+    )
+    defense_engine.run(circuit, stress_result.per_cell, damage_result.per_cell, memory=circuit.memory)
+    events = circuit.memory.events
+    assert any(e.event_type.value == "cell_quarantined" for e in events)

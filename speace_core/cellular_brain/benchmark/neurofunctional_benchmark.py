@@ -185,10 +185,15 @@ class BenchmarkMetrics(BaseModel):
     mean_damage_score: float = 0.0
     max_damage_score: float = 0.0
     repair_success_rate: float = 0.0
+    repair_failure_rate: float = 0.0
     defense_activation_count: int = 0
     quarantined_cell_count: int = 0
     epigenetic_shift_count: int = 0
     cellular_resilience_score: float = 0.0
+    cellular_survival_score: float = 0.0
+    cellular_self_repair_score: float = 0.0
+    cellular_defense_score: float = 0.0
+    epigenetic_adaptation_score: float = 0.0
 
 
 class BenchmarkResult(BaseModel):
@@ -957,10 +962,15 @@ class NeuroFunctionalBenchmark:
         mean_damage_score = 0.0
         max_damage_score = 0.0
         repair_success_rate = 0.0
+        repair_failure_rate = 0.0
         defense_activation_count = 0
         quarantined_cell_count = 0
         epigenetic_shift_count = 0
         cellular_resilience_score = 0.0
+        cellular_survival_score = 0.0
+        cellular_self_repair_score = 0.0
+        cellular_defense_score = 0.0
+        epigenetic_adaptation_score = 0.0
         orch = self.orch
         stress_result = getattr(orch, "_last_cellular_stress_result", None)
         damage_result = getattr(orch, "_last_cellular_damage_result", None)
@@ -975,19 +985,35 @@ class NeuroFunctionalBenchmark:
             max_damage_score = getattr(damage_result, "max_damage", 0.0)
         if repair_result is not None:
             repair_success_rate = getattr(repair_result, "repair_success_rate", 0.0)
+            repair_failure_rate = getattr(repair_result, "repair_failure_rate", 0.0)
         if defense_result is not None:
             defense_activation_count = getattr(defense_result, "defense_activation_count", 0)
             quarantined_cell_count = getattr(defense_result, "quarantined_count", 0)
         if epigenetic_result is not None:
             epigenetic_shift_count = getattr(epigenetic_result, "epigenetic_shift_count", 0)
-        # Cellular resilience score: higher when stress is low, damage is low, repair succeeds
-        if stress_result is not None and damage_result is not None:
-            stress_component = max(0.0, 1.0 - mean_cellular_stress)
-            damage_component = max(0.0, 1.0 - mean_damage_score)
-            repair_component = repair_success_rate
-            cellular_resilience_score = round(
-                (stress_component * 0.3 + damage_component * 0.4 + repair_component * 0.3), 4
-            )
+            epigenetic_adaptation_score = getattr(epigenetic_result, "epigenetic_adaptation_score", 0.0)
+
+        # T42B — Advanced cellular metrics
+        all_neurons = orch.circuit.input_neurons + orch.circuit.hidden_neurons + orch.circuit.output_neurons
+        neuron_count = len(all_neurons)
+        if neuron_count > 0:
+            # Survival: fraction of cells not critically damaged
+            critical_cells = getattr(damage_result, "critical_count", 0) if damage_result else 0
+            cellular_survival_score = round(1.0 - (critical_cells / neuron_count), 4)
+            # Self-repair: repair success weighted by survival
+            cellular_self_repair_score = round(repair_success_rate * cellular_survival_score, 4)
+            # Defense: normalized defense activations per cell
+            cellular_defense_score = round(min(1.0, defense_activation_count / neuron_count), 4)
+
+        # Cellular resilience score: weighted composite
+        cellular_resilience_score = round(
+            0.30 * repair_success_rate
+            + 0.25 * max(0.0, 1.0 - mean_damage_score)
+            + 0.20 * max(0.0, 1.0 - mean_cellular_stress)
+            + 0.15 * cellular_survival_score
+            + 0.10 * epigenetic_adaptation_score,
+            4,
+        )
 
         return BenchmarkMetrics(
             accuracy_score=final.accuracy,
@@ -1142,10 +1168,15 @@ class NeuroFunctionalBenchmark:
             mean_damage_score=mean_damage_score,
             max_damage_score=max_damage_score,
             repair_success_rate=repair_success_rate,
+            repair_failure_rate=repair_failure_rate,
             defense_activation_count=defense_activation_count,
             quarantined_cell_count=quarantined_cell_count,
             epigenetic_shift_count=epigenetic_shift_count,
             cellular_resilience_score=cellular_resilience_score,
+            cellular_survival_score=cellular_survival_score,
+            cellular_self_repair_score=cellular_self_repair_score,
+            cellular_defense_score=cellular_defense_score,
+            epigenetic_adaptation_score=epigenetic_adaptation_score,
         )
 
     def generate_json_report(self, result: BenchmarkResult) -> Path:
@@ -1271,6 +1302,11 @@ class NeuroFunctionalBenchmark:
             f"| Defense activation count | {m.defense_activation_count} |",
             f"| Quarantined cell count | {m.quarantined_cell_count} |",
             f"| Epigenetic shift count | {m.epigenetic_shift_count} |",
+            f"| Repair failure rate | {m.repair_failure_rate:.4f} |",
+            f"| Cellular survival score | {m.cellular_survival_score:.4f} |",
+            f"| Cellular self-repair score | {m.cellular_self_repair_score:.4f} |",
+            f"| Cellular defense score | {m.cellular_defense_score:.4f} |",
+            f"| Epigenetic adaptation score | {m.epigenetic_adaptation_score:.4f} |",
             f"| **Cellular resilience score** | **{m.cellular_resilience_score:.4f}** |",
             "",
             "---",

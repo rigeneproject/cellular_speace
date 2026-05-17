@@ -83,6 +83,12 @@ async def test_t42_defense_reduces_targets_on_high_stress():
     stressed.consecutive_fires = 5
     stressed.apoptosis_risk = 0.9
     stressed.targets = ["t1", "t2"]
+    # Raise newer defense thresholds so quarantine or firewall (which clear targets) can trigger
+    defense = orch._cellular_defense_engine
+    defense.plasticity_lock_stress_threshold = 1.0
+    defense.routing_block_stress_threshold = 1.0
+    defense.input_filter_stress_threshold = 1.0
+    defense.immune_alert_damage_threshold = 1.0
     await orch.run_ticks(1)
     # Defense may have quarantined or firewalled
     assert len(stressed.targets) == 0

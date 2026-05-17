@@ -19,11 +19,17 @@ class RegressionGuardResult(BaseModel):
     recovery_score_ok: bool = True
     emergency_ratio_ok: bool = True
     state_entropy_ok: bool = True
+    # T42B — Cellular guard fields
+    cellular_stress_ok: bool = True
+    cellular_damage_ok: bool = True
+    cellular_resilience_ok: bool = True
+    cellular_self_repair_ok: bool = True
+    cellular_defense_ok: bool = True
     violations: Dict[str, str] = Field(default_factory=dict)
 
 
 class RegressionGuard:
-    """T41 — Lightweight regression guard against the frozen canonical policy.
+    """T41/T42B — Lightweight regression guard against the frozen canonical policy.
 
     Compares current benchmark/audit metrics against the thresholds
     stored in RecoveryPolicy and returns a verdict.
@@ -88,6 +94,32 @@ class RegressionGuard:
         if ent < thr.min_state_entropy:
             result.state_entropy_ok = False
             violations["state_entropy"] = f"{ent:.4f} < {thr.min_state_entropy:.4f}"
+
+        # T42B — Cellular guard
+        mean_stress = _safe(metrics.get("mean_cellular_stress", 0.0))
+        if mean_stress > thr.max_mean_cellular_stress:
+            result.cellular_stress_ok = False
+            violations["cellular_stress"] = f"{mean_stress:.4f} > {thr.max_mean_cellular_stress:.4f}"
+
+        mean_damage = _safe(metrics.get("mean_damage_score", 0.0))
+        if mean_damage > thr.max_mean_damage_score:
+            result.cellular_damage_ok = False
+            violations["cellular_damage"] = f"{mean_damage:.4f} > {thr.max_mean_damage_score:.4f}"
+
+        resilience = _safe(metrics.get("cellular_resilience_score", 0.0))
+        if resilience < thr.min_cellular_resilience_score:
+            result.cellular_resilience_ok = False
+            violations["cellular_resilience"] = f"{resilience:.4f} < {thr.min_cellular_resilience_score:.4f}"
+
+        self_repair = _safe(metrics.get("cellular_self_repair_score", 0.0))
+        if self_repair < thr.min_cellular_self_repair_score:
+            result.cellular_self_repair_ok = False
+            violations["cellular_self_repair"] = f"{self_repair:.4f} < {thr.min_cellular_self_repair_score:.4f}"
+
+        defense_score = _safe(metrics.get("cellular_defense_score", 0.0))
+        if defense_score < thr.min_cellular_defense_score:
+            result.cellular_defense_ok = False
+            violations["cellular_defense"] = f"{defense_score:.4f} < {thr.min_cellular_defense_score:.4f}"
 
         result.violations = violations
 

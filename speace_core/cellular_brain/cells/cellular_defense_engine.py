@@ -24,11 +24,16 @@ class CellularDefenseResult(BaseModel):
     quarantined_count: int = 0
     firewall_count: int = 0
     snooze_count: int = 0
+    routing_block_count: int = 0
+    plasticity_lock_count: int = 0
+    input_filter_count: int = 0
+    immune_alert_count: int = 0
     defense_activation_count: int = 0
 
 
 class CellularDefenseEngine:
-    """T42 — Cellular defense layer: quarantine, firewall, snooze.
+    """T42B — Cellular defense layer: quarantine, firewall, snooze, routing_block,
+    plasticity_lock, input_filtering, immune_alert.
 
     Defense actions are triggered by stress/damage thresholds and aim to
     contain failing cells before they propagate failure to the circuit.
@@ -40,6 +45,10 @@ class CellularDefenseEngine:
         quarantine_damage_threshold: float = 0.60,
         firewall_stress_threshold: float = 0.50,
         snooze_stress_threshold: float = 0.60,
+        routing_block_stress_threshold: float = 0.55,
+        plasticity_lock_stress_threshold: float = 0.65,
+        input_filter_stress_threshold: float = 0.45,
+        immune_alert_damage_threshold: float = 0.70,
         snooze_duration: int = 3,
         max_defenses_per_cycle: int = 5,
     ):
@@ -47,6 +56,10 @@ class CellularDefenseEngine:
         self.quarantine_damage_threshold = quarantine_damage_threshold
         self.firewall_stress_threshold = firewall_stress_threshold
         self.snooze_stress_threshold = snooze_stress_threshold
+        self.routing_block_stress_threshold = routing_block_stress_threshold
+        self.plasticity_lock_stress_threshold = plasticity_lock_stress_threshold
+        self.input_filter_stress_threshold = input_filter_stress_threshold
+        self.immune_alert_damage_threshold = immune_alert_damage_threshold
         self.snooze_duration = snooze_duration
         self.max_defenses_per_cycle = max_defenses_per_cycle
 
@@ -70,6 +83,10 @@ class CellularDefenseEngine:
         quarantined = 0
         firewalled = 0
         snoozed = 0
+        routing_blocked = 0
+        plasticity_locked = 0
+        input_filtered = 0
+        immune_alerts = 0
         defenses_done = 0
 
         # Sort by combined stress+damage descending
@@ -97,10 +114,23 @@ class CellularDefenseEngine:
                     firewalled += 1
                 elif action.action == "snooze":
                     snoozed += 1
+                elif action.action == "temporary_routing_block":
+                    routing_blocked += 1
+                elif action.action == "plasticity_lock":
+                    plasticity_locked += 1
+                elif action.action == "input_filtering":
+                    input_filtered += 1
+                elif action.action == "immune_alert":
+                    immune_alerts += 1
 
                 if memory is not None:
+                    event_type = MorphologyEventType.CELLULAR_DEFENSE_APPLIED
+                    if action.action == "quarantine":
+                        event_type = MorphologyEventType.CELL_QUARANTINED
+                    elif action.action == "immune_alert":
+                        event_type = MorphologyEventType.CELLULAR_IMMUNE_ALERT
                     memory.create_event(
-                        event_type=MorphologyEventType.CELLULAR_DEFENSE_APPLIED,
+                        event_type=event_type,
                         source_id="cellular_defense_engine",
                         target_id=cell_id,
                         metadata={
@@ -116,6 +146,10 @@ class CellularDefenseEngine:
             quarantined_count=quarantined,
             firewall_count=firewalled,
             snooze_count=snoozed,
+            routing_block_count=routing_blocked,
+            plasticity_lock_count=plasticity_locked,
+            input_filter_count=input_filtered,
+            immune_alert_count=immune_alerts,
             defense_activation_count=len(actions),
         )
 
@@ -149,12 +183,51 @@ class CellularDefenseEngine:
                 reason="stress_and_damage_threshold",
             )
 
+        # Immune alert: triggered by critical damage regardless of stress
+        if damage_score >= self.immune_alert_damage_threshold:
+            return DefenseAction(
+                cell_id=neuron.cell_id,
+                action="immune_alert",
+                applied=True,
+                reason="critical_damage",
+            )
+
+        # Plasticity lock: freeze learning when stress is high
+        if stress_score >= self.plasticity_lock_stress_threshold:
+            neuron.plasticity_rate = 0.0
+            return DefenseAction(
+                cell_id=neuron.cell_id,
+                action="plasticity_lock",
+                applied=True,
+                reason="stress_threshold",
+            )
+
+        # Temporary routing block: prevent outgoing signals but keep targets
+        if stress_score >= self.routing_block_stress_threshold:
+            neuron.activation = 0.0
+            return DefenseAction(
+                cell_id=neuron.cell_id,
+                action="temporary_routing_block",
+                applied=True,
+                reason="stress_threshold",
+            )
+
         # Firewall: block outgoing signals by clearing targets temporarily
         if stress_score >= self.firewall_stress_threshold:
             neuron.targets = []
             return DefenseAction(
                 cell_id=neuron.cell_id,
                 action="firewall",
+                applied=True,
+                reason="stress_threshold",
+            )
+
+        # Input filtering: raise threshold to dampen incoming signals
+        if stress_score >= self.input_filter_stress_threshold:
+            neuron.threshold = min(1.0, neuron.threshold * 1.2)
+            return DefenseAction(
+                cell_id=neuron.cell_id,
+                action="input_filtering",
                 applied=True,
                 reason="stress_threshold",
             )

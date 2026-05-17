@@ -110,7 +110,12 @@ class MorphologyEventType(str, Enum):
     CELLULAR_STRESS_EVALUATED = "cellular_stress_evaluated"
     CELLULAR_DAMAGE_EVALUATED = "cellular_damage_evaluated"
     CELLULAR_REPAIR_ATTEMPTED = "cellular_repair_attempted"
+    CELLULAR_REPAIR_SUCCEEDED = "cellular_repair_succeeded"
+    CELLULAR_REPAIR_FAILED = "cellular_repair_failed"
     CELLULAR_DEFENSE_APPLIED = "cellular_defense_applied"
+    CELL_QUARANTINED = "cell_quarantined"
+    CELL_QUARANTINE_RELEASED = "cell_quarantine_released"
+    CELLULAR_IMMUNE_ALERT = "cellular_immune_alert"
     CELLULAR_EPIGENETIC_SHIFT = "cellular_epigenetic_shift"
 
 

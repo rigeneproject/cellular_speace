@@ -35,10 +35,10 @@ def test_stress_engine_importable():
 
 
 def test_stress_state_model():
-    s = CellularStressState(cell_id="c1", stress_score=0.5, level="medium")
+    s = CellularStressState(cell_id="c1", stress_score=0.5, level="high")
     assert s.cell_id == "c1"
     assert s.stress_score == 0.5
-    assert s.level == "medium"
+    assert s.level == "high"
 
 
 # ------------------------------------------------------------------ #
@@ -74,7 +74,6 @@ def test_critical_count():
     circuit = _make_circuit_with_stressed_neurons()
     engine = CellularStressEngine(critical_threshold=0.7)
     result = engine.evaluate(circuit)
-    # n2 is highly stressed; may be critical depending on weights
     assert result.critical_count >= 0
 
 
@@ -84,7 +83,7 @@ def test_low_energy_increases_stress():
     engine = CellularStressEngine()
     result = engine.evaluate(circuit)
     assert result.per_cell["n_low"].stress_score > 0.0
-    assert result.per_cell["n_low"].energy_contribution > 0.0
+    assert result.per_cell["n_low"].energy_stress > 0.0
 
 
 def test_high_firing_increases_stress():
@@ -104,20 +103,36 @@ def test_empty_circuit():
 
 
 # ------------------------------------------------------------------ #
-# Thresholds
+# Thresholds T42B
 # ------------------------------------------------------------------ #
 
-def test_level_low():
+def test_level_normal_for_healthy():
     n = DigitalNeuron(cell_id="n", role="digital_neuron", energy=1.0, activation=0.0, consecutive_fires=0, apoptosis_risk=0.0)
     circuit = NeuralCircuit(circuit_id="t", input_neurons=[n], hidden_neurons=[], output_neurons=[])
     engine = CellularStressEngine()
     result = engine.evaluate(circuit)
-    assert result.per_cell["n"].level == "low"
+    assert result.per_cell["n"].level == "normal"
 
 
-def test_level_medium():
+def test_level_elevated():
     n = DigitalNeuron(cell_id="n", role="digital_neuron", energy=0.5, activation=1.0, consecutive_fires=2, apoptosis_risk=0.3)
     circuit = NeuralCircuit(circuit_id="t", input_neurons=[n], hidden_neurons=[], output_neurons=[])
     engine = CellularStressEngine()
     result = engine.evaluate(circuit)
-    assert result.per_cell["n"].level in ("medium", "high", "critical")
+    assert result.per_cell["n"].level in ("elevated", "high", "critical")
+
+
+def test_granular_stress_fields_present():
+    n = DigitalNeuron(cell_id="n", role="digital_neuron", energy=0.5, activation=1.0, consecutive_fires=2, apoptosis_risk=0.3)
+    n.targets = ["a"] * 5
+    n.error_history = [0.1] * 3
+    circuit = NeuralCircuit(circuit_id="t", input_neurons=[n], hidden_neurons=[], output_neurons=[])
+    engine = CellularStressEngine()
+    result = engine.evaluate(circuit)
+    s = result.per_cell["n"]
+    assert s.activation_stress >= 0.0
+    assert s.energy_stress >= 0.0
+    assert s.synaptic_stress >= 0.0
+    assert s.routing_stress >= 0.0
+    assert s.plasticity_stress >= 0.0
+    assert s.confidence_stress >= 0.0

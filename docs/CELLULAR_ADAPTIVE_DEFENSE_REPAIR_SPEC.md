@@ -1,6 +1,6 @@
 # T42 — Cellular Adaptive Defense & Repair Layer
 
-**Version:** v0.3.26-t42-cellular-adaptive-defense-repair  
+**Version:** v0.3.27-t42b-cellular-defense-repair-completion  
 **Date:** 2026-05-17  
 **Status:** Implemented  
 **Depends on:** T41 (Long-Horizon Recovery Consolidation & Policy Freezing)
@@ -141,21 +141,77 @@ Flags:
 | mean_damage_score | damage_result.mean_damage |
 | max_damage_score | damage_result.max_damage |
 | repair_success_rate | repair_result.repair_success_rate |
+| repair_failure_rate | repair_result.repair_failure_rate |
 | defense_activation_count | defense_result.defense_activation_count |
 | quarantined_cell_count | defense_result.quarantined_count |
 | epigenetic_shift_count | epigenetic_result.epigenetic_shift_count |
-| cellular_resilience_score | composite: 0.3*(1-stress) + 0.4*(1-damage) + 0.3*repair_rate |
+| cellular_resilience_score | composite: 0.30*repair_success_rate + 0.25*(1-mean_damage) + 0.20*(1-mean_stress) + 0.15*survival + 0.10*epigenetic_adaptation_score |
+| cellular_survival_score | 1.0 - apoptosis_rate |
+| cellular_self_repair_score | repair_success_rate * (1 - mean_damage) |
+| cellular_defense_score | defense_activation_count / max(1, neuron_count) |
+| epigenetic_adaptation_score | epigenetic_result.epigenetic_adaptation_score |
 
-## 11. Acceptance Criteria
+## 11. T42B — Completion Patch (v0.3.27)
+
+### 11.1 Granular Stress Fields
+`CellularStressState` now exposes 6 granular stress components:
+- `activation_stress`
+- `energy_stress`
+- `synaptic_stress`
+- `routing_stress`
+- `plasticity_stress`
+- `confidence_stress`
+
+Stress levels renamed from `low/medium/high/critical` to `normal/elevated/high/critical`.
+
+### 11.2 Granular Damage Fields
+`CellularDamageState` now exposes 4 granular damage levels:
+- `reversible_damage`
+- `functional_damage`
+- `structural_damage`
+- `critical_damage`
+
+### 11.3 Biologically-Specific Repair Actions
+Repair engine selects actions based on dominant damage level:
+- reversible -> `restore_energy`
+- functional -> `lower_activation`
+- structural -> `repair_synaptic_weights`
+- critical -> `request_glial_support`
+Additional actions: `reset_refractory_state`, `restore_threshold`, `reduce_plasticity`.
+
+### 11.4 Extended Defense Actions
+New defense actions added:
+- `plasticity_lock` — freeze learning (stress >= 0.65)
+- `temporary_routing_block` — zero activation (stress >= 0.55)
+- `input_filtering` — raise threshold (stress >= 0.45)
+- `immune_alert` — alert on critical damage (damage >= 0.70)
+
+MorphologicalMemory events: `CELL_QUARANTINED`, `CELLULAR_IMMUNE_ALERT`, `CELLULAR_REPAIR_SUCCEEDED`, `CELLULAR_REPAIR_FAILED`.
+
+### 11.5 Numeric Epigenetic Expression Factors
+`GeneExpressionProfile` replaced string gene lists with 7 numeric factors:
+`plasticity_expression`, `repair_expression`, `defense_expression`, `energy_expression`, `growth_expression`, `apoptosis_sensitivity`, `differentiation_bias`.
+
+### 11.6 RegressionGuard Cellular Thresholds
+`RegressionGuardThresholds` adds:
+- `max_mean_cellular_stress`
+- `max_mean_damage_score`
+- `min_cellular_resilience_score`
+- `min_cellular_self_repair_score`
+- `min_cellular_defense_score`
+
+`RegressionGuardResult` adds 5 corresponding boolean flags.
+
+## 12. Acceptance Criteria
 
 - 5 new cellular modules implementati e testati
 - Orchestrator integration: T42 tick logic dopo energy control, prima di snapshot
-- BenchmarkMetrics include 9 nuovi campi T42
-- Markdown report include righe T42
+- BenchmarkMetrics include 14 nuovi campi T42/T42B
+- Markdown report include righe T42/T42B
 - 25+ tests passano
 - coverage >= 85%
-- Commit + tag v0.3.26
+- Commit + tag v0.3.27
 
-## 12. Commit Tag
+## 13. Commit Tag
 
-`v0.3.26-t42-cellular-adaptive-defense-repair`
+`v0.3.27-t42b-cellular-defense-repair-completion`

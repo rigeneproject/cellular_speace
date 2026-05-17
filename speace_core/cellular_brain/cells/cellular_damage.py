@@ -10,11 +10,15 @@ DamageLevel = Literal["none", "reversible", "functional", "structural", "critica
 
 
 class CellularDamageState(BaseModel):
-    """Per-cell damage snapshot."""
+    """T42B — Per-cell damage snapshot with granular components."""
 
     cell_id: str
     damage_score: float = 0.0
     level: DamageLevel = "none"
+    reversible_damage: float = 0.0
+    functional_damage: float = 0.0
+    structural_damage: float = 0.0
+    critical_damage: float = 0.0
     stress_exposure: float = 0.0
     cumulative_stress: float = 0.0
     repair_attempts: int = 0
@@ -34,7 +38,7 @@ class CellularDamageResult(BaseModel):
 
 
 class CellularDamageEngine:
-    """T42 — Track and classify per-cell damage.
+    """T42B — Track and classify per-cell damage with granular components.
 
     Damage is a lagging indicator of stress. Cells accumulate damage when
     stress remains elevated across ticks. Damage levels gate the efficacy
@@ -109,7 +113,6 @@ class CellularDamageEngine:
         current_stress = stress.stress_score if stress else 0.0
 
         if old is not None:
-            # Decay previous cumulative stress, add current
             cumulative = max(0.0, old.cumulative_stress * (1.0 - self.stress_decay) + current_stress)
             damage = min(1.0, old.damage_score + self.damage_accumulation_rate * current_stress)
             attempts = old.repair_attempts
@@ -119,6 +122,15 @@ class CellularDamageEngine:
             damage = self.damage_accumulation_rate * current_stress
             attempts = 0
             successes = 0
+
+        # Granular damage decomposition
+        reversible = min(damage, self.reversible_threshold)
+        remaining = max(0.0, damage - reversible)
+        functional = min(remaining, self.functional_threshold - self.reversible_threshold)
+        remaining = max(0.0, remaining - functional)
+        structural = min(remaining, self.structural_threshold - self.functional_threshold)
+        remaining = max(0.0, remaining - structural)
+        critical = remaining
 
         if damage >= self.critical_threshold:
             level: DamageLevel = "critical"
@@ -135,6 +147,10 @@ class CellularDamageEngine:
             cell_id=neuron.cell_id,
             damage_score=round(damage, 4),
             level=level,
+            reversible_damage=round(reversible, 4),
+            functional_damage=round(functional, 4),
+            structural_damage=round(structural, 4),
+            critical_damage=round(critical, 4),
             stress_exposure=round(current_stress, 4),
             cumulative_stress=round(cumulative, 4),
             repair_attempts=attempts,

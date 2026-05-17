@@ -92,7 +92,6 @@ def test_level_none_for_healthy():
 
 
 def test_level_classifications():
-    # Direct damage state test without stress dependency
     engine = CellularDamageEngine(
         reversible_threshold=0.20,
         functional_threshold=0.40,
@@ -101,3 +100,22 @@ def test_level_classifications():
     )
     assert engine.reversible_threshold == 0.20
     assert engine.functional_threshold == 0.40
+
+
+# ------------------------------------------------------------------ #
+# Granular damage fields
+# ------------------------------------------------------------------ #
+
+def test_granular_damage_fields_present():
+    circuit = _make_circuit()
+    stress_engine = CellularStressEngine()
+    stress_result = stress_engine.evaluate(circuit)
+    damage_engine = CellularDamageEngine()
+    result = damage_engine.evaluate(circuit, stress_result)
+    for state in result.per_cell.values():
+        assert hasattr(state, "reversible_damage")
+        assert hasattr(state, "functional_damage")
+        assert hasattr(state, "structural_damage")
+        assert hasattr(state, "critical_damage")
+        total = state.reversible_damage + state.functional_damage + state.structural_damage + state.critical_damage
+        assert abs(total - state.damage_score) < 1e-6

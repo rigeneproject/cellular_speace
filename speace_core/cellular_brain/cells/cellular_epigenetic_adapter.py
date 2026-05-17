@@ -9,13 +9,16 @@ from speace_core.cellular_brain.memory.morphology_events import MorphologyEventT
 
 
 class GeneExpressionProfile(BaseModel):
-    """Local gene expression profile for a single cell."""
+    """T42B — Local gene expression profile with numeric expression factors."""
 
     cell_id: str
-    stress_response_genes: List[str] = Field(default_factory=list)
-    repair_genes: List[str] = Field(default_factory=list)
-    defense_genes: List[str] = Field(default_factory=list)
-    metabolic_genes: List[str] = Field(default_factory=list)
+    plasticity_expression: float = 1.0
+    repair_expression: float = 0.0
+    defense_expression: float = 0.0
+    energy_expression: float = 1.0
+    growth_expression: float = 0.0
+    apoptosis_sensitivity: float = 0.5
+    differentiation_bias: float = 0.0
     expression_shift_count: int = 0
     last_shift_tick: int = 0
 
@@ -37,13 +40,14 @@ class CellularEpigeneticResult(BaseModel):
     shifts: List[EpigeneticShift] = Field(default_factory=list)
     epigenetic_shift_count: int = 0
     mean_gene_count: float = 0.0
+    epigenetic_adaptation_score: float = 0.0
 
 
 class CellularEpigeneticAdapter:
-    """T42 — Local epigenetic adaptation per cell.
+    """T42B — Local epigenetic adaptation per cell with numeric expression factors.
 
     Each cell maintains its own gene expression profile. Stress and damage
-    triggers shift expression toward stress-response, repair, defense, or
+    triggers shift expression factors toward stress-response, repair, defense, or
     metabolic genes. Shifts are recorded and influence downstream behavior.
     """
 
@@ -100,20 +104,20 @@ class CellularEpigeneticAdapter:
                         },
                     )
 
-        total_genes = sum(
-            len(p.stress_response_genes)
-            + len(p.repair_genes)
-            + len(p.defense_genes)
-            + len(p.metabolic_genes)
-            for p in profiles.values()
-        )
-        mean_gene_count = total_genes / len(profiles) if profiles else 0.0
+        # Compute epigenetic adaptation score: average of repair+defense expression
+        if profiles:
+            epigenetic_adaptation_score = sum(
+                p.repair_expression + p.defense_expression for p in profiles.values()
+            ) / (2 * len(profiles))
+        else:
+            epigenetic_adaptation_score = 0.0
 
         return CellularEpigeneticResult(
             profiles=profiles,
             shifts=shifts,
             epigenetic_shift_count=len(shifts),
-            mean_gene_count=round(mean_gene_count, 4),
+            mean_gene_count=round(len(profiles) * 7 / max(len(profiles), 1), 4),
+            epigenetic_adaptation_score=round(epigenetic_adaptation_score, 4),
         )
 
     def _adapt_cell(
@@ -123,70 +127,121 @@ class CellularEpigeneticAdapter:
         damage: "CellularDamageState | None",
         current_tick: int,
     ) -> tuple[GeneExpressionProfile, EpigeneticShift | None]:
-        # Start from existing epigenetic marks if present
-        existing_genes: List[str] = list(getattr(neuron, "epigenetic_marks", {}).keys())
         stress_score = stress.stress_score if stress else 0.0
         damage_score = damage.damage_score if damage else 0.0
 
-        stress_genes: List[str] = []
-        repair_genes: List[str] = []
-        defense_genes: List[str] = []
-        metabolic_genes: List[str] = []
-
-        # Baseline metabolic genes
-        if stress_score < self.metabolic_boost_threshold and damage_score < self.repair_trigger_threshold:
-            metabolic_genes = ["metabolic_baseline", "energy_efficiency"]
-        else:
-            metabolic_genes = ["metabolic_baseline"]
-
-        if stress_score >= self.stress_response_threshold:
-            stress_genes = ["hsp70_like", "oxidative_stress_response", "calcium_buffering"]
-        if damage_score >= self.repair_trigger_threshold:
-            repair_genes = ["dna_repair_like", "proteostasis", "autophagy_like"]
-        if stress_score >= self.defense_trigger_threshold or damage_score >= 0.50:
-            defense_genes = ["immune_like_response", "inflammatory_dampening", "barrier_reinforcement"]
-
-        added: List[str] = []
-        removed: List[str] = []
-
-        all_new = stress_genes + repair_genes + defense_genes + metabolic_genes
-        for g in all_new:
-            if g not in existing_genes:
-                added.append(g)
-
-        for g in existing_genes:
-            if g not in all_new and g.startswith(("hsp", "dna_repair", "immune_like", "inflammatory")):
-                removed.append(g)
-
+        # Retrieve previous numeric expression factors if stored
         existing_marks = getattr(neuron, "epigenetic_marks", {}) or {}
-        existing_shift_count = existing_marks.get("__shift_count", 0)
-        existing_last_tick = existing_marks.get("__last_shift_tick", 0)
+        prev_plasticity = existing_marks.get("plasticity_expression", 1.0)
+        prev_repair = existing_marks.get("repair_expression", 0.0)
+        prev_defense = existing_marks.get("defense_expression", 0.0)
+        prev_energy = existing_marks.get("energy_expression", 1.0)
+        prev_growth = existing_marks.get("growth_expression", 0.0)
+        prev_apoptosis = existing_marks.get("apoptosis_sensitivity", 0.5)
+        prev_diff = existing_marks.get("differentiation_bias", 0.0)
+        prev_shift_count = existing_marks.get("__shift_count", 0)
+        prev_last_tick = existing_marks.get("__last_shift_tick", 0)
 
-        new_shift_count = existing_shift_count + (1 if added or removed else 0)
-        new_last_tick = current_tick if (added or removed) else existing_last_tick
+        # Baseline: moderate plasticity, neutral repair/defense/growth
+        plasticity = prev_plasticity
+        repair = prev_repair
+        defense = prev_defense
+        energy_expr = prev_energy
+        growth = prev_growth
+        apoptosis = prev_apoptosis
+        diff_bias = prev_diff
+
+        genes_added: List[str] = []
+        genes_removed: List[str] = []
+
+        if stress_score >= self.defense_trigger_threshold or damage_score >= 0.50:
+            # Defense priority: boost defense and repair, suppress plasticity and growth
+            defense = min(1.0, prev_defense + 0.2)
+            repair = min(1.0, prev_repair + 0.15)
+            plasticity = max(0.0, prev_plasticity - 0.15)
+            growth = max(0.0, prev_growth - 0.1)
+            genes_added.extend(["defense_priority", "repair_boost"])
+            if prev_plasticity > 0.5:
+                genes_removed.append("plasticity_high")
+        elif damage_score >= self.repair_trigger_threshold:
+            # Repair priority: boost repair and energy expression
+            repair = min(1.0, prev_repair + 0.2)
+            energy_expr = min(1.0, prev_energy + 0.1)
+            plasticity = max(0.0, prev_plasticity - 0.1)
+            genes_added.extend(["repair_priority", "energy_boost"])
+        elif stress_score >= self.stress_response_threshold:
+            # Stress response: moderate defense, some repair, reduced growth
+            defense = min(1.0, prev_defense + 0.1)
+            repair = min(1.0, prev_repair + 0.05)
+            growth = max(0.0, prev_growth - 0.05)
+            genes_added.append("stress_response")
+        else:
+            # Metabolic baseline: restore plasticity and growth if stress is low
+            if stress_score < self.metabolic_boost_threshold and damage_score < self.repair_trigger_threshold:
+                plasticity = min(1.0, prev_plasticity + 0.05)
+                growth = min(1.0, prev_growth + 0.05)
+                energy_expr = min(1.0, prev_energy + 0.05)
+                genes_added.append("metabolic_baseline")
+
+        # Apoptosis sensitivity modulation based on critical damage persistence
+        if damage_score >= 0.80:
+            apoptosis = min(1.0, prev_apoptosis + 0.1)
+            genes_added.append("apoptosis_sensitized")
+        elif damage_score < 0.30:
+            apoptosis = max(0.0, prev_apoptosis - 0.05)
+
+        # Differentiation bias: increase when cell is stable and growing
+        if stress_score < 0.2 and growth > 0.3:
+            diff_bias = min(1.0, prev_diff + 0.05)
+
+        shift_occurred = (
+            abs(plasticity - prev_plasticity) > 1e-6
+            or abs(repair - prev_repair) > 1e-6
+            or abs(defense - prev_defense) > 1e-6
+            or abs(energy_expr - prev_energy) > 1e-6
+            or abs(growth - prev_growth) > 1e-6
+            or abs(apoptosis - prev_apoptosis) > 1e-6
+            or abs(diff_bias - prev_diff) > 1e-6
+            or genes_added
+            or genes_removed
+        )
+
+        new_shift_count = prev_shift_count + (1 if shift_occurred else 0)
+        new_last_tick = current_tick if shift_occurred else prev_last_tick
 
         profile = GeneExpressionProfile(
             cell_id=neuron.cell_id,
-            stress_response_genes=stress_genes,
-            repair_genes=repair_genes,
-            defense_genes=defense_genes,
-            metabolic_genes=metabolic_genes,
+            plasticity_expression=round(plasticity, 4),
+            repair_expression=round(repair, 4),
+            defense_expression=round(defense, 4),
+            energy_expression=round(energy_expr, 4),
+            growth_expression=round(growth, 4),
+            apoptosis_sensitivity=round(apoptosis, 4),
+            differentiation_bias=round(diff_bias, 4),
             expression_shift_count=new_shift_count,
             last_shift_tick=new_last_tick,
         )
 
-        # Persist onto neuron for continuity
-        neuron.epigenetic_marks = {g: 1.0 for g in all_new}
-        neuron.epigenetic_marks["__shift_count"] = new_shift_count
-        neuron.epigenetic_marks["__last_shift_tick"] = new_last_tick
+        # Persist numeric factors onto neuron for continuity
+        neuron.epigenetic_marks = {
+            "plasticity_expression": plasticity,
+            "repair_expression": repair,
+            "defense_expression": defense,
+            "energy_expression": energy_expr,
+            "growth_expression": growth,
+            "apoptosis_sensitivity": apoptosis,
+            "differentiation_bias": diff_bias,
+            "__shift_count": new_shift_count,
+            "__last_shift_tick": new_last_tick,
+        }
 
-        if added or removed:
+        if shift_occurred:
             shift = EpigeneticShift(
                 cell_id=neuron.cell_id,
                 tick=current_tick,
                 trigger=self._determine_trigger(stress_score, damage_score),
-                genes_added=added,
-                genes_removed=removed,
+                genes_added=genes_added,
+                genes_removed=genes_removed,
             )
         else:
             shift = None

@@ -61,7 +61,7 @@ class FrozenEnergyProfile(BaseModel):
 
 
 class RegressionGuardThresholds(BaseModel):
-    """Thresholds for T41 regression guard."""
+    """Thresholds for T41/T42B regression guard."""
 
     min_cognitive_score: float = 0.30
     min_phi: float = 0.15
@@ -70,6 +70,12 @@ class RegressionGuardThresholds(BaseModel):
     min_long_horizon_recovery_score: float = 0.0
     max_emergency_state_ratio: float = 0.50
     min_state_entropy: float = 0.0
+    # T42B — Cellular thresholds
+    max_mean_cellular_stress: float = 1.0
+    max_mean_damage_score: float = 1.0
+    min_cellular_resilience_score: float = 0.0
+    min_cellular_self_repair_score: float = 0.0
+    min_cellular_defense_score: float = 0.0
 
 
 class RecoveryPolicy(BaseModel):
