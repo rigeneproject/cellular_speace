@@ -125,6 +125,14 @@ class MorphologyEventType(str, Enum):
     CELL_ASSEMBLY_REACTIVATED = "cell_assembly_reactivated"
     SEMANTIC_RECALL_SUCCEEDED = "semantic_recall_succeeded"
     SEMANTIC_RECALL_FAILED = "semantic_recall_failed"
+    # T45 — Autonomous Limitation Detection & Architecture Rewriting Loop
+    LIMITATION_DETECTED = "limitation_detected"
+    LIMITATION_DIAGNOSED = "limitation_diagnosed"
+    ARCHITECTURE_PROPOSAL_CREATED = "architecture_proposal_created"
+    ARCHITECTURE_PROPOSAL_SIMULATED = "architecture_proposal_simulated"
+    ARCHITECTURE_PROPOSAL_ACCEPTED = "architecture_proposal_accepted"
+    ARCHITECTURE_PROPOSAL_REJECTED = "architecture_proposal_rejected"
+    SELF_IMPROVEMENT_CYCLE_COMPLETED = "self_improvement_cycle_completed"
 
 
 class MorphologyEvent(BaseModel):

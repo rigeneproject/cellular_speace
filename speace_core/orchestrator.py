@@ -132,6 +132,9 @@ class CellularBrainOrchestrator(BaseModel):
     _semantic_memory_store: "SemanticMemoryStore | None" = None
     _cell_assembly_engine: "CellAssemblyEngine | None" = None
     _semantic_recall_engine: "SemanticRecallEngine | None" = None
+    # T45 — Autonomous Self-Improvement Loop
+    self_improvement_enabled: bool = False
+    _self_improvement_loop = None
 
     class Config:
         arbitrary_types_allowed = True
@@ -620,6 +623,27 @@ class CellularBrainOrchestrator(BaseModel):
     @property
     def region_registry(self) -> RegionRegistry | None:
         return self._region_registry
+
+    # ------------------------------------------------------------------ #
+    # T45 — Autonomous Self-Improvement Loop
+    # ------------------------------------------------------------------ #
+
+    def get_self_improvement_loop(self):
+        if self._self_improvement_loop is None:
+            from speace_core.cellular_brain.self_improvement.self_improvement_loop import (
+                SelfImprovementLoop,
+            )
+
+            self._self_improvement_loop = SelfImprovementLoop(
+                orchestrator=self,
+                memory=self._memory,
+                regression_guard=getattr(self, "_regression_guard", None),
+            )
+        return self._self_improvement_loop
+
+    def run_self_improvement_cycle(self, metrics: dict):
+        loop = self.get_self_improvement_loop()
+        return loop.run_detection_cycle(metrics)
 
     @classmethod
     def build_mvp(cls, genome: SharedGenome) -> "CellularBrainOrchestrator":

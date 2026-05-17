@@ -205,6 +205,14 @@ class BenchmarkMetrics(BaseModel):
     semantic_memory_utility: float = 0.0
     semantic_consolidation_rate: float = 0.0
     semantic_memory_score: float = 0.0
+    # T45 — Self-Improvement metrics
+    limitations_detected: int = 0
+    diagnoses_created: int = 0
+    architecture_proposals_created: int = 0
+    architecture_proposals_accepted: int = 0
+    architecture_proposals_rejected: int = 0
+    self_improvement_acceptance_score: float = 0.0
+    self_improvement_safety_passed: bool = False
 
 
 class BenchmarkResult(BaseModel):
