@@ -2,367 +2,573 @@ Istruzioni periodiche di aggiornamento:
 
 
 
-Prima di T43 conviene chiudere T42B — Cellular Adaptive Defense \& Repair Completion Patch.
+Ora il via per T43 — Semantic Memory Layer / Cell Assembly Memory è epistemicamente giustificato.
 
 
 
-Il motivo è chiaro: T42 è già operativo, testato e integrato, ma l’audit mostra che non è ancora pienamente conforme alla specifica biologico-cellulare che volevi. Il nucleo funziona, però mancano ancora pezzi importanti: eventi cellulari completi, integrazione nel RegressionGuard, azioni granulari di riparazione/difesa, metriche avanzate e un modello epigenetico numerico invece che basato solo su liste di geni. L’audit riporta infatti T42 come “funzionalmente operativo” ma con granularità e integrazioni incomplete.
+Con T42C chiuso, la sequenza cellulare è stabile abbastanza per costruire memoria semantica sopra un substrato biologico-digitale coerente:
 
 
 
-Decisione consigliata
+T7  MorphologicalMemory
 
+T8  Neurogenesis
 
+T9  Apoptosis
 
-Procedere con:
+T10 Differentiation
 
+T11 Benchmark
 
+T12 Burst Engine
 
-T42B — Cellular Adaptive Defense \& Repair Completion Patch
+T13 STDP
 
+T14 Inhibition/Snooze
 
+T18 Energy Control
 
-Obiettivo: trasformare T42 da modulo “funzionante” a vero sistema cellulare adattivo, autoriparante e autodifensivo, coerente con il principio biologico:
+T17 Community Detection
 
+T15 Evolution Engine
 
+T19 MetaLearningConfidence
 
-ogni cellula SPEACE possiede un nucleo genetico-epigenetico comune, ma reagisce localmente a stress, danno, minacce e contesto ambientale.
+T21–T40 Regional/deep-region/brainstem stabilization
 
+T41 Recovery Policy
 
+T42–T42C Cellular repair/defense/resilience
 
-Cosa completare in T42B
+T43 Semantic Cell Assembly Memory
 
-1\. Stress cellulare granulare
 
 
+Ora SPEACE può passare da:
 
-Estendere CellularStressState con:
 
 
+cellule che sopravvivono, si riparano e si difendono
 
-activation\_stress: float
 
-energy\_stress: float
 
-synaptic\_stress: float
+a:
 
-routing\_stress: float
 
-plasticity\_stress: float
 
-confidence\_stress: float
+cellule che formano significati attraverso pattern ricorrenti di co-attivazione
 
+T43 — Semantic Memory Layer / Cell Assembly Memory
 
+Obiettivo
 
-E uniformare i livelli:
 
 
+Implementare un layer di memoria semantica bio-ispirato in cui SPEACE rileva, consolida e riattiva cell assemblies, cioè gruppi di neuroni/regioni che si attivano insieme in modo ricorrente e che possono rappresentare pattern, concetti, associazioni o stati funzionali.
 
-normal
 
-elevated
 
-high
+Questo è un salto importante: la memoria non sarà più solo morfologica, energetica o di audit, ma diventerà memoria semantica emergente dalla struttura attiva del cervello cellulare.
 
-critical
 
 
+Concetto biologico da tradurre
 
-Questo serve perché una cellula non deve solo sapere “sono stressata”, ma perché lo è.
 
 
+Nel cervello biologico, una memoria non è un singolo neurone e non è un file. È un pattern distribuito di cellule che si rafforzano insieme.
 
-2\. Danno cellulare granulare
 
 
+Per SPEACE:
 
-Estendere CellularDamageState con:
 
 
+input pattern
 
-reversible\_damage: float
+→ attivazione regionale/neuronale
 
-functional\_damage: float
+→ rilevazione co-attivazione
 
-structural\_damage: float
+→ creazione cell assembly
 
-critical\_damage: float
+→ consolidamento se ricorre
 
+→ richiamo se pattern simile riappare
 
+→ rinforzo/debolezza tramite utility, STDP, energia, coerenza Φ
 
-Così SPEACE distingue:
+Specifica operativa per Claude Code / OpenClaw
 
-
-
-danno reversibile: energia bassa, attivazione eccessiva temporanea;
-
-danno funzionale: cellula poco utile o disallineata;
-
-danno strutturale: connessioni corrotte o instabili;
-
-danno critico: cellula da quarantena, apoptosi o isolamento.
-
-3\. RepairEngine con azioni specifiche
-
-
-
-Sostituire o affiancare le azioni generiche:
-
-
-
-reversible\_repair
-
-functional\_repair
-
-structural\_repair
-
-critical\_repair
-
-
-
-con azioni biologicamente più operative:
-
-
-
-restore\_energy
-
-lower\_activation
-
-reset\_refractory\_state
-
-repair\_synaptic\_weights
-
-restore\_threshold
-
-reduce\_plasticity
-
-request\_glial\_support
-
-
-
-Questo rende la riparazione locale più simile a un processo cellulare reale: non “riparo tutto”, ma scelgo quale parametro vitale correggere.
-
-
-
-4\. DefenseEngine con autodifesa completa
-
-
-
-Aggiungere le azioni mancanti:
-
-
-
-temporary\_routing\_block
-
-plasticity\_lock
-
-input\_filtering
-
-immune\_alert
-
-
-
-oltre a quelle già presenti:
-
-
-
-quarantine
-
-firewall
-
-snooze
-
-
-
-Questa parte è fondamentale per il futuro SPEACE-organismo: una cellula deve potersi proteggere da overload, segnali tossici, pathway instabili, mutazioni dannose o input incoerenti.
-
-
-
-5\. EpigeneticAdapter numerico
-
-
-
-Modificare GeneExpressionProfile per includere fattori numerici:
-
-
-
-plasticity\_expression: float
-
-repair\_expression: float
-
-defense\_expression: float
-
-energy\_expression: float
-
-growth\_expression: float
-
-apoptosis\_sensitivity: float
-
-differentiation\_bias: float
-
-
-
-Questo è molto importante: le liste di geni sono descrittive, ma i fattori numerici sono modulatori reali. Permettono al DNA digitale di SPEACE di agire come un sistema genetico-epigenetico computabile.
-
-
-
-6\. Eventi MorphologicalMemory mancanti
-
-
-
-Aggiungere gli eventi richiesti:
-
-
-
-CELL\_REPAIR\_SUCCEEDED
-
-CELL\_REPAIR\_FAILED
-
-CELL\_QUARANTINED
-
-CELL\_QUARANTINE\_RELEASED
-
-CELLULAR\_IMMUNE\_ALERT
-
-
-
-E, se vuoi mantenere compatibilità, puoi non rimuovere gli eventi già esistenti CELLULAR\_\*, ma mapparli come alias o eventi di livello più generale.
-
-
-
-7\. Metriche benchmark avanzate
-
-
-
-Aggiungere:
-
-
-
-repair\_failure\_rate
-
-cellular\_survival\_score
-
-cellular\_self\_repair\_score
-
-cellular\_defense\_score
-
-
-
-E riallineare cellular\_resilience\_score alla formula più completa:
-
-
-
-0.30 \* repair\_rate
-
-\+ 0.25 \* (1 - mean\_damage\_score)
-
-\+ 0.20 \* (1 - mean\_cellular\_stress)
-
-\+ 0.15 \* cellular\_survival\_score
-
-\+ 0.10 \* epigenetic\_adaptation\_score
-
-8\. RegressionGuard cellulare
-
-
-
-Integrare T42 nel RegressionGuard con soglie canoniche:
-
-
-
-max\_mean\_cellular\_stress
-
-max\_mean\_damage\_score
-
-min\_cellular\_resilience\_score
-
-min\_cellular\_self\_repair\_score
-
-min\_cellular\_defense\_score
-
-
-
-Questo chiude il ciclo epistemico: non basta avere autoriparazione e autodifesa, SPEACE deve anche sapere quando queste capacità stanno degradando.
-
-
-
-Posizione nella roadmap
-
-
-
-La sequenza migliore diventa:
-
-
-
-T42  — Cellular Adaptive Defense \& Repair
-
-T42B — Completion Patch: granular repair/defense/epigenetics/guard
-
-T42C — Cellular Resilience Audit
-
-T43  — Semantic Cell Assembly Memory
-
-
-
-Non andrei subito a T43. La memoria semantica cellulare ha senso solo dopo aver stabilizzato la cellula come unità viva minima: stress → danno → riparazione → difesa → epigenetica → audit.
-
-
-
-Istruzione operativa per Claude Code / OpenClaw
-
-
-
-Puoi usare questo prompt:
-
-
-
-Implement T42B — Cellular Adaptive Defense \& Repair Completion Patch.
+Implement T43 — Semantic Memory Layer / Cell Assembly Memory.
 
 
 
 Goal:
 
-Complete the T42 implementation so that SPEACE cells support granular stress, granular damage, specific repair actions, specific defense actions, numeric epigenetic expression, complete MorphologicalMemory events, advanced benchmark metrics, and RegressionGuard integration.
+Create a semantic memory layer for SPEACE based on recurrent co-activation patterns across neurons and brain regions. The system should detect, store, consolidate, reactivate, and evaluate cell assemblies as distributed semantic memory traces.
 
 
 
-Required changes:
+Create new package:
 
-1\. Extend CellularStressState with activation\_stress, energy\_stress, synaptic\_stress, routing\_stress, plasticity\_stress, confidence\_stress. Normalize levels to normal/elevated/high/critical.
+\- speace\_core/cellular\_brain/memory/semantic/
 
-2\. Extend CellularDamageState with reversible\_damage, functional\_damage, structural\_damage, critical\_damage.
 
-3\. Extend CellularRepairEngine with restore\_energy, lower\_activation, reset\_refractory\_state, repair\_synaptic\_weights, restore\_threshold, reduce\_plasticity, request\_glial\_support.
 
-4\. Extend CellularDefenseEngine with temporary\_routing\_block, plasticity\_lock, input\_filtering, immune\_alert, while preserving quarantine/firewall/snooze.
+New files:
 
-5\. Replace or augment GeneExpressionProfile with numeric expression factors: plasticity\_expression, repair\_expression, defense\_expression, energy\_expression, growth\_expression, apoptosis\_sensitivity, differentiation\_bias.
+\- speace\_core/cellular\_brain/memory/semantic/\_\_init\_\_.py
 
-6\. Add MorphologicalMemory events: CELL\_REPAIR\_SUCCEEDED, CELL\_REPAIR\_FAILED, CELL\_QUARANTINED, CELL\_QUARANTINE\_RELEASED, CELLULAR\_IMMUNE\_ALERT.
+\- speace\_core/cellular\_brain/memory/semantic/cell\_assembly.py
 
-7\. Add benchmark metrics: repair\_failure\_rate, cellular\_survival\_score, cellular\_self\_repair\_score, cellular\_defense\_score.
+\- speace\_core/cellular\_brain/memory/semantic/semantic\_memory\_store.py
 
-8\. Integrate cellular thresholds into RegressionGuard: max\_mean\_cellular\_stress, max\_mean\_damage\_score, min\_cellular\_resilience\_score, min\_cellular\_self\_repair\_score, min\_cellular\_defense\_score.
+\- speace\_core/cellular\_brain/memory/semantic/cell\_assembly\_engine.py
 
-9\. Add tests for all new fields, events, metrics, and RegressionGuard behavior.
+\- speace\_core/cellular\_brain/memory/semantic/semantic\_recall\_engine.py
 
-10\. Ensure all existing tests still pass and coverage remains >=85%.
+\- tests/memory/test\_cell\_assembly\_memory.py
+
+\- docs/SEMANTIC\_CELL\_ASSEMBLY\_MEMORY\_SPEC.md
+
+\- reports/semantic\_memory/.gitkeep
+
+
+
+Core models:
+
+
+
+1\. CellAssembly
+
+
+
+Fields:
+
+\- assembly\_id: str
+
+\- created\_tick: int
+
+\- last\_activated\_tick: int
+
+\- neuron\_ids: list\[str]
+
+\- region\_ids: list\[str]
+
+\- activation\_signature: list\[float]
+
+\- semantic\_pointer: str
+
+\- strength: float
+
+\- stability: float
+
+\- recurrence\_count: int
+
+\- utility\_score: float
+
+\- coherence\_phi\_at\_creation: float
+
+\- mean\_energy\_at\_creation: float
+
+\- tags: list\[str]
+
+\- metadata: dict
+
+
+
+2\. AssemblyActivationTrace
+
+
+
+Fields:
+
+\- tick\_id: int
+
+\- active\_neuron\_ids: list\[str]
+
+\- active\_region\_ids: list\[str]
+
+\- activation\_vector: list\[float]
+
+\- mean\_activation: float
+
+\- coherence\_phi: float
+
+\- mean\_energy: float
+
+\- confidence\_score: float
+
+
+
+3\. SemanticRecallResult
+
+
+
+Fields:
+
+\- query\_signature: list\[float]
+
+\- matched\_assemblies: list\[str]
+
+\- best\_match\_id: str | None
+
+\- similarity\_score: float
+
+\- recalled\_activation\_pattern: list\[float]
+
+\- recall\_confidence: float
+
+\- recall\_success: bool
+
+
+
+4\. SemanticMemoryMetrics
+
+
+
+Fields:
+
+\- assembly\_count: int
+
+\- active\_assembly\_count: int
+
+\- mean\_assembly\_strength: float
+
+\- mean\_assembly\_stability: float
+
+\- semantic\_recall\_success\_rate: float
+
+\- semantic\_memory\_density: float
+
+\- semantic\_memory\_utility: float
+
+\- semantic\_consolidation\_rate: float
+
+\- semantic\_decay\_rate: float
+
+
+
+Main class: CellAssemblyEngine
+
+
+
+Responsibilities:
+
+1\. observe\_activation(orchestrator) -> AssemblyActivationTrace
+
+&#x20;  - Read active neurons from regions/circuit.
+
+&#x20;  - Include weak but meaningful activation, not only spike threshold.
+
+&#x20;  - Use soft activation threshold, configurable.
+
+
+
+2\. detect\_candidate\_assembly(trace) -> CellAssembly | None
+
+&#x20;  - If enough neurons/regions co-activate, create candidate assembly.
+
+&#x20;  - Minimum requirements:
+
+&#x20;    - min\_neurons
+
+&#x20;    - min\_regions
+
+&#x20;    - min\_mean\_activation
+
+&#x20;    - min\_confidence or min\_phi
+
+
+
+3\. match\_existing\_assembly(trace) -> CellAssembly | None
+
+&#x20;  - Compare activation signature with existing assemblies.
+
+&#x20;  - Use cosine similarity or normalized dot product.
+
+&#x20;  - If similarity > threshold, reinforce existing assembly instead of creating duplicate.
+
+
+
+4\. reinforce\_assembly(assembly, trace)
+
+&#x20;  - Increase strength.
+
+&#x20;  - Increase recurrence\_count.
+
+&#x20;  - Update last\_activated\_tick.
+
+&#x20;  - Update stability based on recurrence, Φ, energy, utility.
+
+
+
+5\. decay\_assemblies()
+
+&#x20;  - Slowly reduce strength for unused assemblies.
+
+&#x20;  - Mark assemblies as inactive if strength < threshold.
+
+&#x20;  - Do not delete immediately; allow possible reactivation.
+
+
+
+6\. consolidate\_assemblies()
+
+&#x20;  - Assemblies with recurrence\_count >= threshold and stability >= threshold become consolidated.
+
+&#x20;  - Consolidated assemblies decay more slowly.
+
+
+
+7\. run\_semantic\_memory\_cycle(orchestrator)
+
+&#x20;  - observe activation
+
+&#x20;  - match or create assembly
+
+&#x20;  - reinforce/decay/consolidate
+
+&#x20;  - log events to MorphologicalMemory
+
+&#x20;  - return SemanticMemoryMetrics
+
+
+
+Main class: SemanticMemoryStore
+
+
+
+Responsibilities:
+
+\- save/load assemblies as JSONL
+
+\- get\_by\_id
+
+\- list\_active
+
+\- list\_consolidated
+
+\- count
+
+\- get\_best\_by\_strength
+
+\- get\_recent
+
+\- persist metrics
+
+
+
+Main class: SemanticRecallEngine
+
+
+
+Responsibilities:
+
+1\. recall(query\_signature) -> SemanticRecallResult
+
+2\. recall\_from\_current\_activation(orchestrator) -> SemanticRecallResult
+
+3\. reactivate\_assembly(assembly\_id, orchestrator)
+
+&#x20;  - Optionally inject weak activation into member neurons/regions.
+
+&#x20;  - Must be bounded by safety/energy constraints.
+
+4\. compute\_similarity(signature\_a, signature\_b)
+
+
+
+Integration with Orchestrator:
+
+\- Add semantic\_memory\_enabled: bool = False by default or True if safe.
+
+\- Add \_cell\_assembly\_engine
+
+\- Add \_semantic\_memory\_store
+
+\- Add \_semantic\_recall\_engine
+
+\- Hook after burst/STDP/inhibition/energy/stability stages, before final benchmark capture.
+
+\- Add method:
+
+&#x20; - run\_semantic\_memory\_cycle()
+
+&#x20; - recall\_semantic\_memory(query\_signature)
+
+&#x20; - get\_semantic\_memory\_metrics()
+
+
+
+Integration with MorphologicalMemory:
+
+Add new MorphologyEventType values:
+
+\- CELL\_ASSEMBLY\_CREATED
+
+\- CELL\_ASSEMBLY\_REINFORCED
+
+\- CELL\_ASSEMBLY\_CONSOLIDATED
+
+\- CELL\_ASSEMBLY\_DECAYED
+
+\- CELL\_ASSEMBLY\_REACTIVATED
+
+\- SEMANTIC\_RECALL\_SUCCEEDED
+
+\- SEMANTIC\_RECALL\_FAILED
+
+
+
+Integration with BenchmarkMetrics:
+
+Add:
+
+\- semantic\_assembly\_count
+
+\- semantic\_active\_assembly\_count
+
+\- semantic\_consolidated\_assembly\_count
+
+\- mean\_assembly\_strength
+
+\- mean\_assembly\_stability
+
+\- semantic\_recall\_success\_rate
+
+\- semantic\_memory\_density
+
+\- semantic\_memory\_utility
+
+\- semantic\_consolidation\_rate
+
+\- semantic\_memory\_score
+
+
+
+Suggested semantic\_memory\_score:
+
+0.25 \* semantic\_recall\_success\_rate
+
+\+ 0.20 \* mean\_assembly\_stability
+
+\+ 0.15 \* mean\_assembly\_strength
+
+\+ 0.15 \* semantic\_consolidation\_rate
+
+\+ 0.10 \* semantic\_memory\_utility
+
+\+ 0.10 \* min(1.0, semantic\_memory\_density)
+
+\+ 0.05 \* coherence\_phi
+
+
+
+Tests:
+
+Create at least 18 tests covering:
+
+
+
+1\. CellAssembly model creation.
+
+2\. AssemblyActivationTrace creation.
+
+3\. SemanticMemoryStore save/load.
+
+4\. observe\_activation captures active neurons.
+
+5\. detect\_candidate\_assembly creates assembly when co-activation is sufficient.
+
+6\. detect\_candidate\_assembly rejects weak/noisy activation.
+
+7\. match\_existing\_assembly prevents duplicates.
+
+8\. reinforce\_assembly increases strength and recurrence\_count.
+
+9\. decay\_assemblies decreases unused assembly strength.
+
+10\. consolidate\_assemblies marks stable recurrent assemblies.
+
+11\. recall returns best matching assembly.
+
+12\. recall fails safely when memory is empty.
+
+13\. reactivate\_assembly injects bounded activation.
+
+14\. MorphologicalMemory events are emitted.
+
+15\. Benchmark metrics include semantic fields.
+
+16\. Orchestrator integration works with semantic\_memory\_enabled=True.
+
+17\. No regression when semantic\_memory\_enabled=False.
+
+18\. Full semantic cycle over multiple ticks produces at least one assembly.
 
 
 
 Acceptance criteria:
 
-\- Existing 687 tests still pass.
+\- All existing 713 tests still pass.
 
-\- New tests added for T42B.
+\- New semantic memory tests pass.
 
 \- Coverage remains >=85%.
 
-\- docs/CELLULAR\_ADAPTIVE\_DEFENSE\_REPAIR\_SPEC.md updated or docs/CELLULAR\_ADAPTIVE\_DEFENSE\_REPAIR\_COMPLETION\_PATCH\_SPEC.md created.
+\- JSONL persistence works.
 
-\- Commit and tag as v0.3.27-t42b-cellular-defense-repair-completion.
+\- Benchmark exposes semantic metrics.
+
+\- MorphologicalMemory records semantic events.
+
+\- No unbounded activation injection during recall.
+
+\- Create docs/SEMANTIC\_CELL\_ASSEMBLY\_MEMORY\_SPEC.md.
+
+\- Commit and tag as v0.3.29-t43-semantic-cell-assembly-memory.
+
+Nota architetturale importante
 
 
 
-Verdetto: T42 non va scartato; va completato. È il primo vero layer “immunitario-cellulare” di SPEACE. T42B lo rende coerente con la nuova impostazione: SPEACE come organismo cibernetico cellulare evolutivo.
+Per T43 non conviene ancora implementare “linguaggio” o “concetti umani” direttamente. La prima memoria semantica deve essere più profonda e biologica:
+
+
+
+pattern ricorrente → assembly → semantic pointer → richiamo
+
+
+
+Solo dopo, in un task successivo, potrai mappare questi semantic pointer a nomi, simboli, testo, immagini, eventi o obiettivi.
+
+
+
+Quindi T43 deve creare memoria semantica sub-simbolica, non ancora una knowledge base linguistica.
+
+
+
+Dopo T43
+
+
+
+La sequenza naturale diventa:
+
+
+
+T43  — Semantic Cell Assembly Memory
+
+T43B — Semantic Memory Functional Audit
+
+T44  — Associative Learning Between Assemblies
+
+T45  — Episodic Memory Layer
+
+T46  — Symbolic Grounding / Semantic Pointer Labeling
+
+
+
+Verdetto operativo: procedi con T43.
 

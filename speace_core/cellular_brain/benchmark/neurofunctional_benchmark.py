@@ -194,6 +194,17 @@ class BenchmarkMetrics(BaseModel):
     cellular_self_repair_score: float = 0.0
     cellular_defense_score: float = 0.0
     epigenetic_adaptation_score: float = 0.0
+    # T43 — Semantic Cell Assembly Memory metrics
+    semantic_assembly_count: int = 0
+    semantic_active_assembly_count: int = 0
+    semantic_consolidated_assembly_count: int = 0
+    mean_assembly_strength: float = 0.0
+    mean_assembly_stability: float = 0.0
+    semantic_recall_success_rate: float = 0.0
+    semantic_memory_density: float = 0.0
+    semantic_memory_utility: float = 0.0
+    semantic_consolidation_rate: float = 0.0
+    semantic_memory_score: float = 0.0
 
 
 class BenchmarkResult(BaseModel):
@@ -1015,6 +1026,48 @@ class NeuroFunctionalBenchmark:
             4,
         )
 
+        # T43 — Semantic Cell Assembly Memory metrics
+        semantic_assembly_count = 0
+        semantic_active_assembly_count = 0
+        semantic_consolidated_assembly_count = 0
+        mean_assembly_strength = 0.0
+        mean_assembly_stability = 0.0
+        semantic_recall_success_rate = 0.0
+        semantic_memory_density = 0.0
+        semantic_memory_utility = 0.0
+        semantic_consolidation_rate = 0.0
+        semantic_memory_score = 0.0
+
+        store = getattr(self.orch, "_semantic_memory_store", None)
+        if store is not None:
+            all_assemblies = list(store._assemblies.values())
+            semantic_assembly_count = len(all_assemblies)
+            active_asms = [a for a in all_assemblies if a.active]
+            consolidated_asms = [a for a in all_assemblies if a.consolidated]
+            semantic_active_assembly_count = len(active_asms)
+            semantic_consolidated_assembly_count = len(consolidated_asms)
+            if all_assemblies:
+                mean_assembly_strength = sum(a.strength for a in all_assemblies) / len(all_assemblies)
+                mean_assembly_stability = sum(a.stability for a in all_assemblies) / len(all_assemblies)
+                semantic_memory_density = min(1.0, len(all_assemblies) / max(1, len(active_asms) * 2))
+                semantic_memory_utility = sum(a.utility_score for a in all_assemblies) / len(all_assemblies)
+                semantic_consolidation_rate = len(consolidated_asms) / len(all_assemblies)
+            # recall success rate from metrics log
+            if store._metrics_log:
+                recalls = [getattr(m, "semantic_recall_success_rate", 0.0) for m in store._metrics_log]
+                semantic_recall_success_rate = sum(recalls) / len(recalls)
+
+            semantic_memory_score = round(
+                0.25 * semantic_recall_success_rate
+                + 0.20 * mean_assembly_stability
+                + 0.15 * mean_assembly_strength
+                + 0.15 * semantic_consolidation_rate
+                + 0.10 * semantic_memory_utility
+                + 0.10 * min(1.0, semantic_memory_density)
+                + 0.05 * final.coherence_phi,
+                4,
+            )
+
         return BenchmarkMetrics(
             accuracy_score=final.accuracy,
             coherence_phi=final.coherence_phi,
@@ -1177,6 +1230,17 @@ class NeuroFunctionalBenchmark:
             cellular_self_repair_score=cellular_self_repair_score,
             cellular_defense_score=cellular_defense_score,
             epigenetic_adaptation_score=epigenetic_adaptation_score,
+            # T43
+            semantic_assembly_count=semantic_assembly_count,
+            semantic_active_assembly_count=semantic_active_assembly_count,
+            semantic_consolidated_assembly_count=semantic_consolidated_assembly_count,
+            mean_assembly_strength=mean_assembly_strength,
+            mean_assembly_stability=mean_assembly_stability,
+            semantic_recall_success_rate=semantic_recall_success_rate,
+            semantic_memory_density=semantic_memory_density,
+            semantic_memory_utility=semantic_memory_utility,
+            semantic_consolidation_rate=semantic_consolidation_rate,
+            semantic_memory_score=semantic_memory_score,
         )
 
     def generate_json_report(self, result: BenchmarkResult) -> Path:
@@ -1307,7 +1371,21 @@ class NeuroFunctionalBenchmark:
             f"| Cellular self-repair score | {m.cellular_self_repair_score:.4f} |",
             f"| Cellular defense score | {m.cellular_defense_score:.4f} |",
             f"| Epigenetic adaptation score | {m.epigenetic_adaptation_score:.4f} |",
+            "",
+            "### T43 — Semantic Cell Assembly Memory",
+            f"| Semantic assembly count | {m.semantic_assembly_count} |",
+            f"| Semantic active assemblies | {m.semantic_active_assembly_count} |",
+            f"| Semantic consolidated assemblies | {m.semantic_consolidated_assembly_count} |",
+            f"| Mean assembly strength | {m.mean_assembly_strength:.4f} |",
+            f"| Mean assembly stability | {m.mean_assembly_stability:.4f} |",
+            f"| Semantic recall success rate | {m.semantic_recall_success_rate:.4f} |",
+            f"| Semantic memory density | {m.semantic_memory_density:.4f} |",
+            f"| Semantic memory utility | {m.semantic_memory_utility:.4f} |",
+            f"| Semantic consolidation rate | {m.semantic_consolidation_rate:.4f} |",
+            f"| **Semantic memory score** | **{m.semantic_memory_score:.4f}** |",
+            "",
             f"| **Cellular resilience score** | **{m.cellular_resilience_score:.4f}** |",
+
             "",
             "---",
             "*Generated by NeuroFunctionalBenchmark v0.3*",

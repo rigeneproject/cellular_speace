@@ -127,6 +127,11 @@ class CellularBrainOrchestrator(BaseModel):
     _last_cellular_defense_result = None
     _last_cellular_epigenetic_result = None
     _previous_damage_state: dict = {}
+    # T43 — Semantic Cell Assembly Memory
+    semantic_memory_enabled: bool = False
+    _semantic_memory_store: "SemanticMemoryStore | None" = None
+    _cell_assembly_engine: "CellAssemblyEngine | None" = None
+    _semantic_recall_engine: "SemanticRecallEngine | None" = None
 
     class Config:
         arbitrary_types_allowed = True
@@ -192,6 +197,16 @@ class CellularBrainOrchestrator(BaseModel):
             self._cellular_repair_engine = CellularRepairEngine()
         if self.cellular_epigenetics_enabled:
             self._cellular_epigenetic_adapter = CellularEpigeneticAdapter()
+
+        # T43 — Semantic Cell Assembly Memory
+        if self.semantic_memory_enabled:
+            from speace_core.cellular_brain.memory.semantic.semantic_memory_store import SemanticMemoryStore
+            from speace_core.cellular_brain.memory.semantic.cell_assembly_engine import CellAssemblyEngine
+            from speace_core.cellular_brain.memory.semantic.semantic_recall_engine import SemanticRecallEngine
+
+            self._semantic_memory_store = SemanticMemoryStore()
+            self._cell_assembly_engine = CellAssemblyEngine(store=self._semantic_memory_store)
+            self._semantic_recall_engine = SemanticRecallEngine(store=self._semantic_memory_store)
 
     async def run_ticks(self, n_ticks: int) -> None:
         for _ in range(n_ticks):
@@ -439,6 +454,10 @@ class CellularBrainOrchestrator(BaseModel):
         # T42 — Cellular Adaptive Defense & Repair
         self._run_cellular_adaptive_defense_and_repair()
 
+        # T43 — Semantic Cell Assembly Memory
+        if self.semantic_memory_enabled and self._cell_assembly_engine is not None:
+            self._cell_assembly_engine.run_semantic_memory_cycle(self)
+
         # Record morphological snapshot every tick
         snapshot = self._build_morphology_snapshot(metrics)
         self._memory.record_snapshot(snapshot)
@@ -485,6 +504,28 @@ class CellularBrainOrchestrator(BaseModel):
     def run_apoptosis(self) -> None:
         metrics = self.latest_metrics
         self._apoptosis.run(self.circuit, metrics=metrics)
+
+    # ------------------------------------------------------------------ #
+    # T43 — Semantic Cell Assembly Memory
+    # ------------------------------------------------------------------ #
+
+    def run_semantic_memory_cycle(self) -> "SemanticMemoryMetrics | None":
+        """Run one observation-detection-reinforcement cycle for semantic memory."""
+        if self.semantic_memory_enabled and self._cell_assembly_engine is not None:
+            return self._cell_assembly_engine.run_semantic_memory_cycle(self)
+        return None
+
+    def recall_semantic_memory(self, query_signature: List[float]) -> "SemanticRecallResult | None":
+        """Recall a semantic memory from a query activation signature."""
+        if self.semantic_memory_enabled and self._semantic_recall_engine is not None:
+            return self._semantic_recall_engine.recall(query_signature)
+        return None
+
+    def get_semantic_memory_metrics(self) -> "SemanticMemoryMetrics | None":
+        """Return current semantic memory metrics."""
+        if self.semantic_memory_enabled and self._cell_assembly_engine is not None:
+            return self._cell_assembly_engine._compute_metrics()
+        return None
 
     def _run_cellular_adaptive_defense_and_repair(self) -> None:
         """T42 — Run stress, damage, repair, defense, and epigenetic adaptation."""

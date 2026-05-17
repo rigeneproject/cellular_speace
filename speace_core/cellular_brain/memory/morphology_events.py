@@ -117,6 +117,14 @@ class MorphologyEventType(str, Enum):
     CELL_QUARANTINE_RELEASED = "cell_quarantine_released"
     CELLULAR_IMMUNE_ALERT = "cellular_immune_alert"
     CELLULAR_EPIGENETIC_SHIFT = "cellular_epigenetic_shift"
+    # T43 — Semantic Cell Assembly Memory
+    CELL_ASSEMBLY_CREATED = "cell_assembly_created"
+    CELL_ASSEMBLY_REINFORCED = "cell_assembly_reinforced"
+    CELL_ASSEMBLY_CONSOLIDATED = "cell_assembly_consolidated"
+    CELL_ASSEMBLY_DECAYED = "cell_assembly_decayed"
+    CELL_ASSEMBLY_REACTIVATED = "cell_assembly_reactivated"
+    SEMANTIC_RECALL_SUCCEEDED = "semantic_recall_succeeded"
+    SEMANTIC_RECALL_FAILED = "semantic_recall_failed"
 
 
 class MorphologyEvent(BaseModel):
