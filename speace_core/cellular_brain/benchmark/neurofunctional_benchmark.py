@@ -179,6 +179,16 @@ class BenchmarkMetrics(BaseModel):
     coupling_delta_mean: float = 0.0
     suppression_cost_after_coupling: float = 0.0
     brainstem_state_transition_count: int = 0
+    # T42 — Cellular Adaptive Defense & Repair metrics
+    mean_cellular_stress: float = 0.0
+    max_cellular_stress: float = 0.0
+    mean_damage_score: float = 0.0
+    max_damage_score: float = 0.0
+    repair_success_rate: float = 0.0
+    defense_activation_count: int = 0
+    quarantined_cell_count: int = 0
+    epigenetic_shift_count: int = 0
+    cellular_resilience_score: float = 0.0
 
 
 class BenchmarkResult(BaseModel):
@@ -941,6 +951,44 @@ class NeuroFunctionalBenchmark:
             keys = list(preset_balanced.keys())
             gain_vector_distance = round(sum(abs(current[k] - preset_balanced[k]) for k in keys) / len(keys), 4)
 
+        # T42 — Cellular Adaptive Defense & Repair metrics
+        mean_cellular_stress = 0.0
+        max_cellular_stress = 0.0
+        mean_damage_score = 0.0
+        max_damage_score = 0.0
+        repair_success_rate = 0.0
+        defense_activation_count = 0
+        quarantined_cell_count = 0
+        epigenetic_shift_count = 0
+        cellular_resilience_score = 0.0
+        orch = self.orch
+        stress_result = getattr(orch, "_last_cellular_stress_result", None)
+        damage_result = getattr(orch, "_last_cellular_damage_result", None)
+        repair_result = getattr(orch, "_last_cellular_repair_result", None)
+        defense_result = getattr(orch, "_last_cellular_defense_result", None)
+        epigenetic_result = getattr(orch, "_last_cellular_epigenetic_result", None)
+        if stress_result is not None:
+            mean_cellular_stress = getattr(stress_result, "mean_stress", 0.0)
+            max_cellular_stress = getattr(stress_result, "max_stress", 0.0)
+        if damage_result is not None:
+            mean_damage_score = getattr(damage_result, "mean_damage", 0.0)
+            max_damage_score = getattr(damage_result, "max_damage", 0.0)
+        if repair_result is not None:
+            repair_success_rate = getattr(repair_result, "repair_success_rate", 0.0)
+        if defense_result is not None:
+            defense_activation_count = getattr(defense_result, "defense_activation_count", 0)
+            quarantined_cell_count = getattr(defense_result, "quarantined_count", 0)
+        if epigenetic_result is not None:
+            epigenetic_shift_count = getattr(epigenetic_result, "epigenetic_shift_count", 0)
+        # Cellular resilience score: higher when stress is low, damage is low, repair succeeds
+        if stress_result is not None and damage_result is not None:
+            stress_component = max(0.0, 1.0 - mean_cellular_stress)
+            damage_component = max(0.0, 1.0 - mean_damage_score)
+            repair_component = repair_success_rate
+            cellular_resilience_score = round(
+                (stress_component * 0.3 + damage_component * 0.4 + repair_component * 0.3), 4
+            )
+
         return BenchmarkMetrics(
             accuracy_score=final.accuracy,
             coherence_phi=final.coherence_phi,
@@ -1088,6 +1136,16 @@ class NeuroFunctionalBenchmark:
             coupling_delta_mean=coupling_delta_mean,
             suppression_cost_after_coupling=suppression_cost_after_coupling,
             brainstem_state_transition_count=brainstem_state_transition_count,
+            # T42
+            mean_cellular_stress=mean_cellular_stress,
+            max_cellular_stress=max_cellular_stress,
+            mean_damage_score=mean_damage_score,
+            max_damage_score=max_damage_score,
+            repair_success_rate=repair_success_rate,
+            defense_activation_count=defense_activation_count,
+            quarantined_cell_count=quarantined_cell_count,
+            epigenetic_shift_count=epigenetic_shift_count,
+            cellular_resilience_score=cellular_resilience_score,
         )
 
     def generate_json_report(self, result: BenchmarkResult) -> Path:
@@ -1205,6 +1263,15 @@ class NeuroFunctionalBenchmark:
             f"| Mean region damping factor | {m.mean_region_damping_factor:.4f} |",
             f"| Brainstem override count | {m.brainstem_override_count} |",
             f"| Phi recovery score | {m.phi_recovery_score:.4f} |",
+            f"| Mean cellular stress | {m.mean_cellular_stress:.4f} |",
+            f"| Max cellular stress | {m.max_cellular_stress:.4f} |",
+            f"| Mean damage score | {m.mean_damage_score:.4f} |",
+            f"| Max damage score | {m.max_damage_score:.4f} |",
+            f"| Repair success rate | {m.repair_success_rate:.4f} |",
+            f"| Defense activation count | {m.defense_activation_count} |",
+            f"| Quarantined cell count | {m.quarantined_cell_count} |",
+            f"| Epigenetic shift count | {m.epigenetic_shift_count} |",
+            f"| **Cellular resilience score** | **{m.cellular_resilience_score:.4f}** |",
             "",
             "---",
             "*Generated by NeuroFunctionalBenchmark v0.3*",

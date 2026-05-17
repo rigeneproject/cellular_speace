@@ -106,6 +106,12 @@ class MorphologyEventType(str, Enum):
     BRAINSTEM_OUTPUT_COUPLED = "brainstem_output_coupled"
     BRAINSTEM_COUPLING_TRACE_RECORDED = "brainstem_coupling_trace_recorded"
     BRAINSTEM_SUPPRESSION_RELEASED = "brainstem_suppression_released"
+    # T42 — Cellular Adaptive Defense & Repair
+    CELLULAR_STRESS_EVALUATED = "cellular_stress_evaluated"
+    CELLULAR_DAMAGE_EVALUATED = "cellular_damage_evaluated"
+    CELLULAR_REPAIR_ATTEMPTED = "cellular_repair_attempted"
+    CELLULAR_DEFENSE_APPLIED = "cellular_defense_applied"
+    CELLULAR_EPIGENETIC_SHIFT = "cellular_epigenetic_shift"
 
 
 class MorphologyEvent(BaseModel):

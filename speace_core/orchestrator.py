@@ -54,6 +54,11 @@ from speace_core.cellular_brain.regions.brainstem_gain_controller import (
     AdaptiveBrainstemGainController,
     BrainstemGainUpdateResult,
 )
+from speace_core.cellular_brain.cells.cellular_stress import CellularStressEngine
+from speace_core.cellular_brain.cells.cellular_damage import CellularDamageEngine
+from speace_core.cellular_brain.cells.cellular_repair_engine import CellularRepairEngine
+from speace_core.cellular_brain.cells.cellular_defense_engine import CellularDefenseEngine
+from speace_core.cellular_brain.cells.cellular_epigenetic_adapter import CellularEpigeneticAdapter
 from speace_core.dna.models import SharedGenome
 
 
@@ -107,6 +112,21 @@ class CellularBrainOrchestrator(BaseModel):
     _last_brainstem_result = None
     _brainstem_gain_controller = None
     _last_brainstem_gain_result = None
+    # T42 — Cellular Adaptive Defense & Repair
+    cellular_adaptive_defense_enabled: bool = False
+    cellular_repair_enabled: bool = False
+    cellular_epigenetics_enabled: bool = False
+    _cellular_stress_engine: CellularStressEngine | None = None
+    _cellular_damage_engine: CellularDamageEngine | None = None
+    _cellular_repair_engine: CellularRepairEngine | None = None
+    _cellular_defense_engine: CellularDefenseEngine | None = None
+    _cellular_epigenetic_adapter: CellularEpigeneticAdapter | None = None
+    _last_cellular_stress_result = None
+    _last_cellular_damage_result = None
+    _last_cellular_repair_result = None
+    _last_cellular_defense_result = None
+    _last_cellular_epigenetic_result = None
+    _previous_damage_state: dict = {}
 
     class Config:
         arbitrary_types_allowed = True
@@ -162,6 +182,16 @@ class CellularBrainOrchestrator(BaseModel):
             self._brainstem_gain_controller = AdaptiveBrainstemGainController()
         else:
             self._brainstem_gain_controller = None
+
+        # T42 — Cellular Adaptive Defense & Repair
+        if self.cellular_adaptive_defense_enabled:
+            self._cellular_stress_engine = CellularStressEngine()
+            self._cellular_damage_engine = CellularDamageEngine()
+            self._cellular_defense_engine = CellularDefenseEngine()
+        if self.cellular_repair_enabled:
+            self._cellular_repair_engine = CellularRepairEngine()
+        if self.cellular_epigenetics_enabled:
+            self._cellular_epigenetic_adapter = CellularEpigeneticAdapter()
 
     async def run_ticks(self, n_ticks: int) -> None:
         for _ in range(n_ticks):
@@ -406,6 +436,9 @@ class CellularBrainOrchestrator(BaseModel):
                 flow_memory=flow_memory,
             )
 
+        # T42 — Cellular Adaptive Defense & Repair
+        self._run_cellular_adaptive_defense_and_repair()
+
         # Record morphological snapshot every tick
         snapshot = self._build_morphology_snapshot(metrics)
         self._memory.record_snapshot(snapshot)
@@ -452,6 +485,65 @@ class CellularBrainOrchestrator(BaseModel):
     def run_apoptosis(self) -> None:
         metrics = self.latest_metrics
         self._apoptosis.run(self.circuit, metrics=metrics)
+
+    def _run_cellular_adaptive_defense_and_repair(self) -> None:
+        """T42 — Run stress, damage, repair, defense, and epigenetic adaptation."""
+        # Stress evaluation
+        if self.cellular_adaptive_defense_enabled and self._cellular_stress_engine is not None:
+            self._last_cellular_stress_result = self._cellular_stress_engine.evaluate(self.circuit)
+        else:
+            self._last_cellular_stress_result = None
+
+        # Damage evaluation (requires stress)
+        if self.cellular_adaptive_defense_enabled and self._cellular_damage_engine is not None and self._last_cellular_stress_result is not None:
+            self._last_cellular_damage_result = self._cellular_damage_engine.evaluate(
+                self.circuit,
+                stress_result=self._last_cellular_stress_result,
+                previous_damage=getattr(self, "_previous_damage_state", None),
+            )
+            self._previous_damage_state = (
+                self._last_cellular_damage_result.per_cell if self._last_cellular_damage_result else {}
+            )
+        else:
+            self._last_cellular_damage_result = None
+
+        # Defense (requires stress and damage)
+        if self.cellular_adaptive_defense_enabled and self._cellular_defense_engine is not None:
+            stress_per_cell = getattr(self._last_cellular_stress_result, "per_cell", {}) or {}
+            damage_per_cell = getattr(self._last_cellular_damage_result, "per_cell", {}) or {}
+            self._last_cellular_defense_result = self._cellular_defense_engine.run(
+                self.circuit,
+                stress_per_cell=stress_per_cell,
+                damage_per_cell=damage_per_cell,
+                memory=self._memory,
+            )
+        else:
+            self._last_cellular_defense_result = None
+
+        # Repair (requires damage)
+        if self.cellular_repair_enabled and self._cellular_repair_engine is not None:
+            damage_per_cell = getattr(self._last_cellular_damage_result, "per_cell", {}) or {}
+            self._last_cellular_repair_result = self._cellular_repair_engine.run(
+                self.circuit,
+                damage_per_cell=damage_per_cell,
+                memory=self._memory,
+            )
+        else:
+            self._last_cellular_repair_result = None
+
+        # Epigenetic adaptation (requires stress and damage)
+        if self.cellular_epigenetics_enabled and self._cellular_epigenetic_adapter is not None:
+            stress_per_cell = getattr(self._last_cellular_stress_result, "per_cell", {}) or {}
+            damage_per_cell = getattr(self._last_cellular_damage_result, "per_cell", {}) or {}
+            self._last_cellular_epigenetic_result = self._cellular_epigenetic_adapter.adapt(
+                self.circuit,
+                stress_per_cell=stress_per_cell,
+                damage_per_cell=damage_per_cell,
+                current_tick=self.current_tick,
+                memory=self._memory,
+            )
+        else:
+            self._last_cellular_epigenetic_result = None
 
     def _build_morphology_snapshot(self, metrics: SystemMetrics) -> MorphologySnapshot:
         active = sum(1 for s in self.circuit.synapses if s.state != "pruned")
