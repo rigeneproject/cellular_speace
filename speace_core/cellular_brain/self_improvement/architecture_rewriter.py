@@ -50,6 +50,10 @@ class SelfImprovementCycleResult(BaseModel):
     # T48 — Episodic policy context
     episodic_context: Optional[Dict[str, Any]] = None
     episodic_adjustments: List[Dict[str, Any]] = Field(default_factory=list)
+    # T49 — Counterfactual sandbox results
+    counterfactual_results: List[Dict[str, Any]] = Field(default_factory=list)
+    counterfactual_best_result: Optional[Dict[str, Any]] = None
+    counterfactual_verdict: str = ""
 
 
 class ArchitectureRewriter:

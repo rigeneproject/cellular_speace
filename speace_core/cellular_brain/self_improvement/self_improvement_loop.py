@@ -36,6 +36,11 @@ from speace_core.cellular_brain.self_improvement.episodic_policy import (
     EpisodicPolicyContext,
     EpisodicProposalAdjustment,
 )
+from speace_core.cellular_brain.self_improvement.counterfactual_sandbox import (
+    CounterfactualArchitectureSandbox,
+    CounterfactualResult,
+    CounterfactualBatchResult,
+)
 
 
 class SelfImprovementLoop:
@@ -55,6 +60,8 @@ class SelfImprovementLoop:
         self_improvement_memory=None,
         episodic_policy_enabled: bool = False,
         episodic_policy=None,
+        counterfactual_sandbox_enabled: bool = False,
+        counterfactual_sandbox=None,
     ):
         self.orchestrator = orchestrator
         self.detector = detector or LimitationDetector()
@@ -68,6 +75,8 @@ class SelfImprovementLoop:
         self.self_improvement_memory = self_improvement_memory or SelfImprovementMemory(memory=memory)
         self.episodic_policy_enabled = episodic_policy_enabled
         self.episodic_policy = episodic_policy
+        self.counterfactual_sandbox_enabled = counterfactual_sandbox_enabled
+        self.counterfactual_sandbox = counterfactual_sandbox
 
     # ------------------------------------------------------------------ #
     # Detection cycle
@@ -118,6 +127,20 @@ class SelfImprovementLoop:
             episodic_adjustments = self.episodic_policy.adjust_proposals(proposals, episodic_context)
             adj_map = {a.proposal_id: a.adjusted_confidence for a in episodic_adjustments}
             proposals.sort(key=lambda p: adj_map.get(p.id, 0.0), reverse=True)
+
+        # T49 — Counterfactual sandbox evaluation
+        counterfactual_results: List[CounterfactualResult] = []
+        counterfactual_best = None
+        counterfactual_verdict = ""
+        if self.counterfactual_sandbox_enabled and self.counterfactual_sandbox is not None and proposals:
+            limitation_type = diagnoses[0].primary_category if diagnoses else "unknown"
+            for proposal in proposals:
+                cf_result = self.counterfactual_sandbox.run_scenario(proposal, limitation_type)
+                counterfactual_results.append(cf_result)
+            best = self.counterfactual_sandbox.select_best_safe_result(counterfactual_results)
+            counterfactual_best = best
+            if best is not None:
+                counterfactual_verdict = best.verdict
 
         # 4. Simulate proposals
         simulations: List[RewriteSimulationResult] = []
@@ -176,6 +199,9 @@ class SelfImprovementLoop:
             final_verdict=final_verdict,
             episodic_context=episodic_context.model_dump() if episodic_context is not None else None,
             episodic_adjustments=[a.model_dump() for a in episodic_adjustments],
+            counterfactual_results=[r.model_dump() for r in counterfactual_results],
+            counterfactual_best_result=counterfactual_best.model_dump() if counterfactual_best is not None else None,
+            counterfactual_verdict=counterfactual_verdict,
         )
 
         self.proposal_store.save_cycle_result(result)
@@ -222,6 +248,20 @@ class SelfImprovementLoop:
             adj_map = {a.proposal_id: a.adjusted_confidence for a in episodic_adjustments}
             proposals.sort(key=lambda p: adj_map.get(p.id, 0.0), reverse=True)
 
+        # T49 — Counterfactual sandbox evaluation
+        counterfactual_results: List[CounterfactualResult] = []
+        counterfactual_best = None
+        counterfactual_verdict = ""
+        if self.counterfactual_sandbox_enabled and self.counterfactual_sandbox is not None and proposals:
+            limitation_type = diagnoses[0].primary_category if diagnoses else "unknown"
+            for proposal in proposals:
+                cf_result = self.counterfactual_sandbox.run_scenario(proposal, limitation_type)
+                counterfactual_results.append(cf_result)
+            best = self.counterfactual_sandbox.select_best_safe_result(counterfactual_results)
+            counterfactual_best = best
+            if best is not None:
+                counterfactual_verdict = best.verdict
+
         for proposal in proposals:
             sim = self.simulate_proposal(proposal)
             simulations.append(sim)
@@ -258,6 +298,9 @@ class SelfImprovementLoop:
             final_verdict=final_verdict,
             episodic_context=episodic_context.model_dump() if episodic_context is not None else None,
             episodic_adjustments=[a.model_dump() for a in episodic_adjustments],
+            counterfactual_results=[r.model_dump() for r in counterfactual_results],
+            counterfactual_best_result=counterfactual_best.model_dump() if counterfactual_best is not None else None,
+            counterfactual_verdict=counterfactual_verdict,
         )
         self.proposal_store.save_cycle_result(result)
         return result
@@ -427,6 +470,29 @@ class SelfImprovementLoop:
                 reasons = adj.get('reasons', [])
                 if reasons:
                     lines.append(f"  - reasons: {', '.join(reasons)}")
+
+        # T49 — Counterfactual Sandbox Results
+        if result.counterfactual_results:
+            lines.extend(["", "## Counterfactual Sandbox Results"])
+            for cf in result.counterfactual_results:
+                lines.append(
+                    f"- Scenario {cf.get('scenario_id', 'unknown')} | "
+                    f"Proposal {cf.get('proposal_id', 'unknown')}: "
+                    f"verdict={cf.get('verdict', 'unknown')}, "
+                    f"delta_score={cf.get('delta_score', 0.0):.4f}, "
+                    f"confidence={cf.get('confidence', 0.0):.4f}"
+                )
+                flags = cf.get('regression_flags', [])
+                if flags:
+                    lines.append(f"  - flags: {', '.join(flags)}")
+        if result.counterfactual_best_result:
+            best = result.counterfactual_best_result
+            lines.extend(["", "## Best Counterfactual Result"])
+            lines.append(f"- Scenario: {best.get('scenario_id', 'unknown')}")
+            lines.append(f"- Proposal: {best.get('proposal_id', 'unknown')}")
+            lines.append(f"- Verdict: {best.get('verdict', 'unknown')}")
+            lines.append(f"- Delta score: {best.get('delta_score', 0.0):.4f}")
+            lines.append(f"- Confidence: {best.get('confidence', 0.0):.4f}")
 
         lines.extend(["", "## Final Verdict"])
         lines.append(f"**{result.final_verdict}**")

@@ -253,6 +253,15 @@ class BenchmarkMetrics(BaseModel):
     episodic_policy_penalty_mean: float = 0.0
     episodic_adjusted_confidence: float = 0.0
     episodic_policy_selected_proposal_score: float = 0.0
+    # T49 — Counterfactual Architecture Sandbox metrics
+    counterfactual_scenarios_tested: int = 0
+    counterfactual_accepted_count: int = 0
+    counterfactual_rejected_count: int = 0
+    counterfactual_unsafe_count: int = 0
+    counterfactual_best_delta_score: float = 0.0
+    counterfactual_mean_delta_score: float = 0.0
+    counterfactual_best_confidence: float = 0.0
+    counterfactual_policy_safe: bool = False
 
 
 class BenchmarkResult(BaseModel):
@@ -1196,6 +1205,33 @@ class NeuroFunctionalBenchmark:
                 scores = [e.metadata.get("adjusted_confidence", 0.0) for e in sel_events]
                 episodic_policy_selected_proposal_score = round(max(scores), 4)
 
+        # T49 — Counterfactual Architecture Sandbox metrics
+        counterfactual_scenarios_tested = 0
+        counterfactual_accepted_count = 0
+        counterfactual_rejected_count = 0
+        counterfactual_unsafe_count = 0
+        counterfactual_best_delta_score = 0.0
+        counterfactual_mean_delta_score = 0.0
+        counterfactual_best_confidence = 0.0
+        counterfactual_policy_safe = False
+        batch_events = [e for e in mem.events if e.event_type == MorphologyEventType.COUNTERFACTUAL_BATCH_COMPLETED]
+        if batch_events:
+            last_batch = batch_events[-1]
+            counterfactual_scenarios_tested = last_batch.metadata.get("scenarios_tested", 0)
+            counterfactual_accepted_count = last_batch.metadata.get("accepted_count", 0)
+            counterfactual_rejected_count = last_batch.metadata.get("rejected_count", 0)
+            counterfactual_unsafe_count = last_batch.metadata.get("unsafe_count", 0)
+            counterfactual_best_delta_score = round(last_batch.metadata.get("best_delta_score", 0.0), 4)
+        scenario_events = [e for e in mem.events if e.event_type == MorphologyEventType.COUNTERFACTUAL_SCENARIO_COMPLETED]
+        if scenario_events:
+            deltas = [e.metadata.get("delta_score", 0.0) for e in scenario_events]
+            counterfactual_mean_delta_score = round(sum(deltas) / len(deltas), 4) if deltas else 0.0
+            best_scenario = max(scenario_events, key=lambda e: e.metadata.get("delta_score", 0.0))
+            counterfactual_best_confidence = round(best_scenario.metadata.get("confidence", 0.0), 4)
+        accepted_events = [e for e in mem.events if e.event_type == MorphologyEventType.COUNTERFACTUAL_PROPOSAL_ACCEPTED]
+        unsafe_events = [e for e in mem.events if e.event_type == MorphologyEventType.COUNTERFACTUAL_PROPOSAL_UNSAFE]
+        counterfactual_policy_safe = len(unsafe_events) == 0 and len(accepted_events) > 0
+
         return BenchmarkMetrics(
             accuracy_score=final.accuracy,
             coherence_phi=final.coherence_phi,
@@ -1388,6 +1424,15 @@ class NeuroFunctionalBenchmark:
             episodic_policy_penalty_mean=episodic_policy_penalty_mean,
             episodic_adjusted_confidence=episodic_adjusted_confidence,
             episodic_policy_selected_proposal_score=episodic_policy_selected_proposal_score,
+            # T49
+            counterfactual_scenarios_tested=counterfactual_scenarios_tested,
+            counterfactual_accepted_count=counterfactual_accepted_count,
+            counterfactual_rejected_count=counterfactual_rejected_count,
+            counterfactual_unsafe_count=counterfactual_unsafe_count,
+            counterfactual_best_delta_score=counterfactual_best_delta_score,
+            counterfactual_mean_delta_score=counterfactual_mean_delta_score,
+            counterfactual_best_confidence=counterfactual_best_confidence,
+            counterfactual_policy_safe=counterfactual_policy_safe,
         )
 
     def generate_json_report(self, result: BenchmarkResult) -> Path:
@@ -1551,6 +1596,16 @@ class NeuroFunctionalBenchmark:
             f"| Policy penalty mean | {m.episodic_policy_penalty_mean:.4f} |",
             f"| Adjusted confidence | {m.episodic_adjusted_confidence:.4f} |",
             f"| Selected proposal score | {m.episodic_policy_selected_proposal_score:.4f} |",
+            "",
+            "### T49 — Counterfactual Architecture Sandbox",
+            f"| Scenarios tested | {m.counterfactual_scenarios_tested} |",
+            f"| Accepted count | {m.counterfactual_accepted_count} |",
+            f"| Rejected count | {m.counterfactual_rejected_count} |",
+            f"| Unsafe count | {m.counterfactual_unsafe_count} |",
+            f"| Best delta score | {m.counterfactual_best_delta_score:.4f} |",
+            f"| Mean delta score | {m.counterfactual_mean_delta_score:.4f} |",
+            f"| Best confidence | {m.counterfactual_best_confidence:.4f} |",
+            f"| Policy safe | {m.counterfactual_policy_safe} |",
             "",
             f"| **Cellular resilience score** | **{m.cellular_resilience_score:.4f}** |",
 

@@ -162,6 +162,13 @@ class MorphologyEventType(str, Enum):
     EPISODIC_POLICY_RECOVERY_BONUS_APPLIED = "episodic_policy_recovery_bonus_applied"
     EPISODIC_POLICY_REGRESSION_PENALTY_APPLIED = "episodic_policy_regression_penalty_applied"
     EPISODIC_POLICY_PROPOSAL_SELECTED = "episodic_policy_proposal_selected"
+    # T49 — Counterfactual Architecture Sandbox
+    COUNTERFACTUAL_SCENARIO_STARTED = "counterfactual_scenario_started"
+    COUNTERFACTUAL_SCENARIO_COMPLETED = "counterfactual_scenario_completed"
+    COUNTERFACTUAL_BATCH_COMPLETED = "counterfactual_batch_completed"
+    COUNTERFACTUAL_PROPOSAL_ACCEPTED = "counterfactual_proposal_accepted"
+    COUNTERFACTUAL_PROPOSAL_REJECTED = "counterfactual_proposal_rejected"
+    COUNTERFACTUAL_PROPOSAL_UNSAFE = "counterfactual_proposal_unsafe"
 
 
 class MorphologyEvent(BaseModel):

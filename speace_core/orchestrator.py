@@ -142,6 +142,8 @@ class CellularBrainOrchestrator(BaseModel):
     _self_improvement_loop = None
     # T48 — Episodic-Guided Self-Improvement Policy
     episodic_policy_enabled: bool = False
+    # T49 — Counterfactual Architecture Sandbox
+    counterfactual_sandbox_enabled: bool = False
     # T47 — Episodic Memory
     episodic_memory_enabled: bool = True
     _episodic_memory = None
