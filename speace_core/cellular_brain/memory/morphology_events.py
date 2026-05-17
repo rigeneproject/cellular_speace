@@ -141,6 +141,13 @@ class MorphologyEventType(str, Enum):
     ASSOCIATIVE_RECALL_ATTEMPTED = "associative_recall_attempted"
     ASSOCIATIVE_RECALL_SUCCEEDED = "associative_recall_succeeded"
     ASSOCIATIVE_RECALL_FAILED = "associative_recall_failed"
+    # T46 — Self-Improvement Outcome Learning
+    SELF_IMPROVEMENT_OUTCOME_RECORDED = "self_improvement_outcome_recorded"
+    SELF_IMPROVEMENT_PROPOSAL_VALIDATED = "self_improvement_proposal_validated"
+    SELF_IMPROVEMENT_PROPOSAL_FAILED = "self_improvement_proposal_failed"
+    SELF_IMPROVEMENT_MAPPING_REINFORCED = "self_improvement_mapping_reinforced"
+    SELF_IMPROVEMENT_MAPPING_WEAKENED = "self_improvement_mapping_weakened"
+    SELF_IMPROVEMENT_CONFIDENCE_UPDATED = "self_improvement_confidence_updated"
 
 
 class MorphologyEvent(BaseModel):

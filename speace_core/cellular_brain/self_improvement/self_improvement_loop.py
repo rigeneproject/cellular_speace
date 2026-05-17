@@ -20,6 +20,17 @@ from speace_core.cellular_brain.self_improvement.limitation_detector import (
     LimitationSignal,
 )
 from speace_core.cellular_brain.self_improvement.proposal_store import ProposalStore
+from speace_core.cellular_brain.self_improvement.outcome_tracker import (
+    OutcomeTracker,
+    ProposalOutcome,
+)
+from speace_core.cellular_brain.self_improvement.proposal_learning_engine import (
+    ProposalLearningEngine,
+    ProposalLearningRecord,
+)
+from speace_core.cellular_brain.self_improvement.self_improvement_memory import (
+    SelfImprovementMemory,
+)
 
 
 class SelfImprovementLoop:
@@ -34,6 +45,9 @@ class SelfImprovementLoop:
         regression_guard=None,
         benchmark=None,
         memory=None,
+        outcome_tracker=None,
+        proposal_learning_engine=None,
+        self_improvement_memory=None,
     ):
         self.orchestrator = orchestrator
         self.detector = detector or LimitationDetector()
@@ -42,6 +56,9 @@ class SelfImprovementLoop:
         self.regression_guard = regression_guard
         self.benchmark = benchmark
         self.memory = memory
+        self.outcome_tracker = outcome_tracker or OutcomeTracker(memory=memory)
+        self.proposal_learning_engine = proposal_learning_engine or ProposalLearningEngine(memory=memory)
+        self.self_improvement_memory = self_improvement_memory or SelfImprovementMemory(memory=memory)
 
     # ------------------------------------------------------------------ #
     # Detection cycle
@@ -372,6 +389,68 @@ class SelfImprovementLoop:
         self, result: SelfImprovementCycleResult
     ) -> str:
         return json.dumps(result.model_dump(), indent=2, ensure_ascii=False)
+
+    # ------------------------------------------------------------------ #
+    # T46 — Outcome Learning Integration
+    # ------------------------------------------------------------------ #
+
+    def record_proposal_outcome(
+        self,
+        proposal_id: str,
+        limitation_type: str,
+        task_id: str,
+        audit_verdict: str,
+        metrics: Dict[str, Any],
+    ) -> ProposalOutcome:
+        """Record the outcome of an implemented proposal after audit."""
+        outcome = self.outcome_tracker.record_outcome(
+            proposal_id=proposal_id,
+            limitation_type=limitation_type,
+            task_id=task_id,
+            audit_verdict=audit_verdict,
+            metrics=metrics,
+        )
+        self.self_improvement_memory.record_audit_outcome(
+            outcome_id=outcome.id,
+            proposal_id=proposal_id,
+            verdict=audit_verdict,
+            net_gain=outcome.net_gain,
+        )
+        return outcome
+
+    def learn_from_outcome(self, outcome: ProposalOutcome) -> ProposalLearningRecord:
+        """Update learning records from an outcome."""
+        record = self.proposal_learning_engine.update_from_outcome(outcome)
+        self.self_improvement_memory.record_learning_update(
+            limitation_type=outcome.originating_limitation_type,
+            task_id=outcome.implemented_task_id,
+            confidence=record.confidence,
+            mean_net_gain=record.mean_net_gain,
+        )
+        return record
+
+    def get_best_known_proposal_for_limitation(
+        self,
+        limitation_type: str,
+        candidates: Optional[List[Dict[str, Any]]] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """Return the highest-confidence known proposal for a limitation."""
+        if candidates is None:
+            candidates = []
+            # Build candidates from accepted proposals in store
+            for prop in self.proposal_store.list_proposals(status="accepted"):
+                candidates.append({
+                    "task_id": prop.title,
+                    "proposal_id": prop.id,
+                    "title": prop.title,
+                })
+        if not candidates:
+            return None
+        ranked = self.proposal_learning_engine.rank_candidate_proposals(
+            limitation_type=limitation_type,
+            candidates=candidates,
+        )
+        return ranked[0] if ranked else None
 
     # ------------------------------------------------------------------ #
     # Helpers

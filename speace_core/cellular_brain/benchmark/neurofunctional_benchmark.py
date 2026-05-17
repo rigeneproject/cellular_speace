@@ -225,6 +225,14 @@ class BenchmarkMetrics(BaseModel):
     associative_recall_success_rate: float = 0.0
     associative_recall_partial_success_rate: float = 0.0
     associative_memory_effect_score: float = 0.0
+    # T46 — Self-Improvement Outcome Learning metrics
+    self_improvement_outcome_count: int = 0
+    self_improvement_success_rate: float = 0.0
+    self_improvement_regression_rate: float = 0.0
+    self_improvement_mean_net_gain: float = 0.0
+    self_improvement_learning_confidence: float = 0.0
+    validated_proposal_count: int = 0
+    failed_proposal_count: int = 0
 
 
 class BenchmarkResult(BaseModel):
