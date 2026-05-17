@@ -2,393 +2,171 @@ Istruzioni periodiche di aggiornamento:
 
 
 
-Con T43 chiuso, SPEACE ha ora il primo livello di memoria semantica sub-simbolica: non ancora linguaggio o conoscenza dichiarativa, ma cell assemblies ricorrenti, consolidabili e richiamabili.
+Sì: esegui prima l’audit suite reale T43B. Non conviene scegliere T44 o T43C senza il verdetto operativo, perché T43 ha creato il layer, T43B ha creato il misuratore, ma manca ancora la prova empirica sul comportamento reale.
 
 
 
-Il prossimo passo corretto è T43B — Semantic Memory Functional Audit.
+La sequenza corretta ora è:
 
 
 
-T43B — Semantic Memory Functional Audit
+T43 completato → Semantic Cell Assembly Memory esiste
 
-Scopo
+T43B completato → Audit engine esiste
 
+T43B-real-run → verdetto operativo reale
 
+poi:
 
-Validare se il nuovo layer semantico produce un effetto funzionale misurabile oppure se resta solo “telemetria passiva”.
+&#x20; - SEMANTIC\_MEMORY\_VALIDATED → T44 Associative Learning Between Assemblies
 
+&#x20; - SEMANTIC\_MEMORY\_PASSIVE / SEMANTIC\_RECALL\_WEAK → T43C Semantic Recall Sensitivity Tuning
 
+&#x20; - regressione energetica/cognitiva/Φ → task correttivo mirato
 
-T43 ha creato:
-
-
-
-pattern di attivazione → cell assembly → semantic pointer → consolidamento/richiamo
-
-
-
-T43B deve verificare:
+Istruzione operativa consigliata
 
 
 
-memoria semantica attiva → migliore recall → maggiore stabilità → minore regressione → nessuna esplosione energetica
+Puoi dare a Claude Code / OpenClaw questo comando:
 
-Prompt operativo per Claude Code / OpenClaw
 
-Implement T43B — Semantic Memory Functional Audit.
+
+Execute the real T43B Semantic Memory Functional Audit suite.
 
 
 
 Goal:
 
-Validate the functional impact of T43 Semantic Cell Assembly Memory before proceeding to T44 Associative Learning Between Assemblies.
+Run the implemented SemanticMemoryAuditor across all 10 profiles and generate the canonical post-T43B operational verdict.
 
 
 
-Create:
+Required actions:
 
-\- speace\_core/cellular\_brain/analysis/semantic\_memory\_audit.py
+1\. Run the full SemanticMemoryAuditor.run\_audit\_suite().
 
-\- tests/analysis/test\_semantic\_memory\_audit.py
+2\. Save JSON and Markdown reports in reports/semantic\_memory\_audit/.
 
-\- docs/SEMANTIC\_MEMORY\_FUNCTIONAL\_AUDIT\_SPEC.md
+3\. Print a compact comparison table with:
 
-\- reports/semantic\_memory\_audit/.gitkeep
+&#x20;  - profile
 
+&#x20;  - cognitive\_score
 
+&#x20;  - coherence\_phi
 
-Audit requirements:
+&#x20;  - energy\_efficiency
 
-Run reproducible benchmark profiles comparing semantic memory off/on and recall/consolidation variants.
+&#x20;  - semantic\_assembly\_count
 
+&#x20;  - consolidated\_assembly\_count
 
+&#x20;  - semantic\_recall\_success\_rate
 
-Profiles:
+&#x20;  - mean\_assembly\_strength
 
-1\. semantic\_memory\_off
+&#x20;  - semantic\_memory\_score
 
-2\. semantic\_memory\_observe\_only
+&#x20;  - semantic\_net\_gain
 
-3\. semantic\_memory\_create\_only
+4\. Identify:
 
-4\. semantic\_memory\_create\_reinforce
+&#x20;  - best profile
 
-5\. semantic\_memory\_full\_cycle
+&#x20;  - worst profile
 
-6\. semantic\_memory\_recall\_enabled
+&#x20;  - final verdict
 
-7\. semantic\_memory\_consolidation\_enabled
+&#x20;  - recommended next task
 
-8\. semantic\_memory\_decay\_enabled
+5\. Commit the generated canonical audit reports.
 
-9\. semantic\_memory\_reactivation\_enabled
+6\. Tag the result as:
 
-10\. semantic\_memory\_full\_stack
+&#x20;  v0.3.31-t43b-semantic-memory-audit-results
 
 
 
-Each profile should run multiple repeated activation patterns across N adaptive cycles.
+Decision rule:
 
+\- If verdict == SEMANTIC\_MEMORY\_VALIDATED:
 
+&#x20;   recommend T44 — Associative Learning Between Assemblies.
 
-Suggested default:
+\- If verdict == SEMANTIC\_MEMORY\_PASSIVE or SEMANTIC\_RECALL\_WEAK:
 
-\- n\_cycles = 20
+&#x20;   recommend T43C — Semantic Recall Sensitivity Tuning.
 
-\- repeated\_pattern\_count = 5
+\- If verdict == SEMANTIC\_OVERCONSOLIDATION:
 
-\- novel\_pattern\_count = 3
+&#x20;   recommend T43C — Assembly Consolidation Guard.
 
-\- recall\_trials = 5
+\- If verdict == SEMANTIC\_ENERGY\_REGRESSION:
 
-\- deterministic seed
+&#x20;   recommend T43C — Semantic Memory Energy Governor.
 
+\- If verdict == SEMANTIC\_COGNITIVE\_REGRESSION:
 
+&#x20;   recommend T43C — Semantic Memory Cognitive Guard.
 
-Metrics to collect:
+\- If verdict == SEMANTIC\_PHI\_REGRESSION:
 
-\- cognitive\_score
+&#x20;   recommend T43C — Semantic Coherence Stabilizer.
 
-\- coherence\_phi
+\- If verdict == INSUFFICIENT\_EVIDENCE:
 
-\- energy\_efficiency
+&#x20;   recommend T43C — Semantic Benchmark Stimulation Redesign.
 
-\- semantic\_assembly\_count
 
-\- semantic\_active\_assembly\_count
 
-\- semantic\_consolidated\_assembly\_count
+After running, report:
 
-\- mean\_assembly\_strength
+\- test count
 
-\- mean\_assembly\_stability
+\- coverage
 
-\- semantic\_recall\_success\_rate
+\- report paths
 
-\- semantic\_memory\_density
+\- commit hash
 
-\- semantic\_memory\_utility
+\- tag
 
-\- semantic\_consolidation\_rate
+\- final verdict
 
-\- semantic\_memory\_score
+\- next recommended task
 
-\- assembly\_creation\_events
+Perché questo passaggio è importante
 
-\- assembly\_reinforcement\_events
 
-\- assembly\_consolidation\_events
 
-\- assembly\_decay\_events
+T43B è il punto in cui SPEACE deve dimostrare se la memoria semantica è solo “anatomia” oppure funzione cognitiva reale.
 
-\- semantic\_recall\_success\_events
 
-\- semantic\_recall\_failure\_events
 
-\- reactivation\_events
+La domanda non è più:
 
-\- cognitive\_delta\_vs\_baseline
 
-\- phi\_delta\_vs\_baseline
 
-\- energy\_delta\_vs\_baseline
+Esiste una memoria semantica?
 
-\- semantic\_net\_gain
 
 
+ma:
 
-Semantic net gain formula:
 
-0.25 \* delta\_cognitive\_score
 
-\+ 0.25 \* delta\_phi
+La memoria semantica modifica positivamente il comportamento del sistema?
 
-\+ 0.20 \* semantic\_recall\_success\_rate
 
-\+ 0.15 \* mean\_assembly\_stability
 
-\+ 0.10 \* semantic\_consolidation\_rate
+Quindi il prossimo passo non è ancora T44. Il prossimo passo è:
 
-\+ 0.05 \* energy\_delta
 
 
+T43B-real-run — Canonical Semantic Memory Audit Results
 
-Clamp semantic\_net\_gain to \[-1.0, 1.0].
 
 
-
-Verdict logic:
-
-\- SEMANTIC\_MEMORY\_VALIDATED:
-
-&#x20; semantic\_memory\_score improves, recall\_success\_rate > 0, and no cognitive/phi/energy regression.
-
-
-
-\- SEMANTIC\_MEMORY\_PASSIVE:
-
-&#x20; assemblies are created but recall\_success\_rate == 0 or no measurable semantic\_net\_gain.
-
-
-
-\- SEMANTIC\_RECALL\_WEAK:
-
-&#x20; recall exists but recall\_success\_rate remains below threshold.
-
-
-
-\- SEMANTIC\_OVERCONSOLIDATION:
-
-&#x20; too many assemblies consolidate while cognitive\_score or phi drops.
-
-
-
-\- SEMANTIC\_ENERGY\_REGRESSION:
-
-&#x20; energy\_efficiency drops significantly versus baseline.
-
-
-
-\- SEMANTIC\_COGNITIVE\_REGRESSION:
-
-&#x20; cognitive\_score drops significantly versus baseline.
-
-
-
-\- SEMANTIC\_PHI\_REGRESSION:
-
-&#x20; coherence\_phi drops significantly versus baseline.
-
-
-
-\- INSUFFICIENT\_EVIDENCE:
-
-&#x20; no clear signal.
-
-
-
-Implementation details:
-
-
-
-Class: SemanticMemoryAuditor
-
-
-
-Methods:
-
-\- \_\_init\_\_(seed: int = 42, report\_dir: str = "reports/semantic\_memory\_audit")
-
-\- build\_orchestrator(profile) -> CellularBrainOrchestrator
-
-\- run\_profile(profile\_name: str) -> SemanticMemoryAuditResult
-
-\- run\_audit\_suite() -> SemanticMemoryAuditSuiteResult
-
-\- compute\_semantic\_net\_gain(baseline, candidate) -> float
-
-\- compute\_verdict(results) -> str
-
-\- generate\_json\_report(result) -> str
-
-\- generate\_markdown\_report(result) -> str
-
-
-
-Pydantic models:
-
-\- SemanticMemoryAuditProfile
-
-\- SemanticMemoryAuditResult
-
-\- SemanticMemoryAuditSuiteResult
-
-
-
-Required profile fields:
-
-\- semantic\_memory\_enabled: bool
-
-\- recall\_enabled: bool
-
-\- consolidation\_enabled: bool
-
-\- decay\_enabled: bool
-
-\- reactivation\_enabled: bool
-
-\- repeated\_pattern\_count: int
-
-\- novel\_pattern\_count: int
-
-\- recall\_trials: int
-
-\- n\_cycles: int
-
-
-
-Tests:
-
-Create at least 18 tests:
-
-
-
-1\. profile model creation
-
-2\. result model creation
-
-3\. auditor initializes
-
-4\. build\_orchestrator respects semantic\_memory\_enabled=False
-
-5\. build\_orchestrator respects semantic\_memory\_enabled=True
-
-6\. semantic\_memory\_off creates zero or no active semantic events
-
-7\. observe\_only captures traces without unsafe activation injection
-
-8\. create\_only creates at least one assembly under repeated activation
-
-9\. create\_reinforce increases recurrence\_count or strength
-
-10\. full\_cycle produces semantic metrics
-
-11\. recall\_enabled produces recall result safely
-
-12\. recall fails safely when no assembly exists
-
-13\. consolidation profile produces consolidated assembly or valid zero-state
-
-14\. decay profile does not delete all memory abruptly
-
-15\. reactivation remains bounded
-
-16\. semantic\_net\_gain is clamped to \[-1,1]
-
-17\. verdict is one of the allowed values
-
-18\. markdown report includes semantic\_memory\_score, recall\_success\_rate, semantic\_net\_gain, verdict
-
-19\. json report is written to reports/semantic\_memory\_audit/
-
-20\. all semantic audit runs are deterministic with same seed
-
-
-
-Acceptance criteria:
-
-\- All existing 738 tests still pass.
-
-\- New tests pass.
-
-\- Coverage remains >=85%.
-
-\- Audit generates JSON and Markdown reports.
-
-\- At least one profile produces assemblies under repeated activation.
-
-\- Recall path is tested.
-
-\- No unbounded reactivation.
-
-\- No regression when semantic\_memory\_enabled=False.
-
-\- Commit and tag as v0.3.30-t43b-semantic-memory-functional-audit.
-
-Cosa deve dimostrare T43B
-
-
-
-T43B non deve per forza dimostrare che la memoria semantica migliora già molto il cognitive score. Deve però rispondere chiaramente a queste domande:
-
-
-
-1\. Le assemblee cellulari si formano davvero?
-
-2\. Si rafforzano con pattern ricorrenti?
-
-3\. Si consolidano?
-
-4\. Possono essere richiamate?
-
-5\. Il richiamo è energeticamente sicuro?
-
-6\. Il layer semantico migliora, peggiora o resta neutro rispetto alla baseline?
-
-
-
-Se il verdetto sarà SEMANTIC\_MEMORY\_VALIDATED, si procede direttamente a T44 — Associative Learning Between Assemblies.
-
-
-
-Se invece sarà SEMANTIC\_MEMORY\_PASSIVE o SEMANTIC\_RECALL\_WEAK, prima di T44 servirà un task intermedio:
-
-
-
-T43C — Semantic Recall Sensitivity Tuning
-
-
-
-Verdetto operativo: procedi con T43B.
+Solo dopo il verdetto possiamo scegliere il ramo evolutivo corretto.
 
