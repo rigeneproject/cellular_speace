@@ -244,6 +244,15 @@ class BenchmarkMetrics(BaseModel):
     episodic_recall_success_rate: float = 0.0
     recovery_pattern_count: int = 0
     regression_precursor_count: int = 0
+    # T48 — Episodic-Guided Self-Improvement Policy metrics
+    episodic_policy_enabled: bool = False
+    episodic_context_episode_count: int = 0
+    episodic_recovery_context_count: int = 0
+    episodic_regression_context_count: int = 0
+    episodic_policy_bonus_mean: float = 0.0
+    episodic_policy_penalty_mean: float = 0.0
+    episodic_adjusted_confidence: float = 0.0
+    episodic_policy_selected_proposal_score: float = 0.0
 
 
 class BenchmarkResult(BaseModel):
@@ -1143,6 +1152,50 @@ class NeuroFunctionalBenchmark:
                 recovery_pattern_count = len(recall.find_recovery_patterns())
                 regression_precursor_count = len(recall.find_regression_precursors())
 
+        # T48 — Episodic-Guided Self-Improvement Policy metrics
+        episodic_policy_enabled = getattr(self.orch, "episodic_policy_enabled", False)
+        episodic_context_episode_count = 0
+        episodic_recovery_context_count = 0
+        episodic_regression_context_count = 0
+        episodic_policy_bonus_mean = 0.0
+        episodic_policy_penalty_mean = 0.0
+        episodic_adjusted_confidence = 0.0
+        episodic_policy_selected_proposal_score = 0.0
+        if episodic_policy_enabled:
+            context_events = [
+                e for e in mem.events
+                if e.event_type == MorphologyEventType.EPISODIC_POLICY_CONTEXT_BUILT
+            ]
+            episodic_context_episode_count = len(context_events)
+            recovery_ctx = [
+                e for e in context_events
+                if e.metadata.get("recovery_episode_count", 0) > 0
+            ]
+            episodic_recovery_context_count = len(recovery_ctx)
+            regression_ctx = [
+                e for e in context_events
+                if e.metadata.get("regression_episode_count", 0) > 0
+            ]
+            episodic_regression_context_count = len(regression_ctx)
+            adj_events = [
+                e for e in mem.events
+                if e.event_type == MorphologyEventType.EPISODIC_POLICY_PROPOSAL_ADJUSTED
+            ]
+            if adj_events:
+                bonuses = [e.metadata.get("bonus", 0.0) for e in adj_events]
+                penalties = [e.metadata.get("penalty", 0.0) for e in adj_events]
+                adjusted = [e.metadata.get("adjusted_confidence", 0.0) for e in adj_events]
+                episodic_policy_bonus_mean = round(sum(bonuses) / len(bonuses), 4)
+                episodic_policy_penalty_mean = round(sum(penalties) / len(penalties), 4)
+                episodic_adjusted_confidence = round(max(adjusted), 4)
+            sel_events = [
+                e for e in mem.events
+                if e.event_type == MorphologyEventType.EPISODIC_POLICY_PROPOSAL_SELECTED
+            ]
+            if sel_events:
+                scores = [e.metadata.get("adjusted_confidence", 0.0) for e in sel_events]
+                episodic_policy_selected_proposal_score = round(max(scores), 4)
+
         return BenchmarkMetrics(
             accuracy_score=final.accuracy,
             coherence_phi=final.coherence_phi,
@@ -1326,6 +1379,15 @@ class NeuroFunctionalBenchmark:
             episodic_recall_success_rate=episodic_recall_success_rate,
             recovery_pattern_count=recovery_pattern_count,
             regression_precursor_count=regression_precursor_count,
+            # T48
+            episodic_policy_enabled=episodic_policy_enabled,
+            episodic_context_episode_count=episodic_context_episode_count,
+            episodic_recovery_context_count=episodic_recovery_context_count,
+            episodic_regression_context_count=episodic_regression_context_count,
+            episodic_policy_bonus_mean=episodic_policy_bonus_mean,
+            episodic_policy_penalty_mean=episodic_policy_penalty_mean,
+            episodic_adjusted_confidence=episodic_adjusted_confidence,
+            episodic_policy_selected_proposal_score=episodic_policy_selected_proposal_score,
         )
 
     def generate_json_report(self, result: BenchmarkResult) -> Path:
@@ -1479,6 +1541,16 @@ class NeuroFunctionalBenchmark:
             f"| Episodic recall success rate | {m.episodic_recall_success_rate:.4f} |",
             f"| Recovery patterns | {m.recovery_pattern_count} |",
             f"| Regression precursors | {m.regression_precursor_count} |",
+            "",
+            "### T48 — Episodic-Guided Self-Improvement Policy",
+            f"| Episodic policy enabled | {m.episodic_policy_enabled} |",
+            f"| Context episode count | {m.episodic_context_episode_count} |",
+            f"| Recovery context count | {m.episodic_recovery_context_count} |",
+            f"| Regression context count | {m.episodic_regression_context_count} |",
+            f"| Policy bonus mean | {m.episodic_policy_bonus_mean:.4f} |",
+            f"| Policy penalty mean | {m.episodic_policy_penalty_mean:.4f} |",
+            f"| Adjusted confidence | {m.episodic_adjusted_confidence:.4f} |",
+            f"| Selected proposal score | {m.episodic_policy_selected_proposal_score:.4f} |",
             "",
             f"| **Cellular resilience score** | **{m.cellular_resilience_score:.4f}** |",
 

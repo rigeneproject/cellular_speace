@@ -140,6 +140,8 @@ class CellularBrainOrchestrator(BaseModel):
     # T45 — Autonomous Self-Improvement Loop
     self_improvement_enabled: bool = False
     _self_improvement_loop = None
+    # T48 — Episodic-Guided Self-Improvement Policy
+    episodic_policy_enabled: bool = False
     # T47 — Episodic Memory
     episodic_memory_enabled: bool = True
     _episodic_memory = None
@@ -754,11 +756,23 @@ class CellularBrainOrchestrator(BaseModel):
             from speace_core.cellular_brain.self_improvement.self_improvement_loop import (
                 SelfImprovementLoop,
             )
+            from speace_core.cellular_brain.self_improvement.episodic_policy import (
+                EpisodicSelfImprovementPolicy,
+            )
+
+            episodic_policy = None
+            if self.episodic_policy_enabled and self.episodic_memory_enabled:
+                episodic_policy = EpisodicSelfImprovementPolicy(
+                    episodic_recall=self.get_episodic_recall(),
+                    memory=self._memory,
+                )
 
             self._self_improvement_loop = SelfImprovementLoop(
                 orchestrator=self,
                 memory=self._memory,
                 regression_guard=getattr(self, "_regression_guard", None),
+                episodic_policy_enabled=self.episodic_policy_enabled,
+                episodic_policy=episodic_policy,
             )
         return self._self_improvement_loop
 

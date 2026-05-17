@@ -47,6 +47,9 @@ class SelfImprovementCycleResult(BaseModel):
     rejected_proposals: List[str] = Field(default_factory=list)
     final_verdict: str = ""
     report_path: Optional[str] = None
+    # T48 — Episodic policy context
+    episodic_context: Optional[Dict[str, Any]] = None
+    episodic_adjustments: List[Dict[str, Any]] = Field(default_factory=list)
 
 
 class ArchitectureRewriter:

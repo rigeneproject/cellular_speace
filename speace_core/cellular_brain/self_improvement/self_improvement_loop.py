@@ -31,6 +31,11 @@ from speace_core.cellular_brain.self_improvement.proposal_learning_engine import
 from speace_core.cellular_brain.self_improvement.self_improvement_memory import (
     SelfImprovementMemory,
 )
+from speace_core.cellular_brain.self_improvement.episodic_policy import (
+    EpisodicSelfImprovementPolicy,
+    EpisodicPolicyContext,
+    EpisodicProposalAdjustment,
+)
 
 
 class SelfImprovementLoop:
@@ -48,6 +53,8 @@ class SelfImprovementLoop:
         outcome_tracker=None,
         proposal_learning_engine=None,
         self_improvement_memory=None,
+        episodic_policy_enabled: bool = False,
+        episodic_policy=None,
     ):
         self.orchestrator = orchestrator
         self.detector = detector or LimitationDetector()
@@ -59,6 +66,8 @@ class SelfImprovementLoop:
         self.outcome_tracker = outcome_tracker or OutcomeTracker(memory=memory)
         self.proposal_learning_engine = proposal_learning_engine or ProposalLearningEngine(memory=memory)
         self.self_improvement_memory = self_improvement_memory or SelfImprovementMemory(memory=memory)
+        self.episodic_policy_enabled = episodic_policy_enabled
+        self.episodic_policy = episodic_policy
 
     # ------------------------------------------------------------------ #
     # Detection cycle
@@ -99,6 +108,16 @@ class SelfImprovementLoop:
                 "title": proposal.title,
             })
             self.proposal_store.save_proposal(proposal)
+
+        # T48 — Apply episodic policy to adjust proposal ranking
+        episodic_context = None
+        episodic_adjustments = []
+        if self.episodic_policy_enabled and self.episodic_policy is not None and proposals:
+            limitation_type = diagnoses[0].primary_category if diagnoses else "unknown"
+            episodic_context = self.episodic_policy.build_context(limitation_type, metrics)
+            episodic_adjustments = self.episodic_policy.adjust_proposals(proposals, episodic_context)
+            adj_map = {a.proposal_id: a.adjusted_confidence for a in episodic_adjustments}
+            proposals.sort(key=lambda p: adj_map.get(p.id, 0.0), reverse=True)
 
         # 4. Simulate proposals
         simulations: List[RewriteSimulationResult] = []
@@ -155,6 +174,8 @@ class SelfImprovementLoop:
             accepted_proposals=accepted,
             rejected_proposals=rejected,
             final_verdict=final_verdict,
+            episodic_context=episodic_context.model_dump() if episodic_context is not None else None,
+            episodic_adjustments=[a.model_dump() for a in episodic_adjustments],
         )
 
         self.proposal_store.save_cycle_result(result)
@@ -191,6 +212,17 @@ class SelfImprovementLoop:
             proposals.append(proposal)
             self.proposal_store.save_proposal(proposal)
 
+        # T48 — Apply episodic policy to adjust proposal ranking
+        episodic_context = None
+        episodic_adjustments = []
+        if self.episodic_policy_enabled and self.episodic_policy is not None and proposals:
+            limitation_type = diagnoses[0].primary_category if diagnoses else "unknown"
+            episodic_context = self.episodic_policy.build_context(limitation_type, report)
+            episodic_adjustments = self.episodic_policy.adjust_proposals(proposals, episodic_context)
+            adj_map = {a.proposal_id: a.adjusted_confidence for a in episodic_adjustments}
+            proposals.sort(key=lambda p: adj_map.get(p.id, 0.0), reverse=True)
+
+        for proposal in proposals:
             sim = self.simulate_proposal(proposal)
             simulations.append(sim)
 
@@ -224,6 +256,8 @@ class SelfImprovementLoop:
             accepted_proposals=accepted,
             rejected_proposals=rejected,
             final_verdict=final_verdict,
+            episodic_context=episodic_context.model_dump() if episodic_context is not None else None,
+            episodic_adjustments=[a.model_dump() for a in episodic_adjustments],
         )
         self.proposal_store.save_cycle_result(result)
         return result
@@ -367,6 +401,32 @@ class SelfImprovementLoop:
         lines.append(f"- Rejected: {len(result.rejected_proposals)}")
         for pid in result.rejected_proposals:
             lines.append(f"  - {pid}")
+
+        # T48 — Episodic Policy Context
+        if result.episodic_context:
+            ctx = result.episodic_context
+            lines.extend(["", "## Episodic Policy Context"])
+            lines.append(f"- Limitation type: {ctx.get('limitation_type', 'unknown')}")
+            lines.append(f"- Similar episodes: {ctx.get('similar_episode_count', 0)}")
+            lines.append(f"- Recovery episodes: {ctx.get('recovery_episode_count', 0)}")
+            lines.append(f"- Regression episodes: {ctx.get('regression_episode_count', 0)}")
+            lines.append(f"- Recovery patterns: {', '.join(ctx.get('recovery_patterns', []))}")
+            lines.append(f"- Regression precursors: {', '.join(ctx.get('regression_precursors', []))}")
+            lines.append(f"- Confidence modifier: {ctx.get('confidence_modifier', 0.0):.4f}")
+            lines.append(f"- Risk modifier: {ctx.get('risk_modifier', 0.0):.4f}")
+        if result.episodic_adjustments:
+            lines.extend(["", "## Episodic Proposal Adjustments"])
+            for adj in result.episodic_adjustments:
+                lines.append(
+                    f"- {adj.get('proposal_id', 'unknown')}: "
+                    f"original={adj.get('original_confidence', 0.0):.4f}, "
+                    f"adjusted={adj.get('adjusted_confidence', 0.0):.4f}, "
+                    f"bonus={adj.get('episodic_bonus', 0.0):.4f}, "
+                    f"penalty={adj.get('episodic_penalty', 0.0):.4f}"
+                )
+                reasons = adj.get('reasons', [])
+                if reasons:
+                    lines.append(f"  - reasons: {', '.join(reasons)}")
 
         lines.extend(["", "## Final Verdict"])
         lines.append(f"**{result.final_verdict}**")

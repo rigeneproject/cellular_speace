@@ -156,6 +156,12 @@ class MorphologyEventType(str, Enum):
     EPISODE_PATTERN_DETECTED = "episode_pattern_detected"
     EPISODE_RECOVERY_PATTERN_FOUND = "episode_recovery_pattern_found"
     EPISODE_REGRESSION_PRECURSOR_FOUND = "episode_regression_precursor_found"
+    # T48 — Episodic-Guided Self-Improvement Policy
+    EPISODIC_POLICY_CONTEXT_BUILT = "episodic_policy_context_built"
+    EPISODIC_POLICY_PROPOSAL_ADJUSTED = "episodic_policy_proposal_adjusted"
+    EPISODIC_POLICY_RECOVERY_BONUS_APPLIED = "episodic_policy_recovery_bonus_applied"
+    EPISODIC_POLICY_REGRESSION_PENALTY_APPLIED = "episodic_policy_regression_penalty_applied"
+    EPISODIC_POLICY_PROPOSAL_SELECTED = "episodic_policy_proposal_selected"
 
 
 class MorphologyEvent(BaseModel):
