@@ -148,6 +148,14 @@ class MorphologyEventType(str, Enum):
     SELF_IMPROVEMENT_MAPPING_REINFORCED = "self_improvement_mapping_reinforced"
     SELF_IMPROVEMENT_MAPPING_WEAKENED = "self_improvement_mapping_weakened"
     SELF_IMPROVEMENT_CONFIDENCE_UPDATED = "self_improvement_confidence_updated"
+    # T47 — Episodic Memory & Temporal Experience Layer
+    EPISODE_STARTED = "episode_started"
+    EPISODE_EVENT_RECORDED = "episode_event_recorded"
+    EPISODE_CLOSED = "episode_closed"
+    EPISODE_RECALLED = "episode_recalled"
+    EPISODE_PATTERN_DETECTED = "episode_pattern_detected"
+    EPISODE_RECOVERY_PATTERN_FOUND = "episode_recovery_pattern_found"
+    EPISODE_REGRESSION_PRECURSOR_FOUND = "episode_regression_precursor_found"
 
 
 class MorphologyEvent(BaseModel):

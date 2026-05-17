@@ -140,6 +140,10 @@ class CellularBrainOrchestrator(BaseModel):
     # T45 — Autonomous Self-Improvement Loop
     self_improvement_enabled: bool = False
     _self_improvement_loop = None
+    # T47 — Episodic Memory
+    episodic_memory_enabled: bool = True
+    _episodic_memory = None
+    _episodic_recall = None
 
     class Config:
         arbitrary_types_allowed = True
@@ -596,6 +600,55 @@ class CellularBrainOrchestrator(BaseModel):
         if self.associative_recall_enabled:
             engine = self.get_associative_recall_engine()
             return engine.recall_from_assembly(cue_assembly_id)
+        return None
+
+    # ------------------------------------------------------------------ #
+    # T47 — Episodic Memory
+    # ------------------------------------------------------------------ #
+
+    def get_episodic_memory(self):
+        if self._episodic_memory is None:
+            from speace_core.cellular_brain.memory.episodic_memory import EpisodicMemory
+            self._episodic_memory = EpisodicMemory(memory=self._memory)
+        return self._episodic_memory
+
+    def get_episodic_recall(self):
+        if self._episodic_recall is None:
+            from speace_core.cellular_brain.memory.episodic_recall import EpisodicRecall
+            self._episodic_recall = EpisodicRecall(
+                episodic_memory=self.get_episodic_memory(),
+                memory=self._memory,
+            )
+        return self._episodic_recall
+
+    def start_episode(self, trigger: str, initial_metrics=None, tick_id=0):
+        if self.episodic_memory_enabled:
+            return self.get_episodic_memory().start_episode(
+                trigger=trigger,
+                initial_metrics=initial_metrics or {},
+                tick_id=tick_id,
+            )
+        return None
+
+    def record_episode_event(self, episode_id, event_type, source_module, metrics=None, metadata=None, tick_id=0):
+        if self.episodic_memory_enabled and episode_id:
+            return self.get_episodic_memory().record_event(
+                episode_id=episode_id,
+                event_type=event_type,
+                source_module=source_module,
+                metrics=metrics,
+                metadata=metadata,
+                tick_id=tick_id,
+            )
+        return None
+
+    def close_episode(self, episode_id, final_metrics=None, outcome="unknown"):
+        if self.episodic_memory_enabled and episode_id:
+            return self.get_episodic_memory().close_episode(
+                episode_id=episode_id,
+                final_metrics=final_metrics or {},
+                outcome=outcome,
+            )
         return None
 
     def _run_cellular_adaptive_defense_and_repair(self) -> None:

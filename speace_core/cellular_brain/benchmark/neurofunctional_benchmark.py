@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from speace_core.cellular_brain.circuits.neural_circuit import NeuralCircuit
 from speace_core.cellular_brain.memory.morphological_memory import MorphologicalMemory
 from speace_core.cellular_brain.memory.morphology_events import MorphologyEventType
+from speace_core.cellular_brain.memory.episode_summarizer import EpisodeSummarizer
 from speace_core.orchestrator import CellularBrainOrchestrator
 
 
@@ -233,6 +234,16 @@ class BenchmarkMetrics(BaseModel):
     self_improvement_learning_confidence: float = 0.0
     validated_proposal_count: int = 0
     failed_proposal_count: int = 0
+    # T47 — Episodic Memory metrics
+    episode_count: int = 0
+    episode_event_count: int = 0
+    recovery_episode_count: int = 0
+    regression_episode_count: int = 0
+    self_improvement_episode_count: int = 0
+    semantic_learning_episode_count: int = 0
+    episodic_recall_success_rate: float = 0.0
+    recovery_pattern_count: int = 0
+    regression_precursor_count: int = 0
 
 
 class BenchmarkResult(BaseModel):
@@ -1096,6 +1107,42 @@ class NeuroFunctionalBenchmark:
                 4,
             )
 
+        # T47 — Episodic Memory metrics
+        episode_count = 0
+        episode_event_count = 0
+        recovery_episode_count = 0
+        regression_episode_count = 0
+        self_improvement_episode_count = 0
+        semantic_learning_episode_count = 0
+        episodic_recall_success_rate = 0.0
+        recovery_pattern_count = 0
+        regression_precursor_count = 0
+
+        em = getattr(self.orch, "_episodic_memory", None)
+        if em is not None:
+            episodes = em.load_episodes()
+            episode_count = len(episodes)
+            episode_event_count = sum(len(ep.events) for ep in episodes)
+            summarizer = EpisodeSummarizer()
+            for ep in episodes:
+                cls = summarizer.classify(ep)
+                if cls == "RECOVERY_EPISODE":
+                    recovery_episode_count += 1
+                elif cls == "REGRESSION_EPISODE":
+                    regression_episode_count += 1
+                elif cls == "SELF_IMPROVEMENT_EPISODE":
+                    self_improvement_episode_count += 1
+                elif cls == "SEMANTIC_LEARNING_EPISODE":
+                    semantic_learning_episode_count += 1
+            recall_attempts = mem.count_events(MorphologyEventType.EPISODE_RECALLED)
+            if recall_attempts > 0:
+                pattern_detected = mem.count_events(MorphologyEventType.EPISODE_PATTERN_DETECTED)
+                episodic_recall_success_rate = min(1.0, pattern_detected / recall_attempts)
+            recall = getattr(self.orch, "_episodic_recall", None)
+            if recall is not None:
+                recovery_pattern_count = len(recall.find_recovery_patterns())
+                regression_precursor_count = len(recall.find_regression_precursors())
+
         return BenchmarkMetrics(
             accuracy_score=final.accuracy,
             coherence_phi=final.coherence_phi,
@@ -1269,6 +1316,16 @@ class NeuroFunctionalBenchmark:
             semantic_memory_utility=semantic_memory_utility,
             semantic_consolidation_rate=semantic_consolidation_rate,
             semantic_memory_score=semantic_memory_score,
+            # T47
+            episode_count=episode_count,
+            episode_event_count=episode_event_count,
+            recovery_episode_count=recovery_episode_count,
+            regression_episode_count=regression_episode_count,
+            self_improvement_episode_count=self_improvement_episode_count,
+            semantic_learning_episode_count=semantic_learning_episode_count,
+            episodic_recall_success_rate=episodic_recall_success_rate,
+            recovery_pattern_count=recovery_pattern_count,
+            regression_precursor_count=regression_precursor_count,
         )
 
     def generate_json_report(self, result: BenchmarkResult) -> Path:
@@ -1411,6 +1468,17 @@ class NeuroFunctionalBenchmark:
             f"| Semantic memory utility | {m.semantic_memory_utility:.4f} |",
             f"| Semantic consolidation rate | {m.semantic_consolidation_rate:.4f} |",
             f"| **Semantic memory score** | **{m.semantic_memory_score:.4f}** |",
+            "",
+            "### T47 — Episodic Memory & Temporal Experience",
+            f"| Episode count | {m.episode_count} |",
+            f"| Episode event count | {m.episode_event_count} |",
+            f"| Recovery episodes | {m.recovery_episode_count} |",
+            f"| Regression episodes | {m.regression_episode_count} |",
+            f"| Self-improvement episodes | {m.self_improvement_episode_count} |",
+            f"| Semantic learning episodes | {m.semantic_learning_episode_count} |",
+            f"| Episodic recall success rate | {m.episodic_recall_success_rate:.4f} |",
+            f"| Recovery patterns | {m.recovery_pattern_count} |",
+            f"| Regression precursors | {m.regression_precursor_count} |",
             "",
             f"| **Cellular resilience score** | **{m.cellular_resilience_score:.4f}** |",
 
