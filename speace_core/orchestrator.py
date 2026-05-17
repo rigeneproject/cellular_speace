@@ -132,6 +132,11 @@ class CellularBrainOrchestrator(BaseModel):
     _semantic_memory_store: "SemanticMemoryStore | None" = None
     _cell_assembly_engine: "CellAssemblyEngine | None" = None
     _semantic_recall_engine: "SemanticRecallEngine | None" = None
+    # T44 — Associative Learning Between Assemblies
+    associative_learning_enabled: bool = False
+    associative_recall_enabled: bool = False
+    _associative_learning_engine = None
+    _associative_recall_engine = None
     # T45 — Autonomous Self-Improvement Loop
     self_improvement_enabled: bool = False
     _self_improvement_loop = None
@@ -461,6 +466,20 @@ class CellularBrainOrchestrator(BaseModel):
         if self.semantic_memory_enabled and self._cell_assembly_engine is not None:
             self._cell_assembly_engine.run_semantic_memory_cycle(self)
 
+        # T44 — Associative Learning Between Assemblies
+        if (
+            self.semantic_memory_enabled
+            and self.associative_learning_enabled
+            and self._associative_learning_engine is not None
+        ):
+            active_assemblies = []
+            if self._semantic_memory_store is not None:
+                active_assemblies = self._semantic_memory_store.list_active()
+            if active_assemblies:
+                self._associative_learning_engine.observe_assemblies(
+                    active_assemblies, tick=self.current_tick
+                )
+
         # Record morphological snapshot every tick
         snapshot = self._build_morphology_snapshot(metrics)
         self._memory.record_snapshot(snapshot)
@@ -528,6 +547,55 @@ class CellularBrainOrchestrator(BaseModel):
         """Return current semantic memory metrics."""
         if self.semantic_memory_enabled and self._cell_assembly_engine is not None:
             return self._cell_assembly_engine._compute_metrics()
+        return None
+
+    # ------------------------------------------------------------------ #
+    # T44 — Associative Learning Between Assemblies
+    # ------------------------------------------------------------------ #
+
+    def get_associative_learning_engine(self):
+        """Lazy initialization of the associative learning engine."""
+        if self._associative_learning_engine is None:
+            from speace_core.cellular_brain.memory.semantic.associative_learning_engine import (
+                AssociativeLearningEngine,
+            )
+
+            self._associative_learning_engine = AssociativeLearningEngine(
+                memory=self._memory,
+            )
+        return self._associative_learning_engine
+
+    def get_associative_recall_engine(self):
+        """Lazy initialization of the associative recall engine."""
+        if self._associative_recall_engine is None:
+            from speace_core.cellular_brain.memory.semantic.associative_recall_engine import (
+                AssociativeRecallEngine,
+            )
+
+            self._associative_recall_engine = AssociativeRecallEngine(
+                association_engine=self.get_associative_learning_engine(),
+                assembly_store=self._semantic_memory_store,
+                memory=self._memory,
+            )
+        return self._associative_recall_engine
+
+    def run_associative_learning_cycle(self):
+        """Manually run one associative learning cycle on active assemblies."""
+        if (
+            self.semantic_memory_enabled
+            and self.associative_learning_enabled
+            and self._semantic_memory_store is not None
+        ):
+            engine = self.get_associative_learning_engine()
+            active_assemblies = self._semantic_memory_store.list_active()
+            return engine.observe_assemblies(active_assemblies, tick=self.current_tick)
+        return None
+
+    def recall_associative_memory(self, cue_assembly_id: str):
+        """Recall assemblies associated with a cue assembly."""
+        if self.associative_recall_enabled:
+            engine = self.get_associative_recall_engine()
+            return engine.recall_from_assembly(cue_assembly_id)
         return None
 
     def _run_cellular_adaptive_defense_and_repair(self) -> None:

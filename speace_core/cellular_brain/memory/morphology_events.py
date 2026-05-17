@@ -133,6 +133,14 @@ class MorphologyEventType(str, Enum):
     ARCHITECTURE_PROPOSAL_ACCEPTED = "architecture_proposal_accepted"
     ARCHITECTURE_PROPOSAL_REJECTED = "architecture_proposal_rejected"
     SELF_IMPROVEMENT_CYCLE_COMPLETED = "self_improvement_cycle_completed"
+    # T44 — Associative Learning Between Assemblies
+    ASSEMBLY_ASSOCIATION_CREATED = "assembly_association_created"
+    ASSEMBLY_ASSOCIATION_REINFORCED = "assembly_association_reinforced"
+    ASSEMBLY_ASSOCIATION_WEAKENED = "assembly_association_weakened"
+    ASSEMBLY_ASSOCIATION_PRUNED = "assembly_association_pruned"
+    ASSOCIATIVE_RECALL_ATTEMPTED = "associative_recall_attempted"
+    ASSOCIATIVE_RECALL_SUCCEEDED = "associative_recall_succeeded"
+    ASSOCIATIVE_RECALL_FAILED = "associative_recall_failed"
 
 
 class MorphologyEvent(BaseModel):

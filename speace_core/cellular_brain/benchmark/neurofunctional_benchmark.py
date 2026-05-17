@@ -213,6 +213,18 @@ class BenchmarkMetrics(BaseModel):
     architecture_proposals_rejected: int = 0
     self_improvement_acceptance_score: float = 0.0
     self_improvement_safety_passed: bool = False
+    # T44 — Associative Learning metrics
+    assembly_association_count: int = 0
+    assembly_associations_created: int = 0
+    assembly_associations_reinforced: int = 0
+    assembly_associations_weakened: int = 0
+    assembly_associations_pruned: int = 0
+    mean_association_strength: float = 0.0
+    max_association_strength: float = 0.0
+    association_density: float = 0.0
+    associative_recall_success_rate: float = 0.0
+    associative_recall_partial_success_rate: float = 0.0
+    associative_memory_effect_score: float = 0.0
 
 
 class BenchmarkResult(BaseModel):
