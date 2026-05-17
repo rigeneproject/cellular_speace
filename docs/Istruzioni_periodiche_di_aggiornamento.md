@@ -2,429 +2,117 @@ Istruzioni periodiche di aggiornamento:
 
 
 
-Ora il via per T43 — Semantic Memory Layer / Cell Assembly Memory è epistemicamente giustificato.
+Con T43 chiuso, SPEACE ha ora il primo livello di memoria semantica sub-simbolica: non ancora linguaggio o conoscenza dichiarativa, ma cell assemblies ricorrenti, consolidabili e richiamabili.
 
 
 
-Con T42C chiuso, la sequenza cellulare è stabile abbastanza per costruire memoria semantica sopra un substrato biologico-digitale coerente:
+Il prossimo passo corretto è T43B — Semantic Memory Functional Audit.
 
 
 
-T7  MorphologicalMemory
+T43B — Semantic Memory Functional Audit
 
-T8  Neurogenesis
-
-T9  Apoptosis
-
-T10 Differentiation
-
-T11 Benchmark
-
-T12 Burst Engine
-
-T13 STDP
-
-T14 Inhibition/Snooze
-
-T18 Energy Control
-
-T17 Community Detection
-
-T15 Evolution Engine
-
-T19 MetaLearningConfidence
-
-T21–T40 Regional/deep-region/brainstem stabilization
-
-T41 Recovery Policy
-
-T42–T42C Cellular repair/defense/resilience
-
-T43 Semantic Cell Assembly Memory
+Scopo
 
 
 
-Ora SPEACE può passare da:
+Validare se il nuovo layer semantico produce un effetto funzionale misurabile oppure se resta solo “telemetria passiva”.
 
 
 
-cellule che sopravvivono, si riparano e si difendono
+T43 ha creato:
 
 
 
-a:
+pattern di attivazione → cell assembly → semantic pointer → consolidamento/richiamo
 
 
 
-cellule che formano significati attraverso pattern ricorrenti di co-attivazione
-
-T43 — Semantic Memory Layer / Cell Assembly Memory
-
-Obiettivo
+T43B deve verificare:
 
 
 
-Implementare un layer di memoria semantica bio-ispirato in cui SPEACE rileva, consolida e riattiva cell assemblies, cioè gruppi di neuroni/regioni che si attivano insieme in modo ricorrente e che possono rappresentare pattern, concetti, associazioni o stati funzionali.
+memoria semantica attiva → migliore recall → maggiore stabilità → minore regressione → nessuna esplosione energetica
 
+Prompt operativo per Claude Code / OpenClaw
 
-
-Questo è un salto importante: la memoria non sarà più solo morfologica, energetica o di audit, ma diventerà memoria semantica emergente dalla struttura attiva del cervello cellulare.
-
-
-
-Concetto biologico da tradurre
-
-
-
-Nel cervello biologico, una memoria non è un singolo neurone e non è un file. È un pattern distribuito di cellule che si rafforzano insieme.
-
-
-
-Per SPEACE:
-
-
-
-input pattern
-
-→ attivazione regionale/neuronale
-
-→ rilevazione co-attivazione
-
-→ creazione cell assembly
-
-→ consolidamento se ricorre
-
-→ richiamo se pattern simile riappare
-
-→ rinforzo/debolezza tramite utility, STDP, energia, coerenza Φ
-
-Specifica operativa per Claude Code / OpenClaw
-
-Implement T43 — Semantic Memory Layer / Cell Assembly Memory.
+Implement T43B — Semantic Memory Functional Audit.
 
 
 
 Goal:
 
-Create a semantic memory layer for SPEACE based on recurrent co-activation patterns across neurons and brain regions. The system should detect, store, consolidate, reactivate, and evaluate cell assemblies as distributed semantic memory traces.
+Validate the functional impact of T43 Semantic Cell Assembly Memory before proceeding to T44 Associative Learning Between Assemblies.
 
 
 
-Create new package:
+Create:
 
-\- speace\_core/cellular\_brain/memory/semantic/
+\- speace\_core/cellular\_brain/analysis/semantic\_memory\_audit.py
 
+\- tests/analysis/test\_semantic\_memory\_audit.py
 
+\- docs/SEMANTIC\_MEMORY\_FUNCTIONAL\_AUDIT\_SPEC.md
 
-New files:
+\- reports/semantic\_memory\_audit/.gitkeep
 
-\- speace\_core/cellular\_brain/memory/semantic/\_\_init\_\_.py
 
-\- speace\_core/cellular\_brain/memory/semantic/cell\_assembly.py
 
-\- speace\_core/cellular\_brain/memory/semantic/semantic\_memory\_store.py
+Audit requirements:
 
-\- speace\_core/cellular\_brain/memory/semantic/cell\_assembly\_engine.py
+Run reproducible benchmark profiles comparing semantic memory off/on and recall/consolidation variants.
 
-\- speace\_core/cellular\_brain/memory/semantic/semantic\_recall\_engine.py
 
-\- tests/memory/test\_cell\_assembly\_memory.py
 
-\- docs/SEMANTIC\_CELL\_ASSEMBLY\_MEMORY\_SPEC.md
+Profiles:
 
-\- reports/semantic\_memory/.gitkeep
+1\. semantic\_memory\_off
 
+2\. semantic\_memory\_observe\_only
 
+3\. semantic\_memory\_create\_only
 
-Core models:
+4\. semantic\_memory\_create\_reinforce
 
+5\. semantic\_memory\_full\_cycle
 
+6\. semantic\_memory\_recall\_enabled
 
-1\. CellAssembly
+7\. semantic\_memory\_consolidation\_enabled
 
+8\. semantic\_memory\_decay\_enabled
 
+9\. semantic\_memory\_reactivation\_enabled
 
-Fields:
+10\. semantic\_memory\_full\_stack
 
-\- assembly\_id: str
 
-\- created\_tick: int
 
-\- last\_activated\_tick: int
+Each profile should run multiple repeated activation patterns across N adaptive cycles.
 
-\- neuron\_ids: list\[str]
 
-\- region\_ids: list\[str]
 
-\- activation\_signature: list\[float]
+Suggested default:
 
-\- semantic\_pointer: str
+\- n\_cycles = 20
 
-\- strength: float
+\- repeated\_pattern\_count = 5
 
-\- stability: float
+\- novel\_pattern\_count = 3
 
-\- recurrence\_count: int
+\- recall\_trials = 5
 
-\- utility\_score: float
+\- deterministic seed
 
-\- coherence\_phi\_at\_creation: float
 
-\- mean\_energy\_at\_creation: float
 
-\- tags: list\[str]
+Metrics to collect:
 
-\- metadata: dict
+\- cognitive\_score
 
+\- coherence\_phi
 
-
-2\. AssemblyActivationTrace
-
-
-
-Fields:
-
-\- tick\_id: int
-
-\- active\_neuron\_ids: list\[str]
-
-\- active\_region\_ids: list\[str]
-
-\- activation\_vector: list\[float]
-
-\- mean\_activation: float
-
-\- coherence\_phi: float
-
-\- mean\_energy: float
-
-\- confidence\_score: float
-
-
-
-3\. SemanticRecallResult
-
-
-
-Fields:
-
-\- query\_signature: list\[float]
-
-\- matched\_assemblies: list\[str]
-
-\- best\_match\_id: str | None
-
-\- similarity\_score: float
-
-\- recalled\_activation\_pattern: list\[float]
-
-\- recall\_confidence: float
-
-\- recall\_success: bool
-
-
-
-4\. SemanticMemoryMetrics
-
-
-
-Fields:
-
-\- assembly\_count: int
-
-\- active\_assembly\_count: int
-
-\- mean\_assembly\_strength: float
-
-\- mean\_assembly\_stability: float
-
-\- semantic\_recall\_success\_rate: float
-
-\- semantic\_memory\_density: float
-
-\- semantic\_memory\_utility: float
-
-\- semantic\_consolidation\_rate: float
-
-\- semantic\_decay\_rate: float
-
-
-
-Main class: CellAssemblyEngine
-
-
-
-Responsibilities:
-
-1\. observe\_activation(orchestrator) -> AssemblyActivationTrace
-
-&#x20;  - Read active neurons from regions/circuit.
-
-&#x20;  - Include weak but meaningful activation, not only spike threshold.
-
-&#x20;  - Use soft activation threshold, configurable.
-
-
-
-2\. detect\_candidate\_assembly(trace) -> CellAssembly | None
-
-&#x20;  - If enough neurons/regions co-activate, create candidate assembly.
-
-&#x20;  - Minimum requirements:
-
-&#x20;    - min\_neurons
-
-&#x20;    - min\_regions
-
-&#x20;    - min\_mean\_activation
-
-&#x20;    - min\_confidence or min\_phi
-
-
-
-3\. match\_existing\_assembly(trace) -> CellAssembly | None
-
-&#x20;  - Compare activation signature with existing assemblies.
-
-&#x20;  - Use cosine similarity or normalized dot product.
-
-&#x20;  - If similarity > threshold, reinforce existing assembly instead of creating duplicate.
-
-
-
-4\. reinforce\_assembly(assembly, trace)
-
-&#x20;  - Increase strength.
-
-&#x20;  - Increase recurrence\_count.
-
-&#x20;  - Update last\_activated\_tick.
-
-&#x20;  - Update stability based on recurrence, Φ, energy, utility.
-
-
-
-5\. decay\_assemblies()
-
-&#x20;  - Slowly reduce strength for unused assemblies.
-
-&#x20;  - Mark assemblies as inactive if strength < threshold.
-
-&#x20;  - Do not delete immediately; allow possible reactivation.
-
-
-
-6\. consolidate\_assemblies()
-
-&#x20;  - Assemblies with recurrence\_count >= threshold and stability >= threshold become consolidated.
-
-&#x20;  - Consolidated assemblies decay more slowly.
-
-
-
-7\. run\_semantic\_memory\_cycle(orchestrator)
-
-&#x20;  - observe activation
-
-&#x20;  - match or create assembly
-
-&#x20;  - reinforce/decay/consolidate
-
-&#x20;  - log events to MorphologicalMemory
-
-&#x20;  - return SemanticMemoryMetrics
-
-
-
-Main class: SemanticMemoryStore
-
-
-
-Responsibilities:
-
-\- save/load assemblies as JSONL
-
-\- get\_by\_id
-
-\- list\_active
-
-\- list\_consolidated
-
-\- count
-
-\- get\_best\_by\_strength
-
-\- get\_recent
-
-\- persist metrics
-
-
-
-Main class: SemanticRecallEngine
-
-
-
-Responsibilities:
-
-1\. recall(query\_signature) -> SemanticRecallResult
-
-2\. recall\_from\_current\_activation(orchestrator) -> SemanticRecallResult
-
-3\. reactivate\_assembly(assembly\_id, orchestrator)
-
-&#x20;  - Optionally inject weak activation into member neurons/regions.
-
-&#x20;  - Must be bounded by safety/energy constraints.
-
-4\. compute\_similarity(signature\_a, signature\_b)
-
-
-
-Integration with Orchestrator:
-
-\- Add semantic\_memory\_enabled: bool = False by default or True if safe.
-
-\- Add \_cell\_assembly\_engine
-
-\- Add \_semantic\_memory\_store
-
-\- Add \_semantic\_recall\_engine
-
-\- Hook after burst/STDP/inhibition/energy/stability stages, before final benchmark capture.
-
-\- Add method:
-
-&#x20; - run\_semantic\_memory\_cycle()
-
-&#x20; - recall\_semantic\_memory(query\_signature)
-
-&#x20; - get\_semantic\_memory\_metrics()
-
-
-
-Integration with MorphologicalMemory:
-
-Add new MorphologyEventType values:
-
-\- CELL\_ASSEMBLY\_CREATED
-
-\- CELL\_ASSEMBLY\_REINFORCED
-
-\- CELL\_ASSEMBLY\_CONSOLIDATED
-
-\- CELL\_ASSEMBLY\_DECAYED
-
-\- CELL\_ASSEMBLY\_REACTIVATED
-
-\- SEMANTIC\_RECALL\_SUCCEEDED
-
-\- SEMANTIC\_RECALL\_FAILED
-
-
-
-Integration with BenchmarkMetrics:
-
-Add:
+\- energy\_efficiency
 
 \- semantic\_assembly\_count
 
@@ -446,129 +134,261 @@ Add:
 
 \- semantic\_memory\_score
 
+\- assembly\_creation\_events
+
+\- assembly\_reinforcement\_events
+
+\- assembly\_consolidation\_events
+
+\- assembly\_decay\_events
+
+\- semantic\_recall\_success\_events
+
+\- semantic\_recall\_failure\_events
+
+\- reactivation\_events
+
+\- cognitive\_delta\_vs\_baseline
+
+\- phi\_delta\_vs\_baseline
+
+\- energy\_delta\_vs\_baseline
+
+\- semantic\_net\_gain
 
 
-Suggested semantic\_memory\_score:
 
-0.25 \* semantic\_recall\_success\_rate
+Semantic net gain formula:
 
-\+ 0.20 \* mean\_assembly\_stability
+0.25 \* delta\_cognitive\_score
 
-\+ 0.15 \* mean\_assembly\_strength
+\+ 0.25 \* delta\_phi
 
-\+ 0.15 \* semantic\_consolidation\_rate
+\+ 0.20 \* semantic\_recall\_success\_rate
 
-\+ 0.10 \* semantic\_memory\_utility
+\+ 0.15 \* mean\_assembly\_stability
 
-\+ 0.10 \* min(1.0, semantic\_memory\_density)
+\+ 0.10 \* semantic\_consolidation\_rate
 
-\+ 0.05 \* coherence\_phi
+\+ 0.05 \* energy\_delta
+
+
+
+Clamp semantic\_net\_gain to \[-1.0, 1.0].
+
+
+
+Verdict logic:
+
+\- SEMANTIC\_MEMORY\_VALIDATED:
+
+&#x20; semantic\_memory\_score improves, recall\_success\_rate > 0, and no cognitive/phi/energy regression.
+
+
+
+\- SEMANTIC\_MEMORY\_PASSIVE:
+
+&#x20; assemblies are created but recall\_success\_rate == 0 or no measurable semantic\_net\_gain.
+
+
+
+\- SEMANTIC\_RECALL\_WEAK:
+
+&#x20; recall exists but recall\_success\_rate remains below threshold.
+
+
+
+\- SEMANTIC\_OVERCONSOLIDATION:
+
+&#x20; too many assemblies consolidate while cognitive\_score or phi drops.
+
+
+
+\- SEMANTIC\_ENERGY\_REGRESSION:
+
+&#x20; energy\_efficiency drops significantly versus baseline.
+
+
+
+\- SEMANTIC\_COGNITIVE\_REGRESSION:
+
+&#x20; cognitive\_score drops significantly versus baseline.
+
+
+
+\- SEMANTIC\_PHI\_REGRESSION:
+
+&#x20; coherence\_phi drops significantly versus baseline.
+
+
+
+\- INSUFFICIENT\_EVIDENCE:
+
+&#x20; no clear signal.
+
+
+
+Implementation details:
+
+
+
+Class: SemanticMemoryAuditor
+
+
+
+Methods:
+
+\- \_\_init\_\_(seed: int = 42, report\_dir: str = "reports/semantic\_memory\_audit")
+
+\- build\_orchestrator(profile) -> CellularBrainOrchestrator
+
+\- run\_profile(profile\_name: str) -> SemanticMemoryAuditResult
+
+\- run\_audit\_suite() -> SemanticMemoryAuditSuiteResult
+
+\- compute\_semantic\_net\_gain(baseline, candidate) -> float
+
+\- compute\_verdict(results) -> str
+
+\- generate\_json\_report(result) -> str
+
+\- generate\_markdown\_report(result) -> str
+
+
+
+Pydantic models:
+
+\- SemanticMemoryAuditProfile
+
+\- SemanticMemoryAuditResult
+
+\- SemanticMemoryAuditSuiteResult
+
+
+
+Required profile fields:
+
+\- semantic\_memory\_enabled: bool
+
+\- recall\_enabled: bool
+
+\- consolidation\_enabled: bool
+
+\- decay\_enabled: bool
+
+\- reactivation\_enabled: bool
+
+\- repeated\_pattern\_count: int
+
+\- novel\_pattern\_count: int
+
+\- recall\_trials: int
+
+\- n\_cycles: int
 
 
 
 Tests:
 
-Create at least 18 tests covering:
+Create at least 18 tests:
 
 
 
-1\. CellAssembly model creation.
+1\. profile model creation
 
-2\. AssemblyActivationTrace creation.
+2\. result model creation
 
-3\. SemanticMemoryStore save/load.
+3\. auditor initializes
 
-4\. observe\_activation captures active neurons.
+4\. build\_orchestrator respects semantic\_memory\_enabled=False
 
-5\. detect\_candidate\_assembly creates assembly when co-activation is sufficient.
+5\. build\_orchestrator respects semantic\_memory\_enabled=True
 
-6\. detect\_candidate\_assembly rejects weak/noisy activation.
+6\. semantic\_memory\_off creates zero or no active semantic events
 
-7\. match\_existing\_assembly prevents duplicates.
+7\. observe\_only captures traces without unsafe activation injection
 
-8\. reinforce\_assembly increases strength and recurrence\_count.
+8\. create\_only creates at least one assembly under repeated activation
 
-9\. decay\_assemblies decreases unused assembly strength.
+9\. create\_reinforce increases recurrence\_count or strength
 
-10\. consolidate\_assemblies marks stable recurrent assemblies.
+10\. full\_cycle produces semantic metrics
 
-11\. recall returns best matching assembly.
+11\. recall\_enabled produces recall result safely
 
-12\. recall fails safely when memory is empty.
+12\. recall fails safely when no assembly exists
 
-13\. reactivate\_assembly injects bounded activation.
+13\. consolidation profile produces consolidated assembly or valid zero-state
 
-14\. MorphologicalMemory events are emitted.
+14\. decay profile does not delete all memory abruptly
 
-15\. Benchmark metrics include semantic fields.
+15\. reactivation remains bounded
 
-16\. Orchestrator integration works with semantic\_memory\_enabled=True.
+16\. semantic\_net\_gain is clamped to \[-1,1]
 
-17\. No regression when semantic\_memory\_enabled=False.
+17\. verdict is one of the allowed values
 
-18\. Full semantic cycle over multiple ticks produces at least one assembly.
+18\. markdown report includes semantic\_memory\_score, recall\_success\_rate, semantic\_net\_gain, verdict
+
+19\. json report is written to reports/semantic\_memory\_audit/
+
+20\. all semantic audit runs are deterministic with same seed
 
 
 
 Acceptance criteria:
 
-\- All existing 713 tests still pass.
+\- All existing 738 tests still pass.
 
-\- New semantic memory tests pass.
+\- New tests pass.
 
 \- Coverage remains >=85%.
 
-\- JSONL persistence works.
+\- Audit generates JSON and Markdown reports.
 
-\- Benchmark exposes semantic metrics.
+\- At least one profile produces assemblies under repeated activation.
 
-\- MorphologicalMemory records semantic events.
+\- Recall path is tested.
 
-\- No unbounded activation injection during recall.
+\- No unbounded reactivation.
 
-\- Create docs/SEMANTIC\_CELL\_ASSEMBLY\_MEMORY\_SPEC.md.
+\- No regression when semantic\_memory\_enabled=False.
 
-\- Commit and tag as v0.3.29-t43-semantic-cell-assembly-memory.
+\- Commit and tag as v0.3.30-t43b-semantic-memory-functional-audit.
 
-Nota architetturale importante
-
-
-
-Per T43 non conviene ancora implementare “linguaggio” o “concetti umani” direttamente. La prima memoria semantica deve essere più profonda e biologica:
+Cosa deve dimostrare T43B
 
 
 
-pattern ricorrente → assembly → semantic pointer → richiamo
+T43B non deve per forza dimostrare che la memoria semantica migliora già molto il cognitive score. Deve però rispondere chiaramente a queste domande:
 
 
 
-Solo dopo, in un task successivo, potrai mappare questi semantic pointer a nomi, simboli, testo, immagini, eventi o obiettivi.
+1\. Le assemblee cellulari si formano davvero?
+
+2\. Si rafforzano con pattern ricorrenti?
+
+3\. Si consolidano?
+
+4\. Possono essere richiamate?
+
+5\. Il richiamo è energeticamente sicuro?
+
+6\. Il layer semantico migliora, peggiora o resta neutro rispetto alla baseline?
 
 
 
-Quindi T43 deve creare memoria semantica sub-simbolica, non ancora una knowledge base linguistica.
+Se il verdetto sarà SEMANTIC\_MEMORY\_VALIDATED, si procede direttamente a T44 — Associative Learning Between Assemblies.
 
 
 
-Dopo T43
+Se invece sarà SEMANTIC\_MEMORY\_PASSIVE o SEMANTIC\_RECALL\_WEAK, prima di T44 servirà un task intermedio:
 
 
 
-La sequenza naturale diventa:
+T43C — Semantic Recall Sensitivity Tuning
 
 
 
-T43  — Semantic Cell Assembly Memory
-
-T43B — Semantic Memory Functional Audit
-
-T44  — Associative Learning Between Assemblies
-
-T45  — Episodic Memory Layer
-
-T46  — Symbolic Grounding / Semantic Pointer Labeling
-
-
-
-Verdetto operativo: procedi con T43.
+Verdetto operativo: procedi con T43B.
 
