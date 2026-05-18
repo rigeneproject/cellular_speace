@@ -284,6 +284,16 @@ class BenchmarkMetrics(BaseModel):
     patch_audit_cumulative_delta_phi: float = 0.0
     patch_audit_learning_confidence_delta: float = 0.0
     autonomous_improvement_readiness_score: float = 0.0
+    # T52 — Goal-Directed Self-Improvement Planner metrics
+    goal_planner_goal_count: int = 0
+    goal_planner_plan_count: int = 0
+    goal_planner_step_count: int = 0
+    goal_planner_expected_gain: float = 0.0
+    goal_planner_expected_risk: float = 0.0
+    goal_planner_safe_plan_count: int = 0
+    goal_planner_blocked_plan_count: int = 0
+    goal_planner_readiness_required: float = 0.0
+    goal_directed_improvement_score: float = 0.0
 
 
 class BenchmarkResult(BaseModel):
@@ -1297,6 +1307,17 @@ class NeuroFunctionalBenchmark:
         patch_audit_learning_confidence_delta = 0.0
         autonomous_improvement_readiness_score = 0.0
 
+        # T52 — Goal-Directed Self-Improvement Planner metrics (populated externally)
+        goal_planner_goal_count = 0
+        goal_planner_plan_count = 0
+        goal_planner_step_count = 0
+        goal_planner_expected_gain = 0.0
+        goal_planner_expected_risk = 0.0
+        goal_planner_safe_plan_count = 0
+        goal_planner_blocked_plan_count = 0
+        goal_planner_readiness_required = 0.0
+        goal_directed_improvement_score = 0.0
+
         return BenchmarkMetrics(
             accuracy_score=final.accuracy,
             coherence_phi=final.coherence_phi,
@@ -1520,6 +1541,16 @@ class NeuroFunctionalBenchmark:
             patch_audit_cumulative_delta_phi=patch_audit_cumulative_delta_phi,
             patch_audit_learning_confidence_delta=patch_audit_learning_confidence_delta,
             autonomous_improvement_readiness_score=autonomous_improvement_readiness_score,
+            # T52
+            goal_planner_goal_count=goal_planner_goal_count,
+            goal_planner_plan_count=goal_planner_plan_count,
+            goal_planner_step_count=goal_planner_step_count,
+            goal_planner_expected_gain=goal_planner_expected_gain,
+            goal_planner_expected_risk=goal_planner_expected_risk,
+            goal_planner_safe_plan_count=goal_planner_safe_plan_count,
+            goal_planner_blocked_plan_count=goal_planner_blocked_plan_count,
+            goal_planner_readiness_required=goal_planner_readiness_required,
+            goal_directed_improvement_score=goal_directed_improvement_score,
         )
 
     def generate_json_report(self, result: BenchmarkResult) -> Path:
@@ -1717,6 +1748,17 @@ class NeuroFunctionalBenchmark:
             f"| Cumulative delta Φ | {m.patch_audit_cumulative_delta_phi:.4f} |",
             f"| Learning confidence delta | {m.patch_audit_learning_confidence_delta:.4f} |",
             f"| Readiness score | {m.autonomous_improvement_readiness_score:.4f} |",
+            "",
+            "### T52 — Goal-Directed Self-Improvement Planner",
+            f"| Goals | {m.goal_planner_goal_count} |",
+            f"| Plans | {m.goal_planner_plan_count} |",
+            f"| Steps | {m.goal_planner_step_count} |",
+            f"| Expected gain | {m.goal_planner_expected_gain:.4f} |",
+            f"| Expected risk | {m.goal_planner_expected_risk:.4f} |",
+            f"| Safe plans | {m.goal_planner_safe_plan_count} |",
+            f"| Blocked plans | {m.goal_planner_blocked_plan_count} |",
+            f"| Readiness required | {m.goal_planner_readiness_required:.4f} |",
+            f"| Improvement score | {m.goal_directed_improvement_score:.4f} |",
             "",
             f"| **Cellular resilience score** | **{m.cellular_resilience_score:.4f}** |",
 
