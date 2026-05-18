@@ -294,6 +294,16 @@ class BenchmarkMetrics(BaseModel):
     goal_planner_blocked_plan_count: int = 0
     goal_planner_readiness_required: float = 0.0
     goal_directed_improvement_score: float = 0.0
+    # T53 — Self-Organization Controller metrics
+    criticality_state: str = "unknown"
+    system_entropy: float = 0.0
+    behavioral_diversity: float = 0.0
+    modularity_score: float = 0.0
+    perturbation_count: int = 0
+    recovery_after_perturbation: float = 0.0
+    order_chaos_balance: float = 0.0
+    self_organization_score: float = 0.0
+    emergent_structure_gain: float = 0.0
 
 
 class BenchmarkResult(BaseModel):
@@ -1318,6 +1328,17 @@ class NeuroFunctionalBenchmark:
         goal_planner_readiness_required = 0.0
         goal_directed_improvement_score = 0.0
 
+        # T53 — Self-Organization Controller metrics (populated externally)
+        criticality_state = "unknown"
+        system_entropy = 0.0
+        behavioral_diversity = 0.0
+        modularity_score = 0.0
+        perturbation_count = 0
+        recovery_after_perturbation = 0.0
+        order_chaos_balance = 0.0
+        self_organization_score = 0.0
+        emergent_structure_gain = 0.0
+
         return BenchmarkMetrics(
             accuracy_score=final.accuracy,
             coherence_phi=final.coherence_phi,
@@ -1551,6 +1572,16 @@ class NeuroFunctionalBenchmark:
             goal_planner_blocked_plan_count=goal_planner_blocked_plan_count,
             goal_planner_readiness_required=goal_planner_readiness_required,
             goal_directed_improvement_score=goal_directed_improvement_score,
+            # T53
+            criticality_state=criticality_state,
+            system_entropy=system_entropy,
+            behavioral_diversity=behavioral_diversity,
+            modularity_score=modularity_score,
+            perturbation_count=perturbation_count,
+            recovery_after_perturbation=recovery_after_perturbation,
+            order_chaos_balance=order_chaos_balance,
+            self_organization_score=self_organization_score,
+            emergent_structure_gain=emergent_structure_gain,
         )
 
     def generate_json_report(self, result: BenchmarkResult) -> Path:
@@ -1759,6 +1790,17 @@ class NeuroFunctionalBenchmark:
             f"| Blocked plans | {m.goal_planner_blocked_plan_count} |",
             f"| Readiness required | {m.goal_planner_readiness_required:.4f} |",
             f"| Improvement score | {m.goal_directed_improvement_score:.4f} |",
+            "",
+            "### T53 — Self-Organization Controller",
+            f"| Criticality state | {m.criticality_state} |",
+            f"| System entropy | {m.system_entropy:.4f} |",
+            f"| Behavioral diversity | {m.behavioral_diversity:.4f} |",
+            f"| Modularity score | {m.modularity_score:.4f} |",
+            f"| Perturbation count | {m.perturbation_count} |",
+            f"| Recovery after perturbation | {m.recovery_after_perturbation:.4f} |",
+            f"| Order/chaos balance | {m.order_chaos_balance:.4f} |",
+            f"| Self-organization score | {m.self_organization_score:.4f} |",
+            f"| Emergent structure gain | {m.emergent_structure_gain:.4f} |",
             "",
             f"| **Cellular resilience score** | **{m.cellular_resilience_score:.4f}** |",
 
