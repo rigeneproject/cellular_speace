@@ -272,6 +272,18 @@ class BenchmarkMetrics(BaseModel):
     architecture_patch_last_delta_phi: float = 0.0
     architecture_patch_last_delta_energy: float = 0.0
     architecture_patch_safety_pass_rate: float = 0.0
+    # T51 — Patch Outcome Audit metrics
+    patch_audit_cycles_run: int = 0
+    patch_audit_confirmed_count: int = 0
+    patch_audit_rollback_count: int = 0
+    patch_audit_rejected_count: int = 0
+    patch_audit_unsafe_blocks: int = 0
+    patch_audit_success_rate: float = 0.0
+    patch_audit_regression_rate: float = 0.0
+    patch_audit_cumulative_delta_score: float = 0.0
+    patch_audit_cumulative_delta_phi: float = 0.0
+    patch_audit_learning_confidence_delta: float = 0.0
+    autonomous_improvement_readiness_score: float = 0.0
 
 
 class BenchmarkResult(BaseModel):
@@ -1272,6 +1284,19 @@ class NeuroFunctionalBenchmark:
             safe_count = len(confirmed_events)
             architecture_patch_safety_pass_rate = round(safe_count / len(all_patch_results), 4)
 
+        # T51 — Patch Outcome Audit metrics (populated externally via audit)
+        patch_audit_cycles_run = 0
+        patch_audit_confirmed_count = 0
+        patch_audit_rollback_count = 0
+        patch_audit_rejected_count = 0
+        patch_audit_unsafe_blocks = 0
+        patch_audit_success_rate = 0.0
+        patch_audit_regression_rate = 0.0
+        patch_audit_cumulative_delta_score = 0.0
+        patch_audit_cumulative_delta_phi = 0.0
+        patch_audit_learning_confidence_delta = 0.0
+        autonomous_improvement_readiness_score = 0.0
+
         return BenchmarkMetrics(
             accuracy_score=final.accuracy,
             coherence_phi=final.coherence_phi,
@@ -1483,6 +1508,18 @@ class NeuroFunctionalBenchmark:
             architecture_patch_last_delta_phi=architecture_patch_last_delta_phi,
             architecture_patch_last_delta_energy=architecture_patch_last_delta_energy,
             architecture_patch_safety_pass_rate=architecture_patch_safety_pass_rate,
+            # T51
+            patch_audit_cycles_run=patch_audit_cycles_run,
+            patch_audit_confirmed_count=patch_audit_confirmed_count,
+            patch_audit_rollback_count=patch_audit_rollback_count,
+            patch_audit_rejected_count=patch_audit_rejected_count,
+            patch_audit_unsafe_blocks=patch_audit_unsafe_blocks,
+            patch_audit_success_rate=patch_audit_success_rate,
+            patch_audit_regression_rate=patch_audit_regression_rate,
+            patch_audit_cumulative_delta_score=patch_audit_cumulative_delta_score,
+            patch_audit_cumulative_delta_phi=patch_audit_cumulative_delta_phi,
+            patch_audit_learning_confidence_delta=patch_audit_learning_confidence_delta,
+            autonomous_improvement_readiness_score=autonomous_improvement_readiness_score,
         )
 
     def generate_json_report(self, result: BenchmarkResult) -> Path:
@@ -1668,7 +1705,21 @@ class NeuroFunctionalBenchmark:
             f"| Last delta energy | {m.architecture_patch_last_delta_energy:.4f} |",
             f"| Safety pass rate | {m.architecture_patch_safety_pass_rate:.4f} |",
             "",
+            "### T51 — Patch Outcome Audit",
+            f"| Audit cycles run | {m.patch_audit_cycles_run} |",
+            f"| Patches confirmed | {m.patch_audit_confirmed_count} |",
+            f"| Patches rolled back | {m.patch_audit_rollback_count} |",
+            f"| Patches rejected | {m.patch_audit_rejected_count} |",
+            f"| Unsafe blocks | {m.patch_audit_unsafe_blocks} |",
+            f"| Success rate | {m.patch_audit_success_rate:.4f} |",
+            f"| Regression rate | {m.patch_audit_regression_rate:.4f} |",
+            f"| Cumulative delta score | {m.patch_audit_cumulative_delta_score:.4f} |",
+            f"| Cumulative delta Φ | {m.patch_audit_cumulative_delta_phi:.4f} |",
+            f"| Learning confidence delta | {m.patch_audit_learning_confidence_delta:.4f} |",
+            f"| Readiness score | {m.autonomous_improvement_readiness_score:.4f} |",
+            "",
             f"| **Cellular resilience score** | **{m.cellular_resilience_score:.4f}** |",
+
 
 
             "",
