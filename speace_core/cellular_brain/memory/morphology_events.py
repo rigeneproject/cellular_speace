@@ -169,6 +169,15 @@ class MorphologyEventType(str, Enum):
     COUNTERFACTUAL_PROPOSAL_ACCEPTED = "counterfactual_proposal_accepted"
     COUNTERFACTUAL_PROPOSAL_REJECTED = "counterfactual_proposal_rejected"
     COUNTERFACTUAL_PROPOSAL_UNSAFE = "counterfactual_proposal_unsafe"
+    # T50 — Safe Architecture Patch Execution
+    ARCHITECTURE_PATCH_PROPOSED = "architecture_patch_proposed"
+    ARCHITECTURE_PATCH_VALIDATED = "architecture_patch_validated"
+    ARCHITECTURE_PATCH_REJECTED = "architecture_patch_rejected"
+    ARCHITECTURE_PATCH_SNAPSHOT_CREATED = "architecture_patch_snapshot_created"
+    ARCHITECTURE_PATCH_APPLIED = "architecture_patch_applied"
+    ARCHITECTURE_PATCH_CONFIRMED = "architecture_patch_confirmed"
+    ARCHITECTURE_PATCH_ROLLED_BACK = "architecture_patch_rolled_back"
+    ARCHITECTURE_PATCH_FAILED = "architecture_patch_failed"
 
 
 class MorphologyEvent(BaseModel):

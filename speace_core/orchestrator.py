@@ -144,6 +144,8 @@ class CellularBrainOrchestrator(BaseModel):
     episodic_policy_enabled: bool = False
     # T49 — Counterfactual Architecture Sandbox
     counterfactual_sandbox_enabled: bool = False
+    # T50 — Safe Architecture Patch Execution
+    architecture_patch_execution_enabled: bool = False
     # T47 — Episodic Memory
     episodic_memory_enabled: bool = True
     _episodic_memory = None

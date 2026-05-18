@@ -41,6 +41,10 @@ from speace_core.cellular_brain.self_improvement.counterfactual_sandbox import (
     CounterfactualResult,
     CounterfactualBatchResult,
 )
+from speace_core.cellular_brain.self_improvement.architecture_patch_executor import (
+    ArchitecturePatchExecutor,
+    PatchExecutionResult,
+)
 
 
 class SelfImprovementLoop:
@@ -62,6 +66,8 @@ class SelfImprovementLoop:
         episodic_policy=None,
         counterfactual_sandbox_enabled: bool = False,
         counterfactual_sandbox=None,
+        architecture_patch_execution_enabled: bool = False,
+        architecture_patch_executor=None,
     ):
         self.orchestrator = orchestrator
         self.detector = detector or LimitationDetector()
@@ -77,6 +83,8 @@ class SelfImprovementLoop:
         self.episodic_policy = episodic_policy
         self.counterfactual_sandbox_enabled = counterfactual_sandbox_enabled
         self.counterfactual_sandbox = counterfactual_sandbox
+        self.architecture_patch_execution_enabled = architecture_patch_execution_enabled
+        self.architecture_patch_executor = architecture_patch_executor
 
     # ------------------------------------------------------------------ #
     # Detection cycle
@@ -142,6 +150,24 @@ class SelfImprovementLoop:
             if best is not None:
                 counterfactual_verdict = best.verdict
 
+        # T50 — Safe Architecture Patch Execution
+        patch_execution_result: Optional[PatchExecutionResult] = None
+        patch_verdict = ""
+        if (
+            self.architecture_patch_execution_enabled
+            and self.architecture_patch_executor is not None
+            and counterfactual_best is not None
+        ):
+            best_proposal_id = counterfactual_best.get("proposal_id")
+            target_proposal = None
+            for p in proposals:
+                if p.id == best_proposal_id:
+                    target_proposal = p
+                    break
+            if target_proposal is not None:
+                patch_execution_result = self.architecture_patch_executor.execute_patch(target_proposal)
+                patch_verdict = patch_execution_result.verdict
+
         # 4. Simulate proposals
         simulations: List[RewriteSimulationResult] = []
         accepted: List[str] = []
@@ -202,6 +228,8 @@ class SelfImprovementLoop:
             counterfactual_results=[r.model_dump() for r in counterfactual_results],
             counterfactual_best_result=counterfactual_best.model_dump() if counterfactual_best is not None else None,
             counterfactual_verdict=counterfactual_verdict,
+            patch_execution_result=patch_execution_result.model_dump() if patch_execution_result is not None else None,
+            patch_verdict=patch_verdict if patch_verdict else None,
         )
 
         self.proposal_store.save_cycle_result(result)
@@ -262,6 +290,24 @@ class SelfImprovementLoop:
             if best is not None:
                 counterfactual_verdict = best.verdict
 
+        # T50 — Safe Architecture Patch Execution
+        patch_execution_result: Optional[PatchExecutionResult] = None
+        patch_verdict = ""
+        if (
+            self.architecture_patch_execution_enabled
+            and self.architecture_patch_executor is not None
+            and counterfactual_best is not None
+        ):
+            best_proposal_id = counterfactual_best.get("proposal_id")
+            target_proposal = None
+            for p in proposals:
+                if p.id == best_proposal_id:
+                    target_proposal = p
+                    break
+            if target_proposal is not None:
+                patch_execution_result = self.architecture_patch_executor.execute_patch(target_proposal)
+                patch_verdict = patch_execution_result.verdict
+
         for proposal in proposals:
             sim = self.simulate_proposal(proposal)
             simulations.append(sim)
@@ -301,6 +347,8 @@ class SelfImprovementLoop:
             counterfactual_results=[r.model_dump() for r in counterfactual_results],
             counterfactual_best_result=counterfactual_best.model_dump() if counterfactual_best is not None else None,
             counterfactual_verdict=counterfactual_verdict,
+            patch_execution_result=patch_execution_result.model_dump() if patch_execution_result is not None else None,
+            patch_verdict=patch_verdict if patch_verdict else None,
         )
         self.proposal_store.save_cycle_result(result)
         return result
@@ -493,6 +541,30 @@ class SelfImprovementLoop:
             lines.append(f"- Verdict: {best.get('verdict', 'unknown')}")
             lines.append(f"- Delta score: {best.get('delta_score', 0.0):.4f}")
             lines.append(f"- Confidence: {best.get('confidence', 0.0):.4f}")
+
+        # T50 — Safe Architecture Patch Execution
+        if result.patch_execution_result:
+            per = result.patch_execution_result
+            lines.extend(["", "## Safe Architecture Patch Execution (T50)"])
+            lines.append(f"- Patch ID: {per.get('patch_id', 'unknown')}")
+            lines.append(f"- Proposal ID: {per.get('proposal_id', 'unknown')}")
+            lines.append(f"- Applied: {per.get('applied', False)}")
+            lines.append(f"- Confirmed: {per.get('confirmed', False)}")
+            lines.append(f"- Rolled back: {per.get('rolled_back', False)}")
+            lines.append(f"- Verdict: {per.get('verdict', 'unknown')}")
+            lines.append(f"- Pre-score: {per.get('pre_score', 0.0):.4f}")
+            lines.append(f"- Post-score: {per.get('post_score', 0.0):.4f}")
+            lines.append(f"- Delta score: {per.get('delta_score', 0.0):.4f}")
+            lines.append(f"- Delta Φ: {per.get('delta_phi', 0.0):.4f}")
+            lines.append(f"- Delta energy: {per.get('delta_energy', 0.0):.4f}")
+            flags = per.get('regression_flags', [])
+            if flags:
+                lines.append(f"- Regression flags: {', '.join(flags)}")
+            else:
+                lines.append("- Regression flags: none")
+            report_path = per.get('report_path')
+            if report_path:
+                lines.append(f"- Report: {report_path}")
 
         lines.extend(["", "## Final Verdict"])
         lines.append(f"**{result.final_verdict}**")

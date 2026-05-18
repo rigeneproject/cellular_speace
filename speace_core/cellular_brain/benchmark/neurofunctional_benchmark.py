@@ -262,6 +262,16 @@ class BenchmarkMetrics(BaseModel):
     counterfactual_mean_delta_score: float = 0.0
     counterfactual_best_confidence: float = 0.0
     counterfactual_policy_safe: bool = False
+    # T50 — Safe Architecture Patch Execution metrics
+    architecture_patch_count: int = 0
+    architecture_patch_applied_count: int = 0
+    architecture_patch_confirmed_count: int = 0
+    architecture_patch_rollback_count: int = 0
+    architecture_patch_failure_count: int = 0
+    architecture_patch_mean_delta_score: float = 0.0
+    architecture_patch_last_delta_phi: float = 0.0
+    architecture_patch_last_delta_energy: float = 0.0
+    architecture_patch_safety_pass_rate: float = 0.0
 
 
 class BenchmarkResult(BaseModel):
@@ -1232,6 +1242,36 @@ class NeuroFunctionalBenchmark:
         unsafe_events = [e for e in mem.events if e.event_type == MorphologyEventType.COUNTERFACTUAL_PROPOSAL_UNSAFE]
         counterfactual_policy_safe = len(unsafe_events) == 0 and len(accepted_events) > 0
 
+        # T50 — Safe Architecture Patch Execution metrics
+        architecture_patch_count = 0
+        architecture_patch_applied_count = 0
+        architecture_patch_confirmed_count = 0
+        architecture_patch_rollback_count = 0
+        architecture_patch_failure_count = 0
+        architecture_patch_mean_delta_score = 0.0
+        architecture_patch_last_delta_phi = 0.0
+        architecture_patch_last_delta_energy = 0.0
+        architecture_patch_safety_pass_rate = 0.0
+        patch_events = [e for e in mem.events if e.event_type == MorphologyEventType.ARCHITECTURE_PATCH_APPLIED]
+        architecture_patch_count = len(patch_events)
+        architecture_patch_applied_count = architecture_patch_count
+        confirmed_events = [e for e in mem.events if e.event_type == MorphologyEventType.ARCHITECTURE_PATCH_CONFIRMED]
+        architecture_patch_confirmed_count = len(confirmed_events)
+        rollback_events = [e for e in mem.events if e.event_type == MorphologyEventType.ARCHITECTURE_PATCH_ROLLED_BACK]
+        architecture_patch_rollback_count = len(rollback_events)
+        failed_events = [e for e in mem.events if e.event_type == MorphologyEventType.ARCHITECTURE_PATCH_FAILED]
+        architecture_patch_failure_count = len(failed_events)
+        if patch_events:
+            last_patch = patch_events[-1]
+            architecture_patch_last_delta_phi = round(last_patch.metadata.get("delta_phi", 0.0), 4)
+            architecture_patch_last_delta_energy = round(last_patch.metadata.get("delta_energy", 0.0), 4)
+        all_patch_results = confirmed_events + rollback_events + failed_events
+        if all_patch_results:
+            deltas = [e.metadata.get("delta_score", 0.0) for e in all_patch_results]
+            architecture_patch_mean_delta_score = round(sum(deltas) / len(deltas), 4) if deltas else 0.0
+            safe_count = len(confirmed_events)
+            architecture_patch_safety_pass_rate = round(safe_count / len(all_patch_results), 4)
+
         return BenchmarkMetrics(
             accuracy_score=final.accuracy,
             coherence_phi=final.coherence_phi,
@@ -1433,6 +1473,16 @@ class NeuroFunctionalBenchmark:
             counterfactual_mean_delta_score=counterfactual_mean_delta_score,
             counterfactual_best_confidence=counterfactual_best_confidence,
             counterfactual_policy_safe=counterfactual_policy_safe,
+            # T50
+            architecture_patch_count=architecture_patch_count,
+            architecture_patch_applied_count=architecture_patch_applied_count,
+            architecture_patch_confirmed_count=architecture_patch_confirmed_count,
+            architecture_patch_rollback_count=architecture_patch_rollback_count,
+            architecture_patch_failure_count=architecture_patch_failure_count,
+            architecture_patch_mean_delta_score=architecture_patch_mean_delta_score,
+            architecture_patch_last_delta_phi=architecture_patch_last_delta_phi,
+            architecture_patch_last_delta_energy=architecture_patch_last_delta_energy,
+            architecture_patch_safety_pass_rate=architecture_patch_safety_pass_rate,
         )
 
     def generate_json_report(self, result: BenchmarkResult) -> Path:
@@ -1607,7 +1657,19 @@ class NeuroFunctionalBenchmark:
             f"| Best confidence | {m.counterfactual_best_confidence:.4f} |",
             f"| Policy safe | {m.counterfactual_policy_safe} |",
             "",
+            "### T50 — Safe Architecture Patch Execution",
+            f"| Patches proposed | {m.architecture_patch_count} |",
+            f"| Patches applied | {m.architecture_patch_applied_count} |",
+            f"| Patches confirmed | {m.architecture_patch_confirmed_count} |",
+            f"| Patches rolled back | {m.architecture_patch_rollback_count} |",
+            f"| Patch failures | {m.architecture_patch_failure_count} |",
+            f"| Mean delta score | {m.architecture_patch_mean_delta_score:.4f} |",
+            f"| Last delta Φ | {m.architecture_patch_last_delta_phi:.4f} |",
+            f"| Last delta energy | {m.architecture_patch_last_delta_energy:.4f} |",
+            f"| Safety pass rate | {m.architecture_patch_safety_pass_rate:.4f} |",
+            "",
             f"| **Cellular resilience score** | **{m.cellular_resilience_score:.4f}** |",
+
 
             "",
             "---",

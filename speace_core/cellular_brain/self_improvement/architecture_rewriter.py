@@ -54,6 +54,9 @@ class SelfImprovementCycleResult(BaseModel):
     counterfactual_results: List[Dict[str, Any]] = Field(default_factory=list)
     counterfactual_best_result: Optional[Dict[str, Any]] = None
     counterfactual_verdict: str = ""
+    # T50 — Safe Architecture Patch Execution
+    patch_execution_result: Optional[Dict[str, Any]] = None
+    patch_verdict: Optional[str] = None
 
 
 class ArchitectureRewriter:
