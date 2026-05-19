@@ -655,6 +655,21 @@ class BenchmarkMetrics(BaseModel):
     postnatal_real_run_safety_preservation_score: float = 0.0
     postnatal_real_run_read_only_integrity_score: float = 0.0
     postnatal_real_run_score: float = 0.0
+    # T64
+    capability_maturation_audit_count: int = 0
+    capability_maturation_capability_count: int = 0
+    capability_maturation_mature_sandboxed_count: int = 0
+    capability_maturation_immature_count: int = 0
+    capability_maturation_regressive_count: int = 0
+    capability_maturation_safety_blocked_count: int = 0
+    capability_maturation_quarantined_count: int = 0
+    capability_maturation_aggregate_maturity_score: float = 0.0
+    capability_maturation_aggregate_safety_score: float = 0.0
+    capability_maturation_aggregate_confidence_score: float = 0.0
+    capability_maturation_read_only_integrity_score: float = 0.0
+    capability_maturation_unsafe_enabled_count: int = 0
+    capability_maturation_real_world_enabled_count: int = 0
+    capability_maturation_score: float = 0.0
     proceed_to_t64_score: float = 0.0
 
 
@@ -2297,6 +2312,41 @@ class NeuroFunctionalBenchmark:
             postnatal_real_run_score = 0.0
             proceed_to_t64_score = 0.0
 
+        # T64 — Capability Maturation Layer metrics
+        last_cm = getattr(self.orch, "_last_capability_maturation_audit_result", None)
+        if last_cm is not None:
+            suite_cm = last_cm
+            capability_maturation_audit_count = 1
+            capability_maturation_capability_count = suite_cm.get("capability_count", 0)
+            capability_maturation_mature_sandboxed_count = suite_cm.get("mature_sandboxed_count", 0)
+            capability_maturation_immature_count = suite_cm.get("immature_count", 0)
+            capability_maturation_regressive_count = suite_cm.get("regressive_count", 0)
+            capability_maturation_safety_blocked_count = suite_cm.get("safety_blocked_count", 0)
+            capability_maturation_quarantined_count = suite_cm.get("quarantined_count", 0)
+            capability_maturation_aggregate_maturity_score = suite_cm.get("aggregate_maturity_score", 0.0)
+            capability_maturation_aggregate_safety_score = suite_cm.get("aggregate_safety_score", 0.0)
+            capability_maturation_aggregate_confidence_score = suite_cm.get("aggregate_confidence_score", 0.0)
+            capability_maturation_read_only_integrity_score = suite_cm.get("read_only_integrity_score", 0.0)
+            capability_maturation_unsafe_enabled_count = suite_cm.get("unsafe_capability_enabled_count", 0)
+            capability_maturation_real_world_enabled_count = suite_cm.get("real_world_capability_enabled_count", 0)
+            capability_maturation_score = suite_cm.get("aggregate_maturity_score", 0.0)
+            proceed_to_t64_score = 1.0 if suite_cm.get("proceed_to_t64b", False) else 0.0
+        else:
+            capability_maturation_audit_count = 0
+            capability_maturation_capability_count = 0
+            capability_maturation_mature_sandboxed_count = 0
+            capability_maturation_immature_count = 0
+            capability_maturation_regressive_count = 0
+            capability_maturation_safety_blocked_count = 0
+            capability_maturation_quarantined_count = 0
+            capability_maturation_aggregate_maturity_score = 0.0
+            capability_maturation_aggregate_safety_score = 0.0
+            capability_maturation_aggregate_confidence_score = 0.0
+            capability_maturation_read_only_integrity_score = 0.0
+            capability_maturation_unsafe_enabled_count = 0
+            capability_maturation_real_world_enabled_count = 0
+            capability_maturation_score = 0.0
+
         return BenchmarkMetrics(
             accuracy_score=final.accuracy,
             coherence_phi=final.coherence_phi,
@@ -2901,6 +2951,21 @@ class NeuroFunctionalBenchmark:
             postnatal_real_run_read_only_integrity_score=postnatal_real_run_read_only_integrity_score,
             postnatal_real_run_score=postnatal_real_run_score,
             proceed_to_t64_score=proceed_to_t64_score,
+            # T64
+            capability_maturation_audit_count=capability_maturation_audit_count,
+            capability_maturation_capability_count=capability_maturation_capability_count,
+            capability_maturation_mature_sandboxed_count=capability_maturation_mature_sandboxed_count,
+            capability_maturation_immature_count=capability_maturation_immature_count,
+            capability_maturation_regressive_count=capability_maturation_regressive_count,
+            capability_maturation_safety_blocked_count=capability_maturation_safety_blocked_count,
+            capability_maturation_quarantined_count=capability_maturation_quarantined_count,
+            capability_maturation_aggregate_maturity_score=capability_maturation_aggregate_maturity_score,
+            capability_maturation_aggregate_safety_score=capability_maturation_aggregate_safety_score,
+            capability_maturation_aggregate_confidence_score=capability_maturation_aggregate_confidence_score,
+            capability_maturation_read_only_integrity_score=capability_maturation_read_only_integrity_score,
+            capability_maturation_unsafe_enabled_count=capability_maturation_unsafe_enabled_count,
+            capability_maturation_real_world_enabled_count=capability_maturation_real_world_enabled_count,
+            capability_maturation_score=capability_maturation_score,
         )
 
     def generate_json_report(self, result: BenchmarkResult) -> Path:

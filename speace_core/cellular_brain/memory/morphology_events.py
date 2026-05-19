@@ -427,6 +427,18 @@ class MorphologyEventType(str, Enum):
     POSTNATAL_REAL_RUN_READ_ONLY_ENFORCED = "postnatal_real_run_read_only_enforced"
     POSTNATAL_REAL_RUN_VERDICT_COMPUTED = "postnatal_real_run_verdict_computed"
     POSTNATAL_REAL_RUN_AUDIT_COMPLETED = "postnatal_real_run_audit_completed"
+    # T64
+    CAPABILITY_MATURATION_STARTED = "capability_maturation_started"
+    CAPABILITY_RECORD_CREATED = "capability_record_created"
+    CAPABILITY_EVIDENCE_AGGREGATED = "capability_evidence_aggregated"
+    CAPABILITY_MATURITY_EVALUATED = "capability_maturity_evaluated"
+    CAPABILITY_REGRESSION_DETECTED = "capability_regression_detected"
+    CAPABILITY_SAFETY_BLOCKED = "capability_safety_blocked"
+    CAPABILITY_QUARANTINED = "capability_quarantined"
+    CAPABILITY_MATURE_SANDBOXED = "capability_mature_sandboxed"
+    CAPABILITY_READ_ONLY_ENFORCED = "capability_read_only_enforced"
+    CAPABILITY_MATURATION_VERDICT_COMPUTED = "capability_maturation_verdict_computed"
+    CAPABILITY_MATURATION_COMPLETED = "capability_maturation_completed"
 
 
 class MorphologyEvent(BaseModel):

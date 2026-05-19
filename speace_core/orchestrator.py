@@ -1130,6 +1130,11 @@ class CellularBrainOrchestrator(BaseModel):
     _postnatal_curriculum_engine = None
     _last_postnatal_learning_audit_result = None
 
+    # T64 — Developmental Capability Maturation Layer
+    capability_maturation_enabled: bool = False
+    _capability_maturation_layer = None
+    _last_capability_maturation_audit_result = None
+
     def get_postnatal_curriculum_engine(self):
         if self._postnatal_curriculum_engine is None:
             from speace_core.cellular_brain.postnatal_learning.postnatal_curriculum_engine import (
@@ -1171,6 +1176,40 @@ class CellularBrainOrchestrator(BaseModel):
         suite = audit.run_audit_suite()
         self._last_postnatal_learning_real_run_audit_result = suite.model_dump()
         return self._last_postnatal_learning_real_run_audit_result
+
+    # T64 — Developmental Capability Maturation Layer hooks
+    def get_capability_maturation_layer(self):
+        if self._capability_maturation_layer is None:
+            from speace_core.cellular_brain.capability_maturation.capability_maturation_layer import (
+                CapabilityMaturationLayer,
+            )
+            self._capability_maturation_layer = CapabilityMaturationLayer(seed=42)
+        return self._capability_maturation_layer
+
+    def get_capability_maturation_state(self) -> dict:
+        if not self.capability_maturation_enabled:
+            return {"error": "capability_maturation_disabled"}
+        layer = self.get_capability_maturation_layer()
+        return layer.get_state()
+
+    async def run_capability_maturation(self) -> Optional[dict]:
+        if not self.capability_maturation_enabled:
+            return None
+        layer = self.get_capability_maturation_layer()
+        result = layer.run_maturation()
+        self._last_capability_maturation_audit_result = result.model_dump()
+        return self._last_capability_maturation_audit_result
+
+    async def run_capability_maturation_audit(self) -> Optional[dict]:
+        if not self.capability_maturation_enabled:
+            return None
+        from speace_core.cellular_brain.capability_maturation.capability_maturation_audit import (
+            CapabilityMaturationAudit,
+        )
+        audit = CapabilityMaturationAudit(seed=42)
+        result = audit.run_audit()
+        self._last_capability_maturation_audit_result = result.model_dump()
+        return self._last_capability_maturation_audit_result
 
     @classmethod
     def build_mvp(cls, genome: SharedGenome) -> "CellularBrainOrchestrator":
