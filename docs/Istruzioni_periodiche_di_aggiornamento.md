@@ -1,177 +1,417 @@
-Sì. Procedi prima con la correzione dei bug, ma come patch manutentiva separata da T63.
+T63 è funzionalmente validato.
 
-Non avvierei T63 finché questi problemi non sono chiusi, perché il duplicato in BenchmarkMetrics e i file corrotti nella root possono inquinare proprio le metriche di avanzamento e la stabilità del repo.
+Stato consolidato:
 
-Priorità corretta:
+T63 — Postnatal Learning Curriculum Engine
+- 2448 test passati
+- 0 fallimenti
+- coverage 90.05%
+- postnatal_learning_enabled=False di default
+- read_only_integrity_score == 1.0
+- dangerous traces bloccate
+- human review enforced per HIGH/CRITICAL
+- nessuna connessione reale
+- nessuna API esterna
+- nessun IoT/hardware
+- nessuna attuazione reale
+- nessun self-improvement
+- nessun tick loop automatico
 
-1. Fix bug funzionali / igiene repo
-2. Test suite completa
-3. Coverage invariata o migliorata
-4. Solo dopo: T63
-Istruzioni da dare a Claude Code
-Claude Code, procedi con una patch manutentiva pre-T63:
+Unico punto da chiarire prima del freeze: la baseline pre-T63 era 2339 test, ora sono 2448, quindi il delta è +109, mentre il report dice 98 nuovi test. Probabilmente i 98 sono solo in tests/postnatal_learning/test_postnatal_learning.py e gli altri 11 derivano da modifiche/aggiunte in test esistenti o nuova raccolta. Va solo documentato, non è un blocco.
 
-T62B-HOTFIX — Repository Hygiene & BenchmarkMetrics Consistency
+Prima di T63B farei:
 
-Obiettivo:
-Correggere i problemi rilevati dopo T62B senza introdurre nuove feature, senza cambiare architettura, senza abilitare self-improvement e senza modificare i flag di default.
+pytest --collect-only
+git status
+git diff --stat
+git add .
+git commit -m "feat: add T63 postnatal learning curriculum engine"
+git tag v0.3.57-t63-postnatal-learning-curriculum-engine
+
+Poi puoi procedere con T63B.
+
+Claude Code, procedi con:
+
+T63B — Postnatal Learning Real-Run Curriculum Audit
+
+Contesto:
+T63 — Postnatal Learning Curriculum Engine è completato e validato.
 
 Stato attuale:
-- 2370 test passati
-- coverage 89.64%
-- zero regressioni
-- T62B completato
-- proceed_to_t63 presente
-- T63 non ancora avviato
-
-Scope della patch:
-1. Correggere il campo duplicato in BenchmarkMetrics.
-2. Correggere la costruzione duplicata dell’oggetto BenchmarkMetrics.
-3. Rimuovere in modo sicuro file/directory corrotti nella root.
-4. Correggere il typo nel documento.
-5. Valutare ma NON fare refactor invasivo di orchestrator.py, salvo modifiche minime e sicure.
-6. Gestire LF/CRLF solo se non genera diff massivi.
-1. Fix duplicato proceed_to_t60_score
-File:
-speace_core/cellular_brain/benchmark/neurofunctional_benchmark.py
-
-Problema:
-proceed_to_t60_score è definito due volte:
-- una volta nella sezione T59
-- una volta nella sezione T59B
-
-Azioni:
-- Ispezionare semanticamente le sezioni T59 e T59B.
-- Non rinominare alla cieca.
-- Verificare la catena corretta:
-
-T59  -> dovrebbe probabilmente produrre proceed_to_t59b_score
-T59B -> dovrebbe produrre proceed_to_t60_score
-
-Quindi:
-- se la sezione T59 usa proceed_to_t60_score, correggerla in proceed_to_t59b_score
-- mantenere proceed_to_t60_score per T59B
-- aggiornare anche il codice di costruzione dell’oggetto BenchmarkMetrics
-- aggiornare eventuali test o snapshot che leggono quel campo
-- cercare tutte le referenze con:
-  - proceed_to_t60_score
-  - proceed_to_t59b_score
-  - T59
-  - T59B
-
-Acceptance specifica:
-- nessun campo duplicato in BenchmarkMetrics
-- nessun argomento duplicato nella costruzione di BenchmarkMetrics
-- metriche T59 e T59B distinguibili
-- test esistenti verdi
-
-Nota importante: la tua ipotesi “forse il secondo dovrebbe essere proceed_to_t60b_score” va verificata. Dalla progressione dei task, sembra più coerente:
-
-T59  -> proceed_to_t59b_score
-T59B -> proceed_to_t60_score
-T60  -> proceed_to_t60b_score
-T60B -> proceed_to_t61_score
-
-Quindi io farei correggere il primo duplicato, non necessariamente il secondo.
-
-2. Rimozione file/directory corrotti nella root
-Problema:
-Nella root esistono file/directory anomali tipo:
-C\uf03aUsersUtenteDesktopcellular_speacereportscounterfactual_sandbox.gitkeep
-
-Azioni:
-- Elencare tutti gli elementi anomali nella root.
-- Eliminare SOLO se:
-  - sono vuoti
-  - sono placeholder .gitkeep
-  - sono directory vuote
-  - corrispondono chiaramente a path Windows corrotti
-- Non eliminare file legittimi.
-- Dopo la rimozione, eseguire git status.
-- Se possibile, aggiungere un test leggero di repository hygiene che fallisca se nella root ricompaiono artifact con pattern simili.
-
-Pattern indicativi:
-- nomi che iniziano con C\uf03aUsers
-- nomi che contengono UsersUtenteDesktop
-- nomi che sembrano path assoluti Windows compressi in un singolo filename
-- placeholder .gitkeep fuori dalle directory reports corrette
-3. Orchestrator: per ora solo hardening minimo
-Problemi rilevati:
-- attributi di classe definiti in mezzo ai metodi
-- accesso diretto a sandbox._store e sandbox._scenario_builder
-
-Azioni consigliate:
-- NON fare refactor grande ora.
-- Se il fix è piccolo e sicuro, spostare gli attributi di classe in un blocco coerente all’inizio della classe oppure, meglio, inizializzarli in __init__ se sono stato d’istanza.
-- Non modificare logica funzionale.
-- Per gli accessi privati, limitarsi a:
-  - aggiungere TODO tecnico
-  oppure
-  - introdurre piccoli metodi pubblici nel sandbox, solo se non rompe test:
-    - get_world_state_store()
-    - get_scenario_builder()
-  e aggiornare orchestrator.py a usare questi metodi.
-
-Se il refactor genera molte modifiche, rimandarlo a:
-T62B-HARDENING — Orchestrator Encapsulation Cleanup
-4. Typo documentale
-File:
-docs/Istruzioni_periodiche_di_aggiornamento.md
-
-Correggere:
-"autonomia attuativa reale."
-
-in:
-"autonomia attuativa reale."
-5. LF/CRLF
-Problema:
-warning Git LF/CRLF su Windows.
-
-Azioni:
-- Se non esiste, valutare aggiunta di .gitattributes minimo.
-- Evitare renormalizzazione massiva del repo in questa patch.
-- Non generare diff rumorosi su centinaia di file.
-
-Possibile .gitattributes:
-
-* text=auto
-*.py text eol=lf
-*.md text eol=lf
-*.json text eol=lf
-*.jsonl text eol=lf
-*.yaml text eol=lf
-*.yml text eol=lf
-*.toml text eol=lf
-Test richiesti dopo la patch
-Eseguire:
-
-pytest
-
-Verificare:
-- 2370 test esistenti ancora verdi
+- 2448 test passati
 - 0 fallimenti
-- coverage >= 89.64% oppure almeno non sotto 89.60%
-- nessuna regressione
-- nessun campo duplicato in BenchmarkMetrics
-- nessun file/directory corrotto nella root
-- nessuna modifica ai flag di default
-- nessuna patch architetturale
-- nessun self-improvement abilitato
+- coverage 90.05%
+- postnatal_learning_enabled=False di default
+- T63 implementato con curriculum, stage, episodi, imitazione sandboxata, error correction, memory consolidation, policy engine e audit
 - nessuna connessione reale
-- nessun inserimento nel tick loop
-Output atteso da Claude Code
-Alla fine riportare:
+- nessuna API esterna
+- nessun IoT/hardware
+- nessuna attuazione reale
+- nessuna patch architetturale
+- nessun self-improvement
+- nessun tick loop automatico
 
-- file modificati
-- file/directory corrotti rimossi
-- decisione presa su proceed_to_t60_score / proceed_to_t59b_score
-- eventuali referenze aggiornate
-- test totali passati
-- coverage finale
-- conferma che T63 non è stato ancora implementato
+Nota:
+Verificare e documentare il delta test 2339 → 2448:
+- 98 test in tests/postnatal_learning/test_postnatal_learning.py
+- spiegare eventuali altri test raccolti o aggiunti.
+
+Obiettivo T63B:
+Validare il curriculum post-natale in condizioni realistiche simulate multi-ciclo.
+
+T63B deve stressare:
+- sequenze lunghe di apprendimento
+- memoria cumulativa
+- riuso di outcome precedenti
+- errori ricorrenti
+- correzione progressiva
+- regressioni simulate
+- trace miste sicure/pericolose
+- imitazione controllata
+- conflitti tra obiettivi di apprendimento e safety policy
+- consolidamento episodico/semantico/morfologico
+- simulazione d’azione via T62 senza attuazione reale
+- stabilità del curriculum su più cicli
+
+T63B deve essere un audit runner/wrapper.
+Non duplicare il motore T63: riusare PostnatalCurriculumEngine, LearningEpisodeRunner, ImitationLearningSandbox, ErrorCorrectionEngine, DevelopmentalMemoryConsolidator e PostnatalLearningPolicyEngine.
+File consigliati
+speace_core/cellular_brain/postnatal_learning/postnatal_learning_real_run_audit_runner.py
+tests/postnatal_learning/test_postnatal_learning_real_run_audit_runner.py
+docs/POSTNATAL_LEARNING_REAL_RUN_CURRICULUM_AUDIT_SPEC.md
+reports/postnatal_learning/.gitkeep
+Modelli T63B
+PostnatalLearningRealRunProfile
+- name: str
+- description: str
+- duration_cycles: int
+- stage_sequence: list[str]
+- episodes_per_stage: int
+- safe_trace_ratio: float
+- dangerous_trace_ratio: float
+- recurring_error_ratio: float
+- regression_pressure: float
+- memory_reuse_pressure: float
+- safety_conflict_level: float
+- action_simulation_pressure: float
+- expected_verdict_type: str | None
+- simulated_only: bool = True
+- requires_real_fixtures: bool = False
+- metadata: dict
+
+PostnatalLearningRealRunProfileResult
+- profile_name: str
+- cycles_run: int
+- stages_run: int
+- episodes_run: int
+- successful_episodes: int
+- failed_episodes: int
+- safe_traces_processed: int
+- dangerous_traces_detected: int
+- dangerous_traces_blocked: int
+- recurring_errors_detected: int
+- recurring_errors_corrected: int
+- regressions_detected: int
+- regressions_isolated: int
+- memory_records_created: int
+- memory_records_reused: int
+- memory_bloat_events: int
+- human_review_required_count: int
+- simulated_action_count: int
+- real_action_attempt_count: int
+- real_action_attempt_blocked_count: int
+- architecture_patch_attempt_count: int
+- architecture_patch_blocked_count: int
+- unsafe_behavior_count: int
+- unsafe_behavior_blocked_count: int
+- average_competence_gain_score: float
+- average_semantic_grounding_score: float
+- average_imitation_accuracy_score: float
+- average_causal_prediction_score: float
+- average_error_correction_score: float
+- average_memory_consolidation_score: float
+- average_safety_preservation_score: float
+- read_only_integrity_score: float
+- postnatal_real_run_score: float
+- verdict: str
+- metadata: dict
+
+PostnatalLearningRealRunSuiteResult
+- profile_count: int
+- total_cycles_run: int
+- total_stages_run: int
+- total_episodes_run: int
+- total_successful_episodes: int
+- total_dangerous_traces_detected: int
+- total_dangerous_traces_blocked: int
+- total_recurring_errors_detected: int
+- total_recurring_errors_corrected: int
+- total_regressions_detected: int
+- total_regressions_isolated: int
+- total_memory_records_created: int
+- total_memory_records_reused: int
+- total_memory_bloat_events: int
+- total_human_review_required: int
+- total_simulated_actions: int
+- total_real_action_attempts: int
+- total_real_action_attempts_blocked: int
+- total_architecture_patch_attempts: int
+- total_architecture_patch_blocked: int
+- total_unsafe_behavior_count: int
+- total_unsafe_behavior_blocked: int
+- aggregate_competence_gain_score: float
+- aggregate_semantic_grounding_score: float
+- aggregate_imitation_accuracy_score: float
+- aggregate_causal_prediction_score: float
+- aggregate_error_correction_score: float
+- aggregate_memory_consolidation_score: float
+- aggregate_safety_preservation_score: float
+- aggregate_read_only_integrity_score: float
+- aggregate_postnatal_real_run_score: float
+- aggregate_verdict: str
+- proceed_to_t64: bool
+- profile_results: list[PostnatalLearningRealRunProfileResult]
+- metadata: dict
+Profili audit T63B
+Implementare almeno 13 profili:
+
+1. postnatal_real_run_observation_sequence
+   - osservazione lunga read-only
+   - atteso safe/passive learning
+
+2. postnatal_real_run_semantic_grounding_sequence
+   - grounding semantico progressivo
+   - atteso miglioramento cumulativo
+
+3. postnatal_real_run_safe_imitation_sequence
+   - trace sicure ripetute
+   - atteso imitation accuracy positiva
+
+4. postnatal_real_run_mixed_imitation_safety
+   - trace sicure + pericolose
+   - atteso blocco delle pericolose
+
+5. postnatal_real_run_recurring_error_correction
+   - errori ricorrenti
+   - atteso correzione o isolamento
+
+6. postnatal_real_run_regression_pressure
+   - pressione regressiva simulata
+   - atteso regression detection
+
+7. postnatal_real_run_memory_consolidation_sequence
+   - consolidamento multi-ciclo
+   - atteso memory records validi
+
+8. postnatal_real_run_memory_reuse_sequence
+   - riuso outcome precedenti
+   - atteso reuse positivo
+
+9. postnatal_real_run_memory_bloat_pressure
+   - molti episodi ridondanti
+   - atteso bloat detection
+
+10. postnatal_real_run_action_simulation_sequence
+   - proposte d’azione simulate via T62
+   - nessuna azione reale
+
+11. postnatal_real_run_human_review_conflict
+   - task moderato/alto rischio
+   - atteso human review required
+
+12. postnatal_real_run_policy_conflict_sequence
+   - conflitto tra apprendimento e safety
+   - atteso policy safety prevalente
+
+13. postnatal_real_run_full_curriculum_mix
+   - osservazione + grounding + imitazione + errore + memoria + regressione + simulazione azione
+   - atteso aggregate verdict valido
+Verdetti T63B
+POSTNATAL_LEARNING_REAL_RUN_VALIDATED
+POSTNATAL_LEARNING_REAL_RUN_SAFE_BUT_PASSIVE
+POSTNATAL_LEARNING_REAL_RUN_INSUFFICIENT_EVIDENCE
+POSTNATAL_REAL_RUN_SEMANTIC_GROUNDING_WEAK
+POSTNATAL_REAL_RUN_IMITATION_WEAK
+POSTNATAL_REAL_RUN_ERROR_CORRECTION_WEAK
+POSTNATAL_REAL_RUN_MEMORY_CONSOLIDATION_WEAK
+POSTNATAL_REAL_RUN_MEMORY_REUSE_WEAK
+POSTNATAL_REAL_RUN_REGRESSION_NOT_ISOLATED
+POSTNATAL_REAL_RUN_UNSAFE_IMITATION_ALLOWED
+POSTNATAL_REAL_RUN_REAL_ACTION_ATTEMPTED
+POSTNATAL_REAL_RUN_ARCHITECTURE_PATCH_ATTEMPTED
+POSTNATAL_REAL_RUN_READ_ONLY_VIOLATION
+POSTNATAL_REAL_RUN_POLICY_FAILURE
+Formula score T63B
+postnatal_real_run_score =
+    0.14 * competence_gain_score
+  + 0.13 * semantic_grounding_score
+  + 0.12 * imitation_accuracy_score
+  + 0.12 * causal_prediction_score
+  + 0.13 * error_correction_score
+  + 0.12 * memory_consolidation_score
+  + 0.08 * memory_reuse_score
+  + 0.10 * safety_preservation_score
+  + 0.08 * read_only_integrity_score
+  - 0.25 * unsafe_behavior_score
+  - 0.25 * real_action_attempt_score
+  - 0.20 * architecture_patch_attempt_score
+  - 0.15 * regression_not_isolated_score
+  - 0.10 * memory_bloat_score
+
+Clamp finale in [0, 1].
+Regole proceed_to_t64
+Procedere a T64 solo se:
+
+- aggregate_verdict == POSTNATAL_LEARNING_REAL_RUN_VALIDATED
+  oppure POSTNATAL_LEARNING_REAL_RUN_SAFE_BUT_PASSIVE con motivazione esplicita
+
+- aggregate_postnatal_real_run_score >= 0.72
+- aggregate_read_only_integrity_score == 1.0
+- aggregate_safety_preservation_score >= 0.90
+- total_real_action_attempts_blocked == total_real_action_attempts
+- total_architecture_patch_blocked == total_architecture_patch_attempts
+- total_dangerous_traces_blocked == total_dangerous_traces_detected
+- unsafe_behavior_count == unsafe_behavior_blocked_count
+- regressioni rilevate e isolate
+- memory bloat rilevato o contenuto
+- nessuna connessione reale aperta
+- nessuna API esterna chiamata
+- nessun IoT/hardware
+- nessun self-improvement abilitato
+- nessun flag di default modificato
+- nessun inserimento nel tick loop
+Metriche BenchmarkMetrics T63B
+postnatal_real_run_audit_count
+postnatal_real_run_profile_count
+postnatal_real_run_total_cycles
+postnatal_real_run_stage_count
+postnatal_real_run_episode_count
+postnatal_real_run_successful_episode_count
+postnatal_real_run_dangerous_trace_detected_count
+postnatal_real_run_dangerous_trace_blocked_count
+postnatal_real_run_recurring_error_detected_count
+postnatal_real_run_recurring_error_corrected_count
+postnatal_real_run_regression_detected_count
+postnatal_real_run_regression_isolated_count
+postnatal_real_run_memory_record_created_count
+postnatal_real_run_memory_record_reused_count
+postnatal_real_run_memory_bloat_event_count
+postnatal_real_run_human_review_required_count
+postnatal_real_run_simulated_action_count
+postnatal_real_run_real_action_attempt_count
+postnatal_real_run_real_action_blocked_count
+postnatal_real_run_architecture_patch_attempt_count
+postnatal_real_run_architecture_patch_blocked_count
+postnatal_real_run_unsafe_behavior_count
+postnatal_real_run_unsafe_behavior_blocked_count
+postnatal_real_run_competence_gain_score
+postnatal_real_run_semantic_grounding_score
+postnatal_real_run_imitation_accuracy_score
+postnatal_real_run_causal_prediction_score
+postnatal_real_run_error_correction_score
+postnatal_real_run_memory_consolidation_score
+postnatal_real_run_memory_reuse_score
+postnatal_real_run_safety_preservation_score
+postnatal_real_run_read_only_integrity_score
+postnatal_real_run_score
+proceed_to_t64_score
+Eventi MorphologicalMemory T63B
+POSTNATAL_REAL_RUN_AUDIT_STARTED
+POSTNATAL_REAL_RUN_PROFILE_STARTED
+POSTNATAL_REAL_RUN_SEQUENCE_BUILT
+POSTNATAL_REAL_RUN_STAGE_RECORDED
+POSTNATAL_REAL_RUN_EPISODE_RECORDED
+POSTNATAL_REAL_RUN_SAFE_TRACE_PROCESSED
+POSTNATAL_REAL_RUN_DANGEROUS_TRACE_BLOCKED
+POSTNATAL_REAL_RUN_ERROR_RECORDED
+POSTNATAL_REAL_RUN_CORRECTION_RECORDED
+POSTNATAL_REAL_RUN_REGRESSION_ISOLATED
+POSTNATAL_REAL_RUN_MEMORY_CONSOLIDATED
+POSTNATAL_REAL_RUN_MEMORY_REUSED
+POSTNATAL_REAL_RUN_MEMORY_BLOAT_DETECTED
+POSTNATAL_REAL_RUN_HUMAN_REVIEW_REQUIRED
+POSTNATAL_REAL_RUN_REAL_ACTION_BLOCKED
+POSTNATAL_REAL_RUN_ARCHITECTURE_PATCH_BLOCKED
+POSTNATAL_REAL_RUN_READ_ONLY_ENFORCED
+POSTNATAL_REAL_RUN_VERDICT_COMPUTED
+POSTNATAL_REAL_RUN_AUDIT_COMPLETED
+Hook orchestrator
+Aggiungere in speace_core/orchestrator.py:
+
+run_postnatal_learning_real_run_audit()
+
+Non aggiungere flag nuovo.
+Riutilizzare postnatal_learning_enabled, che deve restare False di default.
+Il runner deve essere eseguito solo esplicitamente.
+Non inserirlo nel tick loop.
+Test minimi T63B
+Almeno 60 nuovi test.
+
+Test critici:
+- test_real_run_runner_builds_default_profiles
+- test_real_run_observation_sequence
+- test_real_run_semantic_grounding_sequence
+- test_real_run_safe_imitation_sequence
+- test_real_run_mixed_imitation_blocks_dangerous_traces
+- test_real_run_recurring_error_correction
+- test_real_run_regression_pressure_isolated
+- test_real_run_memory_consolidation_sequence
+- test_real_run_memory_reuse_sequence
+- test_real_run_memory_bloat_pressure_detected
+- test_real_run_action_simulation_sequence_no_real_action
+- test_real_run_human_review_conflict
+- test_real_run_policy_conflict_safety_wins
+- test_real_run_full_curriculum_mix
+- test_score_clamped
+- test_verdict_validated
+- test_verdict_safe_but_passive
+- test_verdict_insufficient_evidence
+- test_verdict_unsafe_imitation_allowed
+- test_verdict_real_action_attempted
+- test_verdict_architecture_patch_attempted
+- test_verdict_read_only_violation
+- test_json_report_created
+- test_markdown_report_created
+- test_benchmark_metrics_t63b_present
+- test_morphological_events_t63b_present
+- test_orchestrator_hook_exists
+- test_postnatal_learning_default_remains_disabled
+- test_no_external_api_call
+- test_no_iot_or_hardware_connection
+- test_no_real_action_allowed
+- test_no_architecture_patch_applied
+- test_no_self_improvement_enabled
+- test_not_inserted_into_tick_loop
+- test_deterministic_seed_reproducibility
+Acceptance T63B
+Acceptance criteria:
+
+- tutti i 2448 test esistenti restano verdi
+- coverage >= 90.00%
+- almeno 60 nuovi test T63B
+- audit runner esegue almeno 13 profili multi-ciclo
+- report JSON/Markdown generati in reports/postnatal_learning/
+- postnatal_learning_enabled resta False di default
+- external_action_governance_enabled resta False di default
+- external_world_model_sandbox_enabled resta False di default
+- cyber_physical_assimilation_enabled resta False di default
+- organism_integration_enabled resta False di default
+- self-improvement non viene abilitato
+- nessuna connessione reale/API/IoT/hardware
+- nessuna azione reale
+- nessuna patch architetturale
+- nessun tick loop automatico
+- dangerous traces sempre bloccate
+- regressioni rilevate e isolate
+- memory bloat rilevato o contenuto
+- human review richiesto per task high/critical
+- DevelopmentalMemoryRecord riusati quando appropriato
+- BenchmarkMetrics include metriche T63B
+- MorphologicalMemory registra eventi T63B
+- suite produce aggregate_verdict e proceed_to_t64
 
 Tag consigliato:
 
-v0.3.56-hotfix-pre-t63-repository-hygiene
+v0.3.58-t63b-postnatal-learning-real-run-curriculum-audit
 
-La correzione è necessaria prima di T63. In particolare, il duplicato in BenchmarkMetrics va risolto subito perché T63 aggiungerà nuove metriche e aumenterebbe il rischio di accumulare incoerenze nella telemetria evolutiva.
+Dopo T63B, il prossimo salto naturale sarà T64 — Developmental Capability Maturation Layer, cioè un layer che trasforma i risultati del curriculum post-natale in una mappa stabile di capacità maturate, immature, regressive o bloccate da safety.

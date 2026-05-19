@@ -397,6 +397,16 @@ class MorphologyEventType(str, Enum):
     ACTION_GOVERNANCE_REAL_RUN_PROFILE_COMPLETED = "action_governance_real_run_profile_completed"
     ACTION_GOVERNANCE_REAL_RUN_VERDICT_COMPUTED = "action_governance_real_run_verdict_computed"
     ACTION_GOVERNANCE_REAL_RUN_AUDIT_COMPLETED = "action_governance_real_run_audit_completed"
+    # T63 — Postnatal Learning Curriculum Engine
+    POSTNATAL_LEARNING_STARTED = "postnatal_learning_started"
+    POSTNATAL_LEARNING_EPISODE_STARTED = "postnatal_learning_episode_started"
+    POSTNATAL_LEARNING_EPISODE_COMPLETED = "postnatal_learning_episode_completed"
+    POSTNATAL_LEARNING_ERROR_CORRECTED = "postnatal_learning_error_corrected"
+    POSTNATAL_LEARNING_MEMORY_CONSOLIDATED = "postnatal_learning_memory_consolidated"
+    POSTNATAL_LEARNING_DANGEROUS_TRACE_BLOCKED = "postnatal_learning_dangerous_trace_blocked"
+    POSTNATAL_LEARNING_HUMAN_REVIEW_REQUIRED = "postnatal_learning_human_review_required"
+    POSTNATAL_LEARNING_AUDIT_STARTED = "postnatal_learning_audit_started"
+    POSTNATAL_LEARNING_AUDIT_COMPLETED = "postnatal_learning_audit_completed"
 
 
 class MorphologyEvent(BaseModel):

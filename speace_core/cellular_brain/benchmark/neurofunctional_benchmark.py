@@ -590,6 +590,37 @@ class BenchmarkMetrics(BaseModel):
     action_governance_real_run_read_only_integrity_score: float = 0.0
     action_governance_real_run_score: float = 0.0
     proceed_to_t63_score: float = 0.0
+    # T63 — Postnatal Learning Curriculum Engine metrics
+    postnatal_learning_audit_count: int = 0
+    postnatal_learning_profile_count: int = 0
+    postnatal_learning_total_cycles: int = 0
+    postnatal_learning_episode_count: int = 0
+    postnatal_learning_evaluated_count: int = 0
+    postnatal_learning_blocked_count: int = 0
+    postnatal_learning_simulation_only_count: int = 0
+    postnatal_learning_human_review_only_count: int = 0
+    postnatal_learning_error_detected_count: int = 0
+    postnatal_learning_error_corrected_count: int = 0
+    postnatal_learning_dangerous_trace_detected_count: int = 0
+    postnatal_learning_dangerous_trace_blocked_count: int = 0
+    postnatal_learning_high_risk_count: int = 0
+    postnatal_learning_critical_risk_count: int = 0
+    postnatal_learning_high_or_critical_reviewed_or_blocked_count: int = 0
+    postnatal_learning_memory_record_count: int = 0
+    postnatal_learning_unsafe_memory_record_blocked_count: int = 0
+    postnatal_learning_review_packet_count: int = 0
+    postnatal_learning_unsafe_review_packet_blocked_count: int = 0
+    postnatal_learning_bus_publication_count: int = 0
+    postnatal_learning_unsafe_bus_publication_blocked_count: int = 0
+    postnatal_learning_read_only_violation_count: int = 0
+    postnatal_learning_risk_classification_score: float = 0.0
+    postnatal_learning_error_correction_score: float = 0.0
+    postnatal_learning_human_review_coverage_score: float = 0.0
+    postnatal_learning_policy_consistency_score: float = 0.0
+    postnatal_learning_safety_preservation_score: float = 0.0
+    postnatal_learning_read_only_integrity_score: float = 0.0
+    postnatal_learning_score: float = 0.0
+    proceed_to_t63b_score: float = 0.0
 
 
 class BenchmarkResult(BaseModel):
@@ -2091,6 +2122,72 @@ class NeuroFunctionalBenchmark:
             action_governance_real_run_score = suite_b.get("aggregate_action_governance_real_run_score", 0.0)
             proceed_to_t63_score = 1.0 if suite_b.get("proceed_to_t63", False) else 0.0
 
+        # T63 — Postnatal Learning Curriculum Engine metrics
+        last_pl = getattr(self.orch, "_last_postnatal_learning_audit_result", None)
+        if last_pl is not None:
+            suite_pl = last_pl
+            postnatal_learning_audit_count = suite_pl.get("profile_count", 0)
+            postnatal_learning_profile_count = suite_pl.get("profile_count", 0)
+            postnatal_learning_total_cycles = suite_pl.get("total_cycles_run", 0)
+            postnatal_learning_episode_count = suite_pl.get("total_episodes_generated", 0)
+            postnatal_learning_evaluated_count = suite_pl.get("total_episodes_evaluated", 0)
+            postnatal_learning_blocked_count = suite_pl.get("total_episodes_blocked", 0)
+            postnatal_learning_simulation_only_count = suite_pl.get("total_episodes_simulation_only", 0)
+            postnatal_learning_human_review_only_count = suite_pl.get("total_episodes_human_review_only", 0)
+            postnatal_learning_error_detected_count = suite_pl.get("total_error_episodes_detected", 0)
+            postnatal_learning_error_corrected_count = suite_pl.get("total_error_episodes_corrected", 0)
+            postnatal_learning_dangerous_trace_detected_count = suite_pl.get("total_dangerous_traces_detected", 0)
+            postnatal_learning_dangerous_trace_blocked_count = suite_pl.get("total_dangerous_traces_blocked", 0)
+            postnatal_learning_high_risk_count = suite_pl.get("total_high_risk_episodes", 0)
+            postnatal_learning_critical_risk_count = suite_pl.get("total_critical_risk_episodes", 0)
+            postnatal_learning_high_or_critical_reviewed_or_blocked_count = suite_pl.get("total_high_or_critical_reviewed_or_blocked", 0)
+            postnatal_learning_memory_record_count = suite_pl.get("total_memory_records_generated", 0)
+            postnatal_learning_unsafe_memory_record_blocked_count = suite_pl.get("total_unsafe_memory_records_blocked", 0)
+            postnatal_learning_review_packet_count = suite_pl.get("total_review_packets_generated", 0)
+            postnatal_learning_unsafe_review_packet_blocked_count = suite_pl.get("total_unsafe_review_packets_blocked", 0)
+            postnatal_learning_bus_publication_count = suite_pl.get("total_bus_publications", 0)
+            postnatal_learning_unsafe_bus_publication_blocked_count = suite_pl.get("total_unsafe_bus_publications_blocked", 0)
+            postnatal_learning_read_only_violation_count = suite_pl.get("total_read_only_violations", 0)
+            postnatal_learning_risk_classification_score = suite_pl.get("aggregate_risk_classification_score", 0.0)
+            postnatal_learning_error_correction_score = suite_pl.get("aggregate_error_correction_score", 0.0)
+            postnatal_learning_human_review_coverage_score = suite_pl.get("aggregate_human_review_coverage_score", 0.0)
+            postnatal_learning_policy_consistency_score = suite_pl.get("aggregate_policy_consistency_score", 0.0)
+            postnatal_learning_safety_preservation_score = suite_pl.get("aggregate_safety_preservation_score", 0.0)
+            postnatal_learning_read_only_integrity_score = suite_pl.get("aggregate_read_only_integrity_score", 0.0)
+            postnatal_learning_score = suite_pl.get("aggregate_postnatal_learning_score", 0.0)
+            proceed_to_t63b_score = 1.0 if suite_pl.get("proceed_to_t63b", False) else 0.0
+        else:
+            postnatal_learning_audit_count = 0
+            postnatal_learning_profile_count = 0
+            postnatal_learning_total_cycles = 0
+            postnatal_learning_episode_count = 0
+            postnatal_learning_evaluated_count = 0
+            postnatal_learning_blocked_count = 0
+            postnatal_learning_simulation_only_count = 0
+            postnatal_learning_human_review_only_count = 0
+            postnatal_learning_error_detected_count = 0
+            postnatal_learning_error_corrected_count = 0
+            postnatal_learning_dangerous_trace_detected_count = 0
+            postnatal_learning_dangerous_trace_blocked_count = 0
+            postnatal_learning_high_risk_count = 0
+            postnatal_learning_critical_risk_count = 0
+            postnatal_learning_high_or_critical_reviewed_or_blocked_count = 0
+            postnatal_learning_memory_record_count = 0
+            postnatal_learning_unsafe_memory_record_blocked_count = 0
+            postnatal_learning_review_packet_count = 0
+            postnatal_learning_unsafe_review_packet_blocked_count = 0
+            postnatal_learning_bus_publication_count = 0
+            postnatal_learning_unsafe_bus_publication_blocked_count = 0
+            postnatal_learning_read_only_violation_count = 0
+            postnatal_learning_risk_classification_score = 0.0
+            postnatal_learning_error_correction_score = 0.0
+            postnatal_learning_human_review_coverage_score = 0.0
+            postnatal_learning_policy_consistency_score = 0.0
+            postnatal_learning_safety_preservation_score = 0.0
+            postnatal_learning_read_only_integrity_score = 0.0
+            postnatal_learning_score = 0.0
+            proceed_to_t63b_score = 0.0
+
         return BenchmarkMetrics(
             accuracy_score=final.accuracy,
             coherence_phi=final.coherence_phi,
@@ -2629,6 +2726,37 @@ class NeuroFunctionalBenchmark:
             action_governance_real_run_read_only_integrity_score=action_governance_real_run_read_only_integrity_score,
             action_governance_real_run_score=action_governance_real_run_score,
             proceed_to_t63_score=proceed_to_t63_score,
+            # T63
+            postnatal_learning_audit_count=postnatal_learning_audit_count,
+            postnatal_learning_profile_count=postnatal_learning_profile_count,
+            postnatal_learning_total_cycles=postnatal_learning_total_cycles,
+            postnatal_learning_episode_count=postnatal_learning_episode_count,
+            postnatal_learning_evaluated_count=postnatal_learning_evaluated_count,
+            postnatal_learning_blocked_count=postnatal_learning_blocked_count,
+            postnatal_learning_simulation_only_count=postnatal_learning_simulation_only_count,
+            postnatal_learning_human_review_only_count=postnatal_learning_human_review_only_count,
+            postnatal_learning_error_detected_count=postnatal_learning_error_detected_count,
+            postnatal_learning_error_corrected_count=postnatal_learning_error_corrected_count,
+            postnatal_learning_dangerous_trace_detected_count=postnatal_learning_dangerous_trace_detected_count,
+            postnatal_learning_dangerous_trace_blocked_count=postnatal_learning_dangerous_trace_blocked_count,
+            postnatal_learning_high_risk_count=postnatal_learning_high_risk_count,
+            postnatal_learning_critical_risk_count=postnatal_learning_critical_risk_count,
+            postnatal_learning_high_or_critical_reviewed_or_blocked_count=postnatal_learning_high_or_critical_reviewed_or_blocked_count,
+            postnatal_learning_memory_record_count=postnatal_learning_memory_record_count,
+            postnatal_learning_unsafe_memory_record_blocked_count=postnatal_learning_unsafe_memory_record_blocked_count,
+            postnatal_learning_review_packet_count=postnatal_learning_review_packet_count,
+            postnatal_learning_unsafe_review_packet_blocked_count=postnatal_learning_unsafe_review_packet_blocked_count,
+            postnatal_learning_bus_publication_count=postnatal_learning_bus_publication_count,
+            postnatal_learning_unsafe_bus_publication_blocked_count=postnatal_learning_unsafe_bus_publication_blocked_count,
+            postnatal_learning_read_only_violation_count=postnatal_learning_read_only_violation_count,
+            postnatal_learning_risk_classification_score=postnatal_learning_risk_classification_score,
+            postnatal_learning_error_correction_score=postnatal_learning_error_correction_score,
+            postnatal_learning_human_review_coverage_score=postnatal_learning_human_review_coverage_score,
+            postnatal_learning_policy_consistency_score=postnatal_learning_policy_consistency_score,
+            postnatal_learning_safety_preservation_score=postnatal_learning_safety_preservation_score,
+            postnatal_learning_read_only_integrity_score=postnatal_learning_read_only_integrity_score,
+            postnatal_learning_score=postnatal_learning_score,
+            proceed_to_t63b_score=proceed_to_t63b_score,
         )
 
     def generate_json_report(self, result: BenchmarkResult) -> Path:

@@ -1125,6 +1125,42 @@ class CellularBrainOrchestrator(BaseModel):
         self._last_cyber_physical_real_run_audit_result = suite.model_dump()
         return self._last_cyber_physical_real_run_audit_result
 
+    # T63 — Postnatal Learning Curriculum Engine
+    postnatal_learning_enabled: bool = False
+    _postnatal_curriculum_engine = None
+    _last_postnatal_learning_audit_result = None
+
+    def get_postnatal_curriculum_engine(self):
+        if self._postnatal_curriculum_engine is None:
+            from speace_core.cellular_brain.postnatal_learning.postnatal_curriculum_engine import (
+                PostnatalCurriculumEngine,
+            )
+            self._postnatal_curriculum_engine = PostnatalCurriculumEngine(seed=42)
+        return self._postnatal_curriculum_engine
+
+    def get_postnatal_learning_state(self) -> dict:
+        if not self.postnatal_learning_enabled:
+            return {"error": "postnatal_learning_disabled"}
+        engine = self.get_postnatal_curriculum_engine()
+        return {"stages": [s.model_dump() for s in engine.get_stages()]}
+
+    async def run_postnatal_learning_curriculum(self) -> Optional[dict]:
+        if not self.postnatal_learning_enabled:
+            return None
+        engine = self.get_postnatal_curriculum_engine()
+        return {"state": "curriculum_ready", "stages_count": len(engine.get_stages())}
+
+    async def run_postnatal_learning_audit(self) -> Optional[dict]:
+        if not self.postnatal_learning_enabled:
+            return None
+        from speace_core.cellular_brain.postnatal_learning.postnatal_learning_audit import (
+            PostnatalLearningAudit,
+        )
+        audit = PostnatalLearningAudit(seed=42)
+        suite = audit.run_audit_suite()
+        self._last_postnatal_learning_audit_result = suite.model_dump()
+        return self._last_postnatal_learning_audit_result
+
     @classmethod
     def build_mvp(cls, genome: SharedGenome) -> "CellularBrainOrchestrator":
         n_inputs = 10
