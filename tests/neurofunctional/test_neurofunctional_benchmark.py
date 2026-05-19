@@ -249,21 +249,162 @@ async def test_adaptation_in_burst_mode_with_stdp_and_inhibition(benchmark, orch
 
 
 @pytest.mark.asyncio
-async def test_adaptation_in_burst_mode_with_stdp_inhibition_and_energy_control(benchmark, orchestrator):
+async def test_compute_metrics_with_audit_results(benchmark, orchestrator):
     pattern = [1.0 if i % 2 == 0 else 0.0 for i in range(10)]
+    # Set mock audit results to cover T60-T62B branches
+    orchestrator._last_cyber_physical_audit_result = {
+        "profile_count": 1,
+        "total_signals_processed": 2,
+        "total_signals_accepted": 1,
+        "total_signals_quarantined": 1,
+        "total_invalid_signals_blocked": 0,
+        "total_actuation_requests_blocked": 1,
+        "aggregate_world_state_coherence_score": 0.5,
+        "aggregate_assimilation_quality_score": 0.6,
+        "aggregate_cyber_physical_score": 0.7,
+        "aggregate_safety_preservation_score": 0.8,
+        "proceed_to_t60b": True,
+    }
+    orchestrator._last_cyber_physical_real_run_audit_result = {
+        "profile_count": 1,
+        "total_ticks_run": 3,
+        "total_streams_processed": 2,
+        "total_signals_processed": 2,
+        "total_signals_accepted": 1,
+        "total_signals_quarantined": 1,
+        "total_invalid_signals_blocked": 0,
+        "total_actuation_requests": 1,
+        "total_actuation_requests_blocked": 1,
+        "total_read_only_violations": 0,
+        "total_real_connection_attempts_blocked": 1,
+        "aggregate_world_coherence_score": 0.5,
+        "aggregate_assimilation_quality_score": 0.6,
+        "aggregate_safety_preservation_score": 0.7,
+        "aggregate_read_only_integrity_score": 1.0,
+        "aggregate_cyber_physical_real_run_score": 0.8,
+        "proceed_to_t61": True,
+    }
+    orchestrator._last_world_model_audit_result = {
+        "profile_count": 1,
+        "total_snapshots_generated": 2,
+        "profile_results": [{"snapshots_generated": 2}],
+        "total_scenarios_built": 1,
+        "total_simulations_run": 1,
+        "total_causal_chains_detected": 1,
+        "total_contradictions_detected": 0,
+        "total_constraint_violations_detected": 0,
+        "total_unsafe_simulated_actions_blocked": 1,
+        "total_real_action_attempts_blocked": 1,
+        "total_bus_publications": 1,
+        "total_read_only_violations": 0,
+        "aggregate_world_model_coherence_score": 0.5,
+        "aggregate_prediction_quality_score": 0.6,
+        "aggregate_safety_preservation_score": 0.7,
+        "aggregate_read_only_integrity_score": 1.0,
+        "aggregate_world_model_sandbox_score": 0.8,
+        "proceed_to_t61b": True,
+    }
+    orchestrator._last_world_model_real_run_audit_result = {
+        "profile_count": 1,
+        "total_ticks_run": 2,
+        "total_snapshots_generated": 1,
+        "profile_results": [{"snapshots_generated": 1}],
+        "total_scenarios_built": 1,
+        "total_simulations_run": 1,
+        "total_entities_simulated": 3,
+        "total_zones_simulated": 2,
+        "total_constraints_evaluated": 1,
+        "total_causal_links_traced": 2,
+        "total_causal_chains_evaluated": 1,
+        "total_contradictions_detected": 0,
+        "total_constraint_violations_detected": 0,
+        "total_prediction_drifts_detected": 0,
+        "total_coherence_collapses_detected": 0,
+        "total_unsafe_simulated_actions_blocked": 1,
+        "total_real_action_attempts": 1,
+        "total_real_action_attempts_blocked": 1,
+        "total_read_only_violations": 0,
+        "total_bus_publications": 1,
+        "aggregate_world_model_coherence_score": 0.5,
+        "aggregate_prediction_quality_score": 0.6,
+        "aggregate_safety_preservation_score": 0.7,
+        "aggregate_read_only_integrity_score": 1.0,
+        "aggregate_world_model_real_run_score": 0.8,
+        "proceed_to_t62": True,
+    }
+    orchestrator._last_external_action_governance_audit_result = {
+        "profile_count": 1,
+        "total_proposals_generated": 3,
+        "total_proposals_blocked": 1,
+        "total_proposals_simulation_only": 1,
+        "total_proposals_human_review_only": 1,
+        "total_safe_noop_count": 0,
+        "total_real_execution_attempts": 1,
+        "total_real_execution_attempts_blocked": 1,
+        "total_unsafe_action_attempts": 0,
+        "total_unsafe_action_attempts_blocked": 0,
+        "total_review_packets_generated": 1,
+        "total_bus_publications": 1,
+        "total_unsafe_bus_publications_blocked": 0,
+        "total_read_only_violations": 0,
+        "aggregate_risk_classification_score": 0.5,
+        "aggregate_reversibility_score": 0.6,
+        "aggregate_human_review_coverage_score": 0.7,
+        "aggregate_policy_consistency_score": 0.8,
+        "aggregate_safety_preservation_score": 0.9,
+        "aggregate_read_only_integrity_score": 1.0,
+        "aggregate_action_governance_sandbox_score": 0.85,
+        "proceed_to_t62b": True,
+    }
+    orchestrator._last_external_action_governance_real_run_audit_result = {
+        "profile_count": 1,
+        "total_cycles_run": 2,
+        "total_proposals_generated": 3,
+        "total_proposals_evaluated": 3,
+        "total_proposals_blocked": 1,
+        "total_proposals_simulation_only": 1,
+        "total_proposals_human_review_only": 1,
+        "total_high_risk_proposals": 1,
+        "total_critical_risk_proposals": 0,
+        "total_high_or_critical_reviewed_or_blocked": 1,
+        "total_irreversible_actions_detected": 0,
+        "total_irreversible_actions_blocked": 0,
+        "total_real_execution_attempts": 1,
+        "total_real_execution_attempts_blocked": 1,
+        "total_external_connection_attempts": 0,
+        "total_external_connection_attempts_blocked": 0,
+        "total_unsafe_payload_attempts": 0,
+        "total_unsafe_payload_attempts_blocked": 0,
+        "total_review_packets_generated": 1,
+        "total_unsafe_review_packets_blocked": 0,
+        "total_bus_publications": 1,
+        "total_unsafe_bus_publications_blocked": 0,
+        "total_read_only_violations": 0,
+        "aggregate_risk_classification_score": 0.5,
+        "aggregate_reversibility_score": 0.6,
+        "aggregate_human_review_coverage_score": 0.7,
+        "aggregate_policy_consistency_score": 0.8,
+        "aggregate_safety_preservation_score": 0.9,
+        "aggregate_read_only_integrity_score": 1.0,
+        "aggregate_action_governance_real_run_score": 0.85,
+        "proceed_to_t63": True,
+    }
     result = await benchmark.run_case(
         "adaptation_after_error",
-        execution_mode="event_driven_burst",
-        stdp_enabled=True,
-        inhibition_enabled=True,
-        energy_control_enabled=True,
         input_pattern=pattern,
         target_output=pattern,
-        n_ticks=3,
+        n_ticks=1,
     )
-
     assert result.case_name == "adaptation_after_error"
-    assert result.baseline_state.neuron_count > 0
-    assert result.final_state.neuron_count > 0
-    assert result.final_state.coherence_phi > 0.0
-    assert 0.0 <= result.metrics.speace_cognitive_score <= 1.0
+    m = result.metrics
+    assert m.cyber_physical_audit_count == 1
+    assert m.cyber_physical_real_run_audit_count == 1
+    assert m.world_model_audit_count == 1
+    assert m.world_model_real_run_audit_count == 1
+    assert m.action_governance_audit_count == 1
+    assert m.action_governance_real_run_audit_count == 1
+    assert m.proceed_to_t60b_score == 1.0
+    assert m.proceed_to_t61_score == 1.0
+    assert m.proceed_to_t61b_score == 1.0
+    assert m.proceed_to_t62b_score == 1.0
+    assert m.proceed_to_t63_score == 1.0

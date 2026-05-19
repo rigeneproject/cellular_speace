@@ -112,6 +112,25 @@ class CellularBrainOrchestrator(BaseModel):
     _last_brainstem_result = None
     _brainstem_gain_controller = None
     _last_brainstem_gain_result = None
+    # T54 — Controlled Perturbation & Recovery Audit
+    perturbation_recovery_audit_enabled: bool = False
+    _perturbation_recovery_audit = None
+    # T55 — EDD-CVT Evolutionary Self-Organization Kernel
+    edd_cvt_kernel_enabled: bool = False
+    _edd_cvt_kernel = None
+    # T57 — Evolutionary Memory Governance Layer
+    evolutionary_memory_governance_enabled: bool = False
+    _evolutionary_memory_governor = None
+    # T58 — Metabolic Resource Governance Layer
+    metabolic_governance_enabled: bool = False
+    _metabolic_governor = None
+    # T59 — Organism Integration Bus
+    organism_integration_enabled: bool = False
+    _organism_bus = None
+    # T60 — Cyber-Physical Assimilation Interface
+    cyber_physical_assimilation_enabled: bool = False
+    _cyber_physical_gateway = None
+    _last_cyber_physical_audit_result = None
     # T42 — Cellular Adaptive Defense & Repair
     cellular_adaptive_defense_enabled: bool = False
     cellular_repair_enabled: bool = False
@@ -304,7 +323,7 @@ class CellularBrainOrchestrator(BaseModel):
         flow_memory = None
         if self._region_signal_router is not None:
             flow_memory = getattr(self._region_signal_router, "_t34_flow_memory", None)
-        if self.region_stability_controller_enabled and self._region_registry is not None:
+        if self.region_stability_controller_enabled and self._region_stability_controller is not None and self._region_registry is not None:
             pre_result = self._region_stability_controller.pre_routing_stability_check(
                 registry=self._region_registry,
                 circuit=self.circuit,
@@ -461,7 +480,7 @@ class CellularBrainOrchestrator(BaseModel):
             )
 
         # T33 — Region-Level Stability Controller (post-routing check)
-        if self.region_stability_controller_enabled and self._region_registry is not None:
+        if self.region_stability_controller_enabled and self._region_stability_controller is not None and self._region_registry is not None:
             self._region_stability_controller.post_routing_stability_check(
                 registry=self._region_registry,
                 circuit=self.circuit,
@@ -783,6 +802,328 @@ class CellularBrainOrchestrator(BaseModel):
     def run_self_improvement_cycle(self, metrics: dict):
         loop = self.get_self_improvement_loop()
         return loop.run_detection_cycle(metrics)
+
+    # ------------------------------------------------------------------ #
+    # T54 — Controlled Perturbation & Recovery Audit
+    # ------------------------------------------------------------------ #
+
+    def get_perturbation_recovery_audit(self):
+        if self._perturbation_recovery_audit is None:
+            from speace_core.cellular_brain.self_organization.perturbation_recovery_audit import (
+                ControlledPerturbationRecoveryAudit,
+            )
+            self._perturbation_recovery_audit = ControlledPerturbationRecoveryAudit(
+                orchestrator=self,
+            )
+        return self._perturbation_recovery_audit
+
+    async def run_perturbation_recovery_audit(self) -> list:
+        if not self.perturbation_recovery_audit_enabled:
+            return []
+        audit = self.get_perturbation_recovery_audit()
+        results = await audit.run_audit_suite()
+        return results
+
+    # T55 — EDD-CVT Evolutionary Self-Organization Kernel
+    def get_edd_cvt_kernel(self):
+        if self._edd_cvt_kernel is None:
+            from speace_core.cellular_brain.evolutionary_kernel.edd_cvt_kernel import (
+                EDDCVTEvolutionaryKernel,
+            )
+            self._edd_cvt_kernel = EDDCVTEvolutionaryKernel(
+                orchestrator=self,
+                enabled=self.edd_cvt_kernel_enabled,
+            )
+        return self._edd_cvt_kernel
+
+    async def run_edd_cvt_cycle(self) -> Optional[Any]:
+        if not self.edd_cvt_kernel_enabled:
+            return None
+        kernel = self.get_edd_cvt_kernel()
+        result = await kernel.run_cycle(tick=self.current_tick)
+        return result
+
+    # T56 — Autonomous Multi-Cycle Evolution With Memory Consolidation
+    def get_multi_cycle_evolution_runner(self):
+        from speace_core.cellular_brain.evolutionary_kernel.multi_cycle_evolution_runner import (
+            MultiCycleEvolutionRunner,
+        )
+        return MultiCycleEvolutionRunner(orchestrator=self)
+
+    async def run_multi_cycle_evolution(self, cycle_count: int = 5) -> Optional[Any]:
+        runner = self.get_multi_cycle_evolution_runner()
+        runner.cycle_count = cycle_count
+        result = await runner.run()
+        return result
+
+    # T57 — Evolutionary Memory Governance Layer
+    def get_evolutionary_memory_governor(self):
+        if self._evolutionary_memory_governor is None:
+            from speace_core.cellular_brain.evolutionary_memory.evolutionary_memory_governor import (
+                EvolutionaryMemoryGovernor,
+            )
+            self._evolutionary_memory_governor = EvolutionaryMemoryGovernor()
+        return self._evolutionary_memory_governor
+
+    async def run_evolutionary_memory_governance_cycle(self) -> Optional[dict]:
+        if not self.evolutionary_memory_governance_enabled:
+            return None
+        governor = self.get_evolutionary_memory_governor()
+        result = governor.run_governance_cycle()
+        return result
+
+    # T58 — Metabolic Resource Governance Layer
+    def get_metabolic_governor(self):
+        if self._metabolic_governor is None:
+            from speace_core.cellular_brain.metabolism.metabolic_governor import MetabolicGovernor
+            self._metabolic_governor = MetabolicGovernor()
+        return self._metabolic_governor
+
+    async def run_metabolic_cycle(self) -> Optional[dict]:
+        if not self.metabolic_governance_enabled:
+            return None
+        governor = self.get_metabolic_governor()
+        result = governor.run_metabolic_cycle()
+        return result
+
+    def get_metabolic_state(self) -> Optional[dict]:
+        if not self.metabolic_governance_enabled:
+            return None
+        governor = self.get_metabolic_governor()
+        state = governor.get_metabolic_state()
+        return state.model_dump()
+
+    async def run_metabolic_audit(self) -> Optional[list]:
+        if not self.metabolic_governance_enabled:
+            return None
+        from speace_core.cellular_brain.metabolism.metabolic_audit import MetabolicAudit
+        governor = self.get_metabolic_governor()
+        audit = MetabolicAudit(governor)
+        results = audit.run_audit_suite()
+        return [r.model_dump() for r in results]
+
+    # T58B — Metabolic Resource Governance Real-Run Audit
+    async def run_metabolic_real_run_audit(self) -> Optional[dict]:
+        if not self.metabolic_governance_enabled:
+            return None
+        from speace_core.cellular_brain.metabolism.metabolic_real_run_audit_runner import (
+            MetabolicRealRunAuditRunner,
+        )
+        governor = self.get_metabolic_governor()
+        runner = MetabolicRealRunAuditRunner(governor=governor)
+        suite = runner.run_audit_suite()
+        return suite.model_dump()
+
+    # T59 — Organism Integration Bus
+    def get_organism_bus(self):
+        if self._organism_bus is None:
+            from speace_core.cellular_brain.organism.organism_bus import OrganismBus
+            self._organism_bus = OrganismBus()
+        return self._organism_bus
+
+    def get_organism_state(self):
+        if not self.organism_integration_enabled:
+            return None
+        from speace_core.cellular_brain.organism.organism_state_synthesizer import (
+            OrganismStateSynthesizer,
+        )
+        synthesizer = OrganismStateSynthesizer()
+        metrics = {
+            "metabolic_mode": "normal",
+            "global_energy_reserve": 1.0,
+            "active_subsystems": [],
+            "degraded_subsystems": [],
+        }
+        return synthesizer.synthesize_state(metrics, tick=self.current_tick)
+
+    async def run_organism_integration_cycle(self) -> Optional[dict]:
+        if not self.organism_integration_enabled:
+            return None
+        from speace_core.cellular_brain.organism.cross_system_coordinator import (
+            CrossSystemCoordinator,
+        )
+        from speace_core.cellular_brain.organism.organism_bus import OrganismBus
+        from speace_core.cellular_brain.organism.subsystem_registry import (
+            SubsystemRegistry,
+        )
+        bus = self.get_organism_bus()
+        registry = SubsystemRegistry()
+        coordinator = CrossSystemCoordinator(bus=bus, registry=registry)
+        state = self.get_organism_state()
+        if state is None:
+            return None
+        decisions = coordinator.coordinate_cycle(state, [])
+        return {"decisions": [d.model_dump() for d in decisions], "tick": self.current_tick}
+
+    async def run_organism_audit(self) -> Optional[dict]:
+        if not self.organism_integration_enabled:
+            return None
+        from speace_core.cellular_brain.organism.organism_audit import OrganismAudit
+        audit = OrganismAudit()
+        suite = audit.run_audit_suite()
+        return suite.model_dump()
+
+    # T59B — Organism Integration Real-Run Audit
+    async def run_organism_real_run_audit(self) -> Optional[dict]:
+        if not self.organism_integration_enabled:
+            return None
+        from speace_core.cellular_brain.organism.organism_real_run_audit_runner import (
+            OrganismRealRunAuditRunner,
+        )
+        runner = OrganismRealRunAuditRunner()
+        suite = runner.run_audit_suite()
+        return suite.model_dump()
+
+    # T60 — Cyber-Physical Assimilation Interface
+    def get_cyber_physical_gateway(self):
+        if self._cyber_physical_gateway is None:
+            from speace_core.cellular_brain.cyber_physical.assimilation_gateway import (
+                AssimilationGateway,
+            )
+            self._cyber_physical_gateway = AssimilationGateway()
+        return self._cyber_physical_gateway
+
+    def ingest_external_signal_simulated(self, signal) -> dict:
+        if not self.cyber_physical_assimilation_enabled:
+            return {"error": "cyber_physical_assimilation_disabled"}
+        gateway = self.get_cyber_physical_gateway()
+        decision = gateway.assimilate_signal(signal)
+        return decision.model_dump()
+
+    def synthesize_world_state(self) -> Optional[dict]:
+        if not self.cyber_physical_assimilation_enabled:
+            return None
+        gateway = self.get_cyber_physical_gateway()
+        return gateway.publish_world_state_to_bus()
+
+    async def run_cyber_physical_audit(self) -> Optional[dict]:
+        if not self.cyber_physical_assimilation_enabled:
+            return None
+        from speace_core.cellular_brain.cyber_physical.cyber_physical_audit import (
+            CyberPhysicalAudit,
+        )
+        audit = CyberPhysicalAudit()
+        suite = audit.run_audit_suite()
+        self._last_cyber_physical_audit_result = suite.model_dump()
+        return self._last_cyber_physical_audit_result
+
+    # T61 — External World Model Sandbox
+    external_world_model_sandbox_enabled: bool = False
+    _external_world_model_sandbox = None
+    _last_world_model_audit_result = None
+
+    def get_external_world_model_sandbox(self):
+        if self._external_world_model_sandbox is None:
+            from speace_core.cellular_brain.world_model.world_model_sandbox import ExternalWorldModelSandbox
+            self._external_world_model_sandbox = ExternalWorldModelSandbox(seed=42)
+        return self._external_world_model_sandbox
+
+    def ingest_world_state_into_world_model(self, cp_snapshot: dict) -> Optional[dict]:
+        if not self.external_world_model_sandbox_enabled:
+            return {"error": "external_world_model_sandbox_disabled"}
+        sandbox = self.get_external_world_model_sandbox()
+        snapshot = sandbox.ingest_world_state_snapshot(cp_snapshot)
+        return snapshot.model_dump()
+
+    def run_external_world_model_scenario(self, snapshot_id: str, scenario_type: str = "baseline") -> Optional[dict]:
+        if not self.external_world_model_sandbox_enabled:
+            return {"error": "external_world_model_sandbox_disabled"}
+        sandbox = self.get_external_world_model_sandbox()
+        snapshot = sandbox._store.get_snapshot(snapshot_id)
+        if snapshot is None:
+            return {"error": "snapshot_not_found"}
+        scenario = sandbox._scenario_builder.build_scenario_from_profile(snapshot, scenario_type)
+        causal, impact = sandbox.run_scenario_simulation(snapshot, scenario)
+        return {
+            "causal_simulation": causal.model_dump(),
+            "impact_assessment": impact.model_dump(),
+        }
+
+    async def run_external_world_model_audit(self) -> Optional[dict]:
+        if not self.external_world_model_sandbox_enabled:
+            return None
+        from speace_core.cellular_brain.world_model.world_model_audit import WorldModelAudit
+        audit = WorldModelAudit(seed=42)
+        suite = audit.run_audit_suite()
+        self._last_world_model_audit_result = suite.model_dump()
+        return self._last_world_model_audit_result
+
+    # T61B — External World Model Real-Run Sandbox Audit
+    async def run_external_world_model_real_run_audit(self) -> Optional[dict]:
+        if not self.external_world_model_sandbox_enabled:
+            return None
+        from speace_core.cellular_brain.world_model.world_model_real_run_audit_runner import (
+            WorldModelRealRunAuditRunner,
+        )
+        runner = WorldModelRealRunAuditRunner(seed=42)
+        suite = runner.run_audit_suite()
+        self._last_world_model_real_run_audit_result = suite.model_dump()
+        return self._last_world_model_real_run_audit_result
+
+    # T62 — External Action Governance Sandbox
+    external_action_governance_enabled: bool = False
+    _external_action_governance_sandbox = None
+    _last_external_action_governance_audit_result = None
+    _last_external_action_governance_real_run_audit_result = None
+
+    def get_external_action_governance_sandbox(self):
+        if self._external_action_governance_sandbox is None:
+            from speace_core.cellular_brain.action_governance.action_governance_sandbox import (
+                ExternalActionGovernanceSandbox,
+            )
+            self._external_action_governance_sandbox = ExternalActionGovernanceSandbox(seed=42)
+        return self._external_action_governance_sandbox
+
+    def generate_external_action_proposals(self, world_model_outputs: list) -> dict:
+        if not self.external_action_governance_enabled:
+            return {"error": "external_action_governance_disabled"}
+        sandbox = self.get_external_action_governance_sandbox()
+        proposals = sandbox.generate_action_proposals(world_model_outputs[0] if world_model_outputs else {})
+        return {"proposals": [p.model_dump() for p in proposals]}
+
+    def evaluate_external_action_proposal(self, proposal: dict) -> dict:
+        if not self.external_action_governance_enabled:
+            return {"error": "external_action_governance_disabled"}
+        from speace_core.cellular_brain.action_governance.action_governance_models import ExternalActionProposal
+        sandbox = self.get_external_action_governance_sandbox()
+        p = ExternalActionProposal(**proposal)
+        decision = sandbox.evaluate_action_proposal(p)
+        return decision.model_dump()
+
+    async def run_external_action_governance_audit(self) -> Optional[dict]:
+        if not self.external_action_governance_enabled:
+            return None
+        from speace_core.cellular_brain.action_governance.action_governance_audit import (
+            ActionGovernanceAudit,
+        )
+        audit = ActionGovernanceAudit(seed=42)
+        suite = audit.run_audit_suite()
+        self._last_external_action_governance_audit_result = suite.model_dump()
+        return self._last_external_action_governance_audit_result
+
+    # T62B — External Action Governance Real-Run Sandbox Audit
+    async def run_external_action_governance_real_run_audit(self) -> Optional[dict]:
+        if not self.external_action_governance_enabled:
+            return None
+        from speace_core.cellular_brain.action_governance.action_governance_real_run_audit_runner import (
+            ActionGovernanceRealRunAuditRunner,
+        )
+        runner = ActionGovernanceRealRunAuditRunner(seed=42)
+        suite = runner.run_audit_suite()
+        self._last_external_action_governance_real_run_audit_result = suite.model_dump()
+        return self._last_external_action_governance_real_run_audit_result
+
+    # T60B — Cyber-Physical Assimilation Real-Run Audit
+    async def run_cyber_physical_real_run_audit(self) -> Optional[dict]:
+        if not self.cyber_physical_assimilation_enabled:
+            return None
+        from speace_core.cellular_brain.cyber_physical.cyber_physical_real_run_audit_runner import (
+            CyberPhysicalRealRunAuditRunner,
+        )
+        runner = CyberPhysicalRealRunAuditRunner()
+        suite = runner.run_audit_suite()
+        self._last_cyber_physical_real_run_audit_result = suite.model_dump()
+        return self._last_cyber_physical_real_run_audit_result
 
     @classmethod
     def build_mvp(cls, genome: SharedGenome) -> "CellularBrainOrchestrator":

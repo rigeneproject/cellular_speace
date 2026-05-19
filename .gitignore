@@ -10,16 +10,17 @@ __pycache__/
 .coverage
 
 # Generated reports (non-baseline)
-reports/neurofunctional/benchmark_*.json
-reports/neurofunctional/benchmark_*.md
-reports/neurofunctional/latest_report.*
-reports/audit/audit_*.json
-reports/audit/audit_*.md
-reports/calibration/calibration_*.json
-reports/calibration/calibration_*.md
+reports/**/*.json
+reports/**/*.md
+!reports/**/.gitkeep
 
 # Runtime data
 data/evolution/*.jsonl
+data/episodic_memory/*.jsonl
+data/self_improvement/*.jsonl
+
+# Coverage
+cov.json
 
 # Temp files
 docs/_temp*.txt
