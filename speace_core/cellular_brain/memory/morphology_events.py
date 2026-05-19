@@ -407,6 +407,26 @@ class MorphologyEventType(str, Enum):
     POSTNATAL_LEARNING_HUMAN_REVIEW_REQUIRED = "postnatal_learning_human_review_required"
     POSTNATAL_LEARNING_AUDIT_STARTED = "postnatal_learning_audit_started"
     POSTNATAL_LEARNING_AUDIT_COMPLETED = "postnatal_learning_audit_completed"
+    # T63B
+    POSTNATAL_REAL_RUN_AUDIT_STARTED = "postnatal_real_run_audit_started"
+    POSTNATAL_REAL_RUN_PROFILE_STARTED = "postnatal_real_run_profile_started"
+    POSTNATAL_REAL_RUN_SEQUENCE_BUILT = "postnatal_real_run_sequence_built"
+    POSTNATAL_REAL_RUN_STAGE_RECORDED = "postnatal_real_run_stage_recorded"
+    POSTNATAL_REAL_RUN_EPISODE_RECORDED = "postnatal_real_run_episode_recorded"
+    POSTNATAL_REAL_RUN_SAFE_TRACE_PROCESSED = "postnatal_real_run_safe_trace_processed"
+    POSTNATAL_REAL_RUN_DANGEROUS_TRACE_BLOCKED = "postnatal_real_run_dangerous_trace_blocked"
+    POSTNATAL_REAL_RUN_ERROR_RECORDED = "postnatal_real_run_error_recorded"
+    POSTNATAL_REAL_RUN_CORRECTION_RECORDED = "postnatal_real_run_correction_recorded"
+    POSTNATAL_REAL_RUN_REGRESSION_ISOLATED = "postnatal_real_run_regression_isolated"
+    POSTNATAL_REAL_RUN_MEMORY_CONSOLIDATED = "postnatal_real_run_memory_consolidated"
+    POSTNATAL_REAL_RUN_MEMORY_REUSED = "postnatal_real_run_memory_reused"
+    POSTNATAL_REAL_RUN_MEMORY_BLOAT_DETECTED = "postnatal_real_run_memory_bloat_detected"
+    POSTNATAL_REAL_RUN_HUMAN_REVIEW_REQUIRED = "postnatal_real_run_human_review_required"
+    POSTNATAL_REAL_RUN_REAL_ACTION_BLOCKED = "postnatal_real_run_real_action_blocked"
+    POSTNATAL_REAL_RUN_ARCHITECTURE_PATCH_BLOCKED = "postnatal_real_run_architecture_patch_blocked"
+    POSTNATAL_REAL_RUN_READ_ONLY_ENFORCED = "postnatal_real_run_read_only_enforced"
+    POSTNATAL_REAL_RUN_VERDICT_COMPUTED = "postnatal_real_run_verdict_computed"
+    POSTNATAL_REAL_RUN_AUDIT_COMPLETED = "postnatal_real_run_audit_completed"
 
 
 class MorphologyEvent(BaseModel):

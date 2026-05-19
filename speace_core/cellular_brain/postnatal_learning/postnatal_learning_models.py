@@ -159,3 +159,99 @@ class PostnatalLearningSuiteResult(BaseModel):
     proceed_to_t63b: bool = False
     profile_results: List[PostnatalLearningProfileResult] = Field(default_factory=list)
     metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class PostnatalLearningRealRunProfile(BaseModel):
+    name: str
+    description: str = ""
+    duration_cycles: int = 3
+    stage_sequence: List[str] = Field(default_factory=list)
+    episodes_per_stage: int = 3
+    safe_trace_ratio: float = 1.0
+    dangerous_trace_ratio: float = 0.0
+    recurring_error_ratio: float = 0.0
+    regression_pressure: float = 0.0
+    memory_reuse_pressure: float = 0.0
+    safety_conflict_level: float = 0.0
+    action_simulation_pressure: float = 0.0
+    expected_verdict_type: Optional[str] = None
+    simulated_only: bool = True
+    requires_real_fixtures: bool = False
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class PostnatalLearningRealRunProfileResult(BaseModel):
+    profile_name: str
+    cycles_run: int = 0
+    stages_run: int = 0
+    episodes_run: int = 0
+    successful_episodes: int = 0
+    failed_episodes: int = 0
+    safe_traces_processed: int = 0
+    dangerous_traces_detected: int = 0
+    dangerous_traces_blocked: int = 0
+    recurring_errors_detected: int = 0
+    recurring_errors_corrected: int = 0
+    regressions_detected: int = 0
+    regressions_isolated: int = 0
+    memory_records_created: int = 0
+    memory_records_reused: int = 0
+    memory_bloat_events: int = 0
+    human_review_required_count: int = 0
+    simulated_action_count: int = 0
+    real_action_attempt_count: int = 0
+    real_action_attempt_blocked_count: int = 0
+    architecture_patch_attempt_count: int = 0
+    architecture_patch_blocked_count: int = 0
+    unsafe_behavior_count: int = 0
+    unsafe_behavior_blocked_count: int = 0
+    average_competence_gain_score: float = 0.0
+    average_semantic_grounding_score: float = 0.0
+    average_imitation_accuracy_score: float = 0.0
+    average_causal_prediction_score: float = 0.0
+    average_error_correction_score: float = 0.0
+    average_memory_consolidation_score: float = 0.0
+    average_safety_preservation_score: float = 0.0
+    read_only_integrity_score: float = 0.0
+    postnatal_real_run_score: float = 0.0
+    verdict: str = "POSTNATAL_LEARNING_REAL_RUN_INSUFFICIENT_EVIDENCE"
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class PostnatalLearningRealRunSuiteResult(BaseModel):
+    profile_count: int = 0
+    total_cycles_run: int = 0
+    total_stages_run: int = 0
+    total_episodes_run: int = 0
+    total_successful_episodes: int = 0
+    total_dangerous_traces_detected: int = 0
+    total_dangerous_traces_blocked: int = 0
+    total_recurring_errors_detected: int = 0
+    total_recurring_errors_corrected: int = 0
+    total_regressions_detected: int = 0
+    total_regressions_isolated: int = 0
+    total_memory_records_created: int = 0
+    total_memory_records_reused: int = 0
+    total_memory_bloat_events: int = 0
+    total_human_review_required: int = 0
+    total_simulated_actions: int = 0
+    total_real_action_attempts: int = 0
+    total_real_action_attempts_blocked: int = 0
+    total_architecture_patch_attempts: int = 0
+    total_architecture_patch_blocked: int = 0
+    total_unsafe_behavior_count: int = 0
+    total_unsafe_behavior_blocked: int = 0
+    aggregate_competence_gain_score: float = 0.0
+    aggregate_semantic_grounding_score: float = 0.0
+    aggregate_imitation_accuracy_score: float = 0.0
+    aggregate_causal_prediction_score: float = 0.0
+    aggregate_error_correction_score: float = 0.0
+    aggregate_memory_consolidation_score: float = 0.0
+    aggregate_memory_reuse_score: float = 0.0
+    aggregate_safety_preservation_score: float = 0.0
+    aggregate_read_only_integrity_score: float = 0.0
+    aggregate_postnatal_real_run_score: float = 0.0
+    aggregate_verdict: str = "POSTNATAL_LEARNING_REAL_RUN_INSUFFICIENT_EVIDENCE"
+    proceed_to_t64: bool = False
+    profile_results: List[PostnatalLearningRealRunProfileResult] = Field(default_factory=list)
+    metadata: Dict[str, Any] = Field(default_factory=dict)

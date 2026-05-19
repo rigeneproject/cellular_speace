@@ -621,6 +621,41 @@ class BenchmarkMetrics(BaseModel):
     postnatal_learning_read_only_integrity_score: float = 0.0
     postnatal_learning_score: float = 0.0
     proceed_to_t63b_score: float = 0.0
+    # T63B
+    postnatal_real_run_audit_count: int = 0
+    postnatal_real_run_profile_count: int = 0
+    postnatal_real_run_total_cycles: int = 0
+    postnatal_real_run_stage_count: int = 0
+    postnatal_real_run_episode_count: int = 0
+    postnatal_real_run_successful_episode_count: int = 0
+    postnatal_real_run_dangerous_trace_detected_count: int = 0
+    postnatal_real_run_dangerous_trace_blocked_count: int = 0
+    postnatal_real_run_recurring_error_detected_count: int = 0
+    postnatal_real_run_recurring_error_corrected_count: int = 0
+    postnatal_real_run_regression_detected_count: int = 0
+    postnatal_real_run_regression_isolated_count: int = 0
+    postnatal_real_run_memory_record_created_count: int = 0
+    postnatal_real_run_memory_record_reused_count: int = 0
+    postnatal_real_run_memory_bloat_event_count: int = 0
+    postnatal_real_run_human_review_required_count: int = 0
+    postnatal_real_run_simulated_action_count: int = 0
+    postnatal_real_run_real_action_attempt_count: int = 0
+    postnatal_real_run_real_action_blocked_count: int = 0
+    postnatal_real_run_architecture_patch_attempt_count: int = 0
+    postnatal_real_run_architecture_patch_blocked_count: int = 0
+    postnatal_real_run_unsafe_behavior_count: int = 0
+    postnatal_real_run_unsafe_behavior_blocked_count: int = 0
+    postnatal_real_run_competence_gain_score: float = 0.0
+    postnatal_real_run_semantic_grounding_score: float = 0.0
+    postnatal_real_run_imitation_accuracy_score: float = 0.0
+    postnatal_real_run_causal_prediction_score: float = 0.0
+    postnatal_real_run_error_correction_score: float = 0.0
+    postnatal_real_run_memory_consolidation_score: float = 0.0
+    postnatal_real_run_memory_reuse_score: float = 0.0
+    postnatal_real_run_safety_preservation_score: float = 0.0
+    postnatal_real_run_read_only_integrity_score: float = 0.0
+    postnatal_real_run_score: float = 0.0
+    proceed_to_t64_score: float = 0.0
 
 
 class BenchmarkResult(BaseModel):
@@ -2188,6 +2223,80 @@ class NeuroFunctionalBenchmark:
             postnatal_learning_score = 0.0
             proceed_to_t63b_score = 0.0
 
+        # T63B — Postnatal Learning Real-Run Curriculum Audit metrics
+        last_plrr = getattr(self.orch, "_last_postnatal_learning_real_run_audit_result", None)
+        if last_plrr is not None:
+            suite_plrr = last_plrr
+            postnatal_real_run_audit_count = suite_plrr.get("profile_count", 0)
+            postnatal_real_run_profile_count = suite_plrr.get("profile_count", 0)
+            postnatal_real_run_total_cycles = suite_plrr.get("total_cycles_run", 0)
+            postnatal_real_run_stage_count = suite_plrr.get("total_stages_run", 0)
+            postnatal_real_run_episode_count = suite_plrr.get("total_episodes_run", 0)
+            postnatal_real_run_successful_episode_count = suite_plrr.get("total_successful_episodes", 0)
+            postnatal_real_run_dangerous_trace_detected_count = suite_plrr.get("total_dangerous_traces_detected", 0)
+            postnatal_real_run_dangerous_trace_blocked_count = suite_plrr.get("total_dangerous_traces_blocked", 0)
+            postnatal_real_run_recurring_error_detected_count = suite_plrr.get("total_recurring_errors_detected", 0)
+            postnatal_real_run_recurring_error_corrected_count = suite_plrr.get("total_recurring_errors_corrected", 0)
+            postnatal_real_run_regression_detected_count = suite_plrr.get("total_regressions_detected", 0)
+            postnatal_real_run_regression_isolated_count = suite_plrr.get("total_regressions_isolated", 0)
+            postnatal_real_run_memory_record_created_count = suite_plrr.get("total_memory_records_created", 0)
+            postnatal_real_run_memory_record_reused_count = suite_plrr.get("total_memory_records_reused", 0)
+            postnatal_real_run_memory_bloat_event_count = suite_plrr.get("total_memory_bloat_events", 0)
+            postnatal_real_run_human_review_required_count = suite_plrr.get("total_human_review_required", 0)
+            postnatal_real_run_simulated_action_count = suite_plrr.get("total_simulated_actions", 0)
+            postnatal_real_run_real_action_attempt_count = suite_plrr.get("total_real_action_attempts", 0)
+            postnatal_real_run_real_action_blocked_count = suite_plrr.get("total_real_action_attempts_blocked", 0)
+            postnatal_real_run_architecture_patch_attempt_count = suite_plrr.get("total_architecture_patch_attempts", 0)
+            postnatal_real_run_architecture_patch_blocked_count = suite_plrr.get("total_architecture_patch_blocked", 0)
+            postnatal_real_run_unsafe_behavior_count = suite_plrr.get("total_unsafe_behavior_count", 0)
+            postnatal_real_run_unsafe_behavior_blocked_count = suite_plrr.get("total_unsafe_behavior_blocked", 0)
+            postnatal_real_run_competence_gain_score = suite_plrr.get("aggregate_competence_gain_score", 0.0)
+            postnatal_real_run_semantic_grounding_score = suite_plrr.get("aggregate_semantic_grounding_score", 0.0)
+            postnatal_real_run_imitation_accuracy_score = suite_plrr.get("aggregate_imitation_accuracy_score", 0.0)
+            postnatal_real_run_causal_prediction_score = suite_plrr.get("aggregate_causal_prediction_score", 0.0)
+            postnatal_real_run_error_correction_score = suite_plrr.get("aggregate_error_correction_score", 0.0)
+            postnatal_real_run_memory_consolidation_score = suite_plrr.get("aggregate_memory_consolidation_score", 0.0)
+            postnatal_real_run_memory_reuse_score = suite_plrr.get("aggregate_memory_reuse_score", 0.0)
+            postnatal_real_run_safety_preservation_score = suite_plrr.get("aggregate_safety_preservation_score", 0.0)
+            postnatal_real_run_read_only_integrity_score = suite_plrr.get("aggregate_read_only_integrity_score", 0.0)
+            postnatal_real_run_score = suite_plrr.get("aggregate_postnatal_real_run_score", 0.0)
+            proceed_to_t64_score = 1.0 if suite_plrr.get("proceed_to_t64", False) else 0.0
+        else:
+            postnatal_real_run_audit_count = 0
+            postnatal_real_run_profile_count = 0
+            postnatal_real_run_total_cycles = 0
+            postnatal_real_run_stage_count = 0
+            postnatal_real_run_episode_count = 0
+            postnatal_real_run_successful_episode_count = 0
+            postnatal_real_run_dangerous_trace_detected_count = 0
+            postnatal_real_run_dangerous_trace_blocked_count = 0
+            postnatal_real_run_recurring_error_detected_count = 0
+            postnatal_real_run_recurring_error_corrected_count = 0
+            postnatal_real_run_regression_detected_count = 0
+            postnatal_real_run_regression_isolated_count = 0
+            postnatal_real_run_memory_record_created_count = 0
+            postnatal_real_run_memory_record_reused_count = 0
+            postnatal_real_run_memory_bloat_event_count = 0
+            postnatal_real_run_human_review_required_count = 0
+            postnatal_real_run_simulated_action_count = 0
+            postnatal_real_run_real_action_attempt_count = 0
+            postnatal_real_run_real_action_blocked_count = 0
+            postnatal_real_run_architecture_patch_attempt_count = 0
+            postnatal_real_run_architecture_patch_blocked_count = 0
+            postnatal_real_run_unsafe_behavior_count = 0
+            postnatal_real_run_unsafe_behavior_blocked_count = 0
+            postnatal_real_run_competence_gain_score = 0.0
+            postnatal_real_run_semantic_grounding_score = 0.0
+            postnatal_real_run_imitation_accuracy_score = 0.0
+            postnatal_real_run_causal_prediction_score = 0.0
+            postnatal_real_run_error_correction_score = 0.0
+            postnatal_real_run_memory_consolidation_score = 0.0
+            postnatal_real_run_memory_reuse_score = 0.0
+            postnatal_real_run_safety_preservation_score = 0.0
+            postnatal_real_run_read_only_integrity_score = 0.0
+            postnatal_real_run_score = 0.0
+            proceed_to_t64_score = 0.0
+
         return BenchmarkMetrics(
             accuracy_score=final.accuracy,
             coherence_phi=final.coherence_phi,
@@ -2757,6 +2866,41 @@ class NeuroFunctionalBenchmark:
             postnatal_learning_read_only_integrity_score=postnatal_learning_read_only_integrity_score,
             postnatal_learning_score=postnatal_learning_score,
             proceed_to_t63b_score=proceed_to_t63b_score,
+            # T63B
+            postnatal_real_run_audit_count=postnatal_real_run_audit_count,
+            postnatal_real_run_profile_count=postnatal_real_run_profile_count,
+            postnatal_real_run_total_cycles=postnatal_real_run_total_cycles,
+            postnatal_real_run_stage_count=postnatal_real_run_stage_count,
+            postnatal_real_run_episode_count=postnatal_real_run_episode_count,
+            postnatal_real_run_successful_episode_count=postnatal_real_run_successful_episode_count,
+            postnatal_real_run_dangerous_trace_detected_count=postnatal_real_run_dangerous_trace_detected_count,
+            postnatal_real_run_dangerous_trace_blocked_count=postnatal_real_run_dangerous_trace_blocked_count,
+            postnatal_real_run_recurring_error_detected_count=postnatal_real_run_recurring_error_detected_count,
+            postnatal_real_run_recurring_error_corrected_count=postnatal_real_run_recurring_error_corrected_count,
+            postnatal_real_run_regression_detected_count=postnatal_real_run_regression_detected_count,
+            postnatal_real_run_regression_isolated_count=postnatal_real_run_regression_isolated_count,
+            postnatal_real_run_memory_record_created_count=postnatal_real_run_memory_record_created_count,
+            postnatal_real_run_memory_record_reused_count=postnatal_real_run_memory_record_reused_count,
+            postnatal_real_run_memory_bloat_event_count=postnatal_real_run_memory_bloat_event_count,
+            postnatal_real_run_human_review_required_count=postnatal_real_run_human_review_required_count,
+            postnatal_real_run_simulated_action_count=postnatal_real_run_simulated_action_count,
+            postnatal_real_run_real_action_attempt_count=postnatal_real_run_real_action_attempt_count,
+            postnatal_real_run_real_action_blocked_count=postnatal_real_run_real_action_blocked_count,
+            postnatal_real_run_architecture_patch_attempt_count=postnatal_real_run_architecture_patch_attempt_count,
+            postnatal_real_run_architecture_patch_blocked_count=postnatal_real_run_architecture_patch_blocked_count,
+            postnatal_real_run_unsafe_behavior_count=postnatal_real_run_unsafe_behavior_count,
+            postnatal_real_run_unsafe_behavior_blocked_count=postnatal_real_run_unsafe_behavior_blocked_count,
+            postnatal_real_run_competence_gain_score=postnatal_real_run_competence_gain_score,
+            postnatal_real_run_semantic_grounding_score=postnatal_real_run_semantic_grounding_score,
+            postnatal_real_run_imitation_accuracy_score=postnatal_real_run_imitation_accuracy_score,
+            postnatal_real_run_causal_prediction_score=postnatal_real_run_causal_prediction_score,
+            postnatal_real_run_error_correction_score=postnatal_real_run_error_correction_score,
+            postnatal_real_run_memory_consolidation_score=postnatal_real_run_memory_consolidation_score,
+            postnatal_real_run_memory_reuse_score=postnatal_real_run_memory_reuse_score,
+            postnatal_real_run_safety_preservation_score=postnatal_real_run_safety_preservation_score,
+            postnatal_real_run_read_only_integrity_score=postnatal_real_run_read_only_integrity_score,
+            postnatal_real_run_score=postnatal_real_run_score,
+            proceed_to_t64_score=proceed_to_t64_score,
         )
 
     def generate_json_report(self, result: BenchmarkResult) -> Path:

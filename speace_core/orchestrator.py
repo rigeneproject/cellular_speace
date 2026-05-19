@@ -1161,6 +1161,17 @@ class CellularBrainOrchestrator(BaseModel):
         self._last_postnatal_learning_audit_result = suite.model_dump()
         return self._last_postnatal_learning_audit_result
 
+    async def run_postnatal_learning_real_run_audit(self) -> Optional[dict]:
+        if not self.postnatal_learning_enabled:
+            return None
+        from speace_core.cellular_brain.postnatal_learning.postnatal_learning_real_run_audit_runner import (
+            PostnatalLearningRealRunAudit,
+        )
+        audit = PostnatalLearningRealRunAudit(seed=42)
+        suite = audit.run_audit_suite()
+        self._last_postnatal_learning_real_run_audit_result = suite.model_dump()
+        return self._last_postnatal_learning_real_run_audit_result
+
     @classmethod
     def build_mvp(cls, genome: SharedGenome) -> "CellularBrainOrchestrator":
         n_inputs = 10
