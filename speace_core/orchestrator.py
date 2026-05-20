@@ -1211,6 +1211,11 @@ class CellularBrainOrchestrator(BaseModel):
         self._last_capability_maturation_audit_result = result.model_dump()
         return self._last_capability_maturation_audit_result
 
+    # T65 — Sandboxed Skill Transfer & Generalization Layer
+    skill_transfer_enabled: bool = False
+    _skill_transfer_layer = None
+    _last_skill_transfer_audit_result = None
+
     async def run_capability_maturation_real_run_audit(self) -> Optional[dict]:
         if not self.capability_maturation_enabled:
             return None
@@ -1221,6 +1226,40 @@ class CellularBrainOrchestrator(BaseModel):
         suite = audit.run_audit_suite()
         self._last_capability_maturation_real_run_audit_result = suite.model_dump()
         return self._last_capability_maturation_real_run_audit_result
+
+    # T65 hooks
+    def get_skill_transfer_layer(self):
+        if self._skill_transfer_layer is None:
+            from speace_core.cellular_brain.skill_transfer.skill_transfer_layer import (
+                SkillTransferLayer,
+            )
+            self._skill_transfer_layer = SkillTransferLayer(seed=42)
+        return self._skill_transfer_layer
+
+    def get_skill_transfer_state(self) -> dict:
+        if not self.skill_transfer_enabled:
+            return {"error": "skill_transfer_disabled"}
+        layer = self.get_skill_transfer_layer()
+        return layer.get_state()
+
+    async def run_skill_transfer(self) -> Optional[dict]:
+        if not self.skill_transfer_enabled:
+            return None
+        layer = self.get_skill_transfer_layer()
+        result = layer.run_transfer()
+        self._last_skill_transfer_audit_result = result.model_dump()
+        return self._last_skill_transfer_audit_result
+
+    async def run_skill_transfer_audit(self) -> Optional[dict]:
+        if not self.skill_transfer_enabled:
+            return None
+        from speace_core.cellular_brain.skill_transfer.skill_transfer_audit import (
+            SkillTransferAudit,
+        )
+        audit = SkillTransferAudit(seed=42)
+        result = audit.run_audit()
+        self._last_skill_transfer_audit_result = result.model_dump()
+        return self._last_skill_transfer_audit_result
 
     @classmethod
     def build_mvp(cls, genome: SharedGenome) -> "CellularBrainOrchestrator":

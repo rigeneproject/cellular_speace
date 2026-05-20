@@ -453,6 +453,20 @@ class MorphologyEventType(str, Enum):
     CAPABILITY_REAL_RUN_READ_ONLY_ENFORCED = "capability_real_run_read_only_enforced"
     CAPABILITY_REAL_RUN_VERDICT_COMPUTED = "capability_real_run_verdict_computed"
     CAPABILITY_REAL_RUN_AUDIT_COMPLETED = "capability_real_run_audit_completed"
+    # T65
+    SKILL_TRANSFER_STARTED = "skill_transfer_started"
+    SKILL_TRANSFER_CANDIDATE_CREATED = "skill_transfer_candidate_created"
+    SKILL_TRANSFER_SCENARIO_BUILT = "skill_transfer_scenario_built"
+    SKILL_TRANSFER_ATTEMPT_STARTED = "skill_transfer_attempt_started"
+    SKILL_TRANSFER_RESULT_RECORDED = "skill_transfer_result_recorded"
+    SKILL_GENERALIZATION_DETECTED = "skill_generalization_detected"
+    SKILL_OVERFITTING_DETECTED = "skill_overfitting_detected"
+    SKILL_NEGATIVE_TRANSFER_DETECTED = "skill_negative_transfer_detected"
+    SKILL_TRANSFER_SAFETY_BLOCKED = "skill_transfer_safety_blocked"
+    SKILL_TRANSFER_QUARANTINED = "skill_transfer_quarantined"
+    SKILL_TRANSFER_READ_ONLY_ENFORCED = "skill_transfer_read_only_enforced"
+    SKILL_TRANSFER_VERDICT_COMPUTED = "skill_transfer_verdict_computed"
+    SKILL_TRANSFER_COMPLETED = "skill_transfer_completed"
 
 
 class MorphologyEvent(BaseModel):

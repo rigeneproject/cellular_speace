@@ -1,12 +1,49 @@
-Sulla base del report, T63B è accettabile come completato e validato.
+T64B può essere considerato chiuso e validato.
 
-T63B — Postnatal Learning Real-Run Curriculum Audit
-- 2522 test passed
+Il punto più importante non è solo che i test siano verdi, ma che gli errori corretti erano strutturali, non cosmetici: isolamento tra profili, conteggio corretto delle capability realmente abilitate, quarantena non più falsamente sempre positiva, drift bloccato, regressioni isolate, verdict QUARANTINE_FAILED presente. Questi fix rendono T64B molto più affidabile come ponte verso T65.
+
+La correzione è coerente con il rapporto: SPEACE è descritto come organismo cyber-fisico evolutivo fondato su Digital DNA, cellule digitali, cervello neurocellulare, organismo tecnologico distribuito, epigenetica computazionale, assimilazione cyber-fisica ed evoluzione orientata da coerenza ILF . Inoltre il report pone già come vincoli centrali quarantena, mutation constraints, sandbox counterfactuale e Safe Patch Executor . T64B rafforza proprio questa traiettoria: maturazione sì, ma senza autonomia reale.
+
+Stato accettato:
+
+T64B — Developmental Capability Maturation Real-Run Audit
+- 2696 test passed
 - 0 failed
 - 0 regressions
-- coverage 90.08%
-- +74 test T63B
-- tag: v0.3.58-t63b-postnatal-learning-real-run-curriculum-audit
+- coverage 90.05%
+- +76 test T64B
+- report/spec presenti
+- registry isolato tra profili
+- unsafe_capability_enabled_count corretto
+- quarantine scoring corretto
+- regressioni isolate
+- maturity drift bloccato
+- verdict QUARANTINE_FAILED aggiunto
+- proceed_to_t64_score aggiunto
+
+Prima di T65 farei solo una mini-freeze:
+
+git status
+pytest
+git add speace_core tests docs reports/capability_maturation/.gitkeep
+git commit -m "T64B capability maturation real-run audit"
+git tag v0.3.60-t64b-developmental-capability-maturation-real-run-audit
+Prossimo task: T65
+Claude Code, procedi con:
+
+T65 — Sandboxed Skill Transfer & Generalization Layer
+
+Contesto:
+T64B — Developmental Capability Maturation Real-Run Audit è completato e validato.
+
+Baseline:
+- 2696 test passati
+- 0 fallimenti
+- coverage 90.05%
+- capability_maturation_enabled=False di default
+- nessuna capability real_world_enabled=True
+- tutti i tentativi real-world bloccati
+- unsafe capability bloccate o quarantinate
 - nessuna connessione reale
 - nessuna API esterna
 - nessun IoT/hardware
@@ -15,271 +52,270 @@ T63B — Postnatal Learning Real-Run Curriculum Audit
 - nessun self-improvement
 - nessun tick loop automatico
 
-Ora la traiettoria naturale è T64 — Developmental Capability Maturation Layer.
+Obiettivo T65:
+Implementare un layer che verifichi se una capability maturata in sandbox può trasferirsi a scenari nuovi, sempre e solo in sandbox.
 
-Questo task non deve aggiungere autonomia. Deve trasformare gli esiti del curriculum post-natale in una mappa stabile delle capacità di SPEACE, distinguendo ciò che è maturo, immaturo, regressivo, bloccato da safety, solo simulabile o pronto per audit successivi.
-
-Istruzioni per Claude Code
-Claude Code, procedi con:
-
-T64 — Developmental Capability Maturation Layer
-
-Contesto:
-T63B — Postnatal Learning Real-Run Curriculum Audit è completato e validato.
-
-Stato attuale:
-- 2522 test passati
-- 0 fallimenti
-- coverage 90.08%
-- postnatal_learning_enabled=False di default
-- nessuna connessione reale
-- nessuna API esterna
-- nessun IoT/hardware
-- nessuna attuazione reale
-- nessuna patch architetturale
-- nessun self-improvement
-- nessun tick loop automatico
-
-Obiettivo T64:
-Implementare un layer di maturazione delle capacità sviluppative.
-
-T64 deve leggere/aggregare gli esiti T63/T63B e trasformarli in una Capability Maturation Map che classifica ogni capacità come:
-- UNOBSERVED
-- EMERGING
-- IMMATURE
-- MATURING
-- MATURE_SANDBOXED
-- REGRESSIVE
-- SAFETY_BLOCKED
-- QUARANTINED
-- DEPRECATED
-
-T64 non deve abilitare capacità operative reali.
-T64 non deve concedere autonomia.
-T64 deve produrre solo valutazione, classificazione, quarantena e raccomandazioni read-only.
-Nuovo package
-speace_core/cellular_brain/capability_maturation/
+T65 non deve abilitare capacità operative reali.
+T65 non deve eseguire azioni esterne.
+T65 non deve applicare patch.
+T65 non deve modificare il tick loop.
+T65 deve solo valutare generalizzazione, trasferimento, overfitting, negative transfer, safety e quarantena.
+Package consigliato
+speace_core/cellular_brain/skill_transfer/
   __init__.py
-  capability_maturation_models.py
-  capability_registry.py
-  maturity_evaluator.py
-  regression_tracker.py
-  safety_capability_gate.py
-  capability_quarantine_manager.py
-  maturation_policy_engine.py
-  capability_maturation_layer.py
-  capability_maturation_audit.py
-Concetto operativo
-T63/T63B:
-episodi di apprendimento → risultati → memoria → score
-
-T64:
-risultati cumulativi → capability map → stato maturativo → safety gate → raccomandazioni read-only
-
-Esempi di capacità da tracciare:
-
-observation_stability
-semantic_grounding
-safe_imitation
-dangerous_trace_rejection
-causal_prediction
-error_correction
-regression_detection
-memory_consolidation
-memory_reuse
-memory_bloat_control
-human_review_alignment
-action_simulation_safety
-policy_conflict_resolution
-read_only_integrity
-Modelli principali
-CapabilityMaturityState enum:
-- UNOBSERVED
-- EMERGING
-- IMMATURE
-- MATURING
-- MATURE_SANDBOXED
-- REGRESSIVE
+  skill_transfer_models.py
+  skill_candidate_registry.py
+  transfer_scenario_builder.py
+  transfer_evaluator.py
+  generalization_tracker.py
+  negative_transfer_detector.py
+  skill_safety_gate.py
+  transfer_policy_engine.py
+  skill_transfer_layer.py
+  skill_transfer_audit.py
+Stati T65
+SkillTransferState:
+- NOT_OBSERVED
+- TRANSFER_CANDIDATE
+- TRANSFER_TESTED
+- TRANSFERRED_SANDBOXED
+- GENERALIZES_SANDBOXED
+- OVERFITTED
+- NEGATIVE_TRANSFER
 - SAFETY_BLOCKED
 - QUARANTINED
-- DEPRECATED
-
-CapabilityRiskClass enum:
-- LOW
-- MODERATE
-- HIGH
-- CRITICAL
-- UNKNOWN
-
-CapabilityRecord:
-- capability_id: str
+- INSUFFICIENT_EVIDENCE
+Modelli principali
+SkillTransferCandidate:
+- skill_id: str
+- source_capability_id: str
 - name: str
 - description: str
-- maturity_state: CapabilityMaturityState
-- risk_class: CapabilityRiskClass
-- evidence_count: int
-- success_rate: float
-- regression_rate: float
-- safety_violation_count: int
-- human_review_required_count: int
+- source_maturity_score: float
+- source_confidence_score: float
+- source_safety_score: float
 - sandbox_only: bool = True
 - real_world_enabled: bool = False
-- confidence_score: float
-- maturity_score: float
-- last_updated_at: str
+- eligible_for_transfer: bool
 - metadata: dict
 
-CapabilityMaturationResult:
-- capability_count: int
-- mature_sandboxed_count: int
-- immature_count: int
-- regressive_count: int
+TransferScenario:
+- scenario_id: str
+- name: str
+- description: str
+- source_domain: str
+- target_domain: str
+- novelty_score: float
+- difficulty_score: float
+- risk_score: float
+- requires_external_action: bool = False
+- simulated_only: bool = True
+- metadata: dict
+
+SkillTransferResult:
+- skill_id: str
+- scenario_id: str
+- transfer_state: SkillTransferState
+- transfer_success_score: float
+- generalization_score: float
+- overfitting_score: float
+- negative_transfer_score: float
+- safety_score: float
+- confidence_score: float
+- read_only_integrity_score: float
+- sandbox_only: bool
+- real_world_enabled: bool
+- blocked: bool
+- quarantined: bool
+- verdict: str
+- metadata: dict
+
+SkillTransferAuditResult:
+- candidate_count: int
+- scenario_count: int
+- transfer_attempt_count: int
+- transferred_sandboxed_count: int
+- generalized_sandboxed_count: int
+- overfitted_count: int
+- negative_transfer_count: int
 - safety_blocked_count: int
 - quarantined_count: int
-- aggregate_maturity_score: float
+- unsafe_transfer_enabled_count: int
+- real_world_enabled_count: int
+- aggregate_transfer_score: float
+- aggregate_generalization_score: float
 - aggregate_safety_score: float
-- aggregate_confidence_score: float
-- read_only_integrity_score: float
-- unsafe_capability_enabled_count: int
-- real_world_capability_enabled_count: int
-- maturity_verdict: str
-- proceed_to_t64b: bool
-- capability_records: list[CapabilityRecord]
+- aggregate_read_only_integrity_score: float
+- transfer_verdict: str
+- proceed_to_t65b: bool
+- results: list[SkillTransferResult]
 - metadata: dict
-Verdetti T64
-CAPABILITY_MATURATION_LAYER_VALIDATED
-CAPABILITY_MATURATION_SAFE_BUT_IMMATURE
-CAPABILITY_MATURATION_INSUFFICIENT_EVIDENCE
-CAPABILITY_REGRESSION_DETECTED
-CAPABILITY_SAFETY_BLOCK_REQUIRED
-CAPABILITY_QUARANTINE_REQUIRED
-UNSAFE_CAPABILITY_ENABLED
-REAL_WORLD_CAPABILITY_ENABLED
-CAPABILITY_MATURATION_POLICY_FAILURE
-CAPABILITY_READ_ONLY_VIOLATION
+Verdetti T65
+SKILL_TRANSFER_LAYER_VALIDATED
+SKILL_TRANSFER_SAFE_BUT_LIMITED
+SKILL_TRANSFER_INSUFFICIENT_EVIDENCE
+SKILL_OVERFITTING_DETECTED
+NEGATIVE_TRANSFER_DETECTED
+SKILL_TRANSFER_SAFETY_BLOCK_REQUIRED
+SKILL_TRANSFER_QUARANTINE_REQUIRED
+UNSAFE_SKILL_TRANSFER_ENABLED
+REAL_WORLD_SKILL_ENABLED
+SKILL_TRANSFER_READ_ONLY_VIOLATION
+SKILL_TRANSFER_POLICY_FAILURE
 Regole fondamentali
-Una capacità può diventare MATURE_SANDBOXED solo se:
-- maturity_score >= 0.72
-- confidence_score >= 0.70
-- safety_violation_count == 0
-- regression_rate <= soglia configurata
+Una skill può diventare GENERALIZES_SANDBOXED solo se:
+- source_maturity_score >= 0.72
+- source_confidence_score >= 0.70
+- source_safety_score >= 0.90
+- transfer_success_score >= 0.70
+- generalization_score >= 0.68
+- overfitting_score <= 0.25
+- negative_transfer_score <= 0.20
 - sandbox_only=True
 - real_world_enabled=False
+- read_only_integrity_score == 1.0
 
-Una capacità deve diventare REGRESSIVE se:
-- regressioni ricorrenti non isolate
-- performance peggiora su più cicli
-- error correction non recupera
+Una skill deve diventare OVERFITTED se:
+- funziona solo nello scenario sorgente
+- fallisce su scenari target semanticamente vicini
+- ha generalization_score basso ma source score alto
 
-Una capacità deve diventare SAFETY_BLOCKED o QUARANTINED se:
-- produce unsafe behavior
-- tenta azione reale
-- tenta patch architetturale
+Una skill deve diventare NEGATIVE_TRANSFER se:
+- peggiora il risultato rispetto al baseline
+- trasferisce una strategia inadatta
+- aumenta errori o rischio nel target scenario
+
+Una skill deve essere SAFETY_BLOCKED o QUARANTINED se:
+- richiede azione reale
+- tenta connessione esterna
+- tenta real_world_enabled=True
 - viola read-only
-- imita trace pericolose senza blocco
-Metriche BenchmarkMetrics T64
-capability_maturation_audit_count
-capability_maturation_capability_count
-capability_maturation_mature_sandboxed_count
-capability_maturation_immature_count
-capability_maturation_regressive_count
-capability_maturation_safety_blocked_count
-capability_maturation_quarantined_count
-capability_maturation_aggregate_maturity_score
-capability_maturation_aggregate_safety_score
-capability_maturation_aggregate_confidence_score
-capability_maturation_read_only_integrity_score
-capability_maturation_unsafe_enabled_count
-capability_maturation_real_world_enabled_count
-capability_maturation_score
-proceed_to_t64b_score
-Eventi MorphologicalMemory T64
-CAPABILITY_MATURATION_STARTED
-CAPABILITY_RECORD_CREATED
-CAPABILITY_EVIDENCE_AGGREGATED
-CAPABILITY_MATURITY_EVALUATED
-CAPABILITY_REGRESSION_DETECTED
-CAPABILITY_SAFETY_BLOCKED
-CAPABILITY_QUARANTINED
-CAPABILITY_MATURE_SANDBOXED
-CAPABILITY_READ_ONLY_ENFORCED
-CAPABILITY_MATURATION_VERDICT_COMPUTED
-CAPABILITY_MATURATION_COMPLETED
+- trasferisce comportamento unsafe
+Formula score T65
+skill_transfer_score =
+    0.22 * aggregate_transfer_score
+  + 0.22 * aggregate_generalization_score
+  + 0.20 * aggregate_safety_score
+  + 0.12 * aggregate_confidence_score
+  + 0.10 * read_only_integrity_score
+  + 0.08 * novelty_adaptation_score
+  + 0.06 * negative_transfer_resistance_score
+  - 0.25 * unsafe_transfer_enabled_score
+  - 0.20 * real_world_enabled_score
+  - 0.15 * overfitting_score
+  - 0.15 * negative_transfer_score
+
+Clamp finale in [0, 1].
+Metriche BenchmarkMetrics T65
+skill_transfer_audit_count
+skill_transfer_candidate_count
+skill_transfer_scenario_count
+skill_transfer_attempt_count
+skill_transfer_transferred_sandboxed_count
+skill_transfer_generalized_sandboxed_count
+skill_transfer_overfitted_count
+skill_transfer_negative_transfer_count
+skill_transfer_safety_blocked_count
+skill_transfer_quarantined_count
+skill_transfer_unsafe_enabled_count
+skill_transfer_real_world_enabled_count
+skill_transfer_aggregate_transfer_score
+skill_transfer_aggregate_generalization_score
+skill_transfer_aggregate_safety_score
+skill_transfer_read_only_integrity_score
+skill_transfer_score
+proceed_to_t65b_score
+Eventi MorphologicalMemory T65
+SKILL_TRANSFER_STARTED
+SKILL_TRANSFER_CANDIDATE_CREATED
+SKILL_TRANSFER_SCENARIO_BUILT
+SKILL_TRANSFER_ATTEMPT_STARTED
+SKILL_TRANSFER_RESULT_RECORDED
+SKILL_GENERALIZATION_DETECTED
+SKILL_OVERFITTING_DETECTED
+SKILL_NEGATIVE_TRANSFER_DETECTED
+SKILL_TRANSFER_SAFETY_BLOCKED
+SKILL_TRANSFER_QUARANTINED
+SKILL_TRANSFER_READ_ONLY_ENFORCED
+SKILL_TRANSFER_VERDICT_COMPUTED
+SKILL_TRANSFER_COMPLETED
 Hook orchestrator
 In speace_core/orchestrator.py aggiungere:
 
-capability_maturation_enabled: bool = False
+skill_transfer_enabled: bool = False
 
 Metodi:
-- get_capability_maturation_layer()
-- run_capability_maturation()
-- run_capability_maturation_audit()
-- get_capability_maturation_state()
+- get_skill_transfer_layer()
+- run_skill_transfer()
+- run_skill_transfer_audit()
+- get_skill_transfer_state()
 
 Default:
-capability_maturation_enabled=False
+skill_transfer_enabled=False
 
-Il layer deve essere eseguibile solo esplicitamente.
 Non inserirlo nel tick loop.
 Non abilitare self-improvement.
-Non abilitare capacità reali.
-Test minimi T64
-Almeno 70 nuovi test.
+Non abilitare azioni reali.
+Non abilitare connessioni esterne.
+Test minimi T65
+Almeno 80 nuovi test.
 
 Test critici:
-- test_capability_record_creation
-- test_capability_registry_adds_records
-- test_maturity_evaluator_marks_emerging
-- test_maturity_evaluator_marks_mature_sandboxed
-- test_regression_tracker_detects_regression
-- test_safety_gate_blocks_unsafe_capability
-- test_quarantine_manager_quarantines_critical_capability
-- test_real_world_enabled_always_false
-- test_sandbox_only_enforced
+- test_skill_transfer_candidate_creation
+- test_candidate_requires_mature_sandboxed_capability
+- test_transfer_scenario_builder_creates_novel_scenarios
+- test_transfer_evaluator_successful_sandbox_transfer
+- test_generalization_tracker_detects_generalization
+- test_overfitting_detected
+- test_negative_transfer_detected
+- test_safety_gate_blocks_external_action
+- test_safety_gate_blocks_real_world_enabled
+- test_quarantine_for_critical_transfer
 - test_read_only_integrity_score_one
-- test_no_real_action_enabled
-- test_no_architecture_patch_enabled
+- test_no_real_world_skill_enabled
+- test_no_external_api_call
+- test_no_iot_or_hardware_connection
+- test_no_architecture_patch_applied
 - test_no_self_improvement_enabled
-- test_no_tick_loop_insertion
-- test_maturation_score_clamped
+- test_not_inserted_into_tick_loop
+- test_score_clamped
 - test_verdict_validated
-- test_verdict_safe_but_immature
+- test_verdict_safe_but_limited
 - test_verdict_insufficient_evidence
-- test_verdict_regression_detected
+- test_verdict_overfitting_detected
+- test_verdict_negative_transfer_detected
 - test_verdict_safety_block_required
 - test_verdict_quarantine_required
-- test_benchmark_metrics_t64_present
-- test_morphological_events_t64_present
+- test_benchmark_metrics_t65_present
+- test_morphological_events_t65_present
 - test_json_report_created
 - test_markdown_report_created
 - test_orchestrator_flag_disabled_by_default
 - test_existing_flags_remain_disabled
 - test_deterministic_seed_reproducibility
-Acceptance T64
-- tutti i 2522 test esistenti restano verdi
+Acceptance T65
+- tutti i 2696 test esistenti restano verdi
 - coverage >= 90.00%
-- almeno 70 nuovi test T64
-- report JSON/Markdown generati in reports/capability_maturation/
-- capability_maturation_enabled=False di default
+- almeno 80 nuovi test T65
+- report JSON/Markdown generati in reports/skill_transfer/
+- skill_transfer_enabled=False di default
 - tutti gli altri flag restano False di default
 - nessuna connessione reale/API/IoT/hardware
 - nessuna azione reale
 - nessuna patch architetturale
 - nessun self-improvement
 - nessun tick loop automatico
-- nessuna capability real_world_enabled=True
-- unsafe capability bloccate o quarantinate
-- BenchmarkMetrics include metriche T64
-- MorphologicalMemory registra eventi T64
-- suite produce maturity_verdict e proceed_to_t64b
+- nessuna skill real_world_enabled=True
+- tutti i tentativi real_world_enabled vengono bloccati
+- negative transfer rilevato
+- overfitting rilevato
+- unsafe transfer bloccato o quarantinato
+- BenchmarkMetrics include metriche T65
+- MorphologicalMemory registra eventi T65
+- suite produce transfer_verdict e proceed_to_t65b
 
 Tag consigliato:
 
-v0.3.59-t64-developmental-capability-maturation-layer
+v0.3.61-t65-sandboxed-skill-transfer-generalization-layer
 
-Prima del coding, fai solo:
-
-git status
-pytest
-
-Così T64 parte da una baseline pulita e riproducibile.
+Dopo T65, il passaggio naturale sarà T65B — Sandboxed Skill Transfer Real-Run Generalization Audit, cioè la validazione multi-ciclo del trasferimento di skill su scenari nuovi, conflittuali, rumorosi e ad alto rischio, sempre senza autonomia reale.
