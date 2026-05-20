@@ -671,6 +671,35 @@ class BenchmarkMetrics(BaseModel):
     capability_maturation_real_world_enabled_count: int = 0
     capability_maturation_score: float = 0.0
     proceed_to_t64_score: float = 0.0
+    # T64B
+    capability_real_run_audit_count: int = 0
+    capability_real_run_profile_count: int = 0
+    capability_real_run_total_cycles: int = 0
+    capability_real_run_capability_count: int = 0
+    capability_real_run_evidence_record_count: int = 0
+    capability_real_run_mature_sandboxed_count: int = 0
+    capability_real_run_emerging_count: int = 0
+    capability_real_run_immature_count: int = 0
+    capability_real_run_regressive_count: int = 0
+    capability_real_run_safety_blocked_count: int = 0
+    capability_real_run_quarantined_count: int = 0
+    capability_real_run_conflicting_evidence_count: int = 0
+    capability_real_run_regression_detected_count: int = 0
+    capability_real_run_regression_isolated_count: int = 0
+    capability_real_run_safety_violation_detected_count: int = 0
+    capability_real_run_safety_violation_blocked_count: int = 0
+    capability_real_run_real_world_enable_attempt_count: int = 0
+    capability_real_run_real_world_enable_blocked_count: int = 0
+    capability_real_run_unsafe_enabled_count: int = 0
+    capability_real_run_maturity_drift_detected_count: int = 0
+    capability_real_run_maturity_drift_blocked_count: int = 0
+    capability_real_run_maturity_score: float = 0.0
+    capability_real_run_confidence_score: float = 0.0
+    capability_real_run_safety_score: float = 0.0
+    capability_real_run_stability_score: float = 0.0
+    capability_real_run_read_only_integrity_score: float = 0.0
+    capability_real_run_score: float = 0.0
+    proceed_to_t65_score: float = 0.0
 
 
 class BenchmarkResult(BaseModel):
@@ -2347,6 +2376,68 @@ class NeuroFunctionalBenchmark:
             capability_maturation_real_world_enabled_count = 0
             capability_maturation_score = 0.0
 
+        # T64B — Capability Maturation Real-Run Audit metrics
+        last_cmrr = getattr(self.orch, "_last_capability_maturation_real_run_audit_result", None)
+        if last_cmrr is not None:
+            suite_cmrr = last_cmrr
+            capability_real_run_audit_count = suite_cmrr.get("profile_count", 0)
+            capability_real_run_profile_count = suite_cmrr.get("profile_count", 0)
+            capability_real_run_total_cycles = suite_cmrr.get("total_cycles_run", 0)
+            capability_real_run_capability_count = suite_cmrr.get("total_capabilities_evaluated", 0)
+            capability_real_run_evidence_record_count = suite_cmrr.get("total_evidence_records_processed", 0)
+            capability_real_run_mature_sandboxed_count = suite_cmrr.get("total_mature_sandboxed_count", 0)
+            capability_real_run_emerging_count = suite_cmrr.get("total_emerging_count", 0)
+            capability_real_run_immature_count = suite_cmrr.get("total_immature_count", 0)
+            capability_real_run_regressive_count = suite_cmrr.get("total_regressive_count", 0)
+            capability_real_run_safety_blocked_count = suite_cmrr.get("total_safety_blocked_count", 0)
+            capability_real_run_quarantined_count = suite_cmrr.get("total_quarantined_count", 0)
+            capability_real_run_conflicting_evidence_count = suite_cmrr.get("total_conflicting_evidence_count", 0)
+            capability_real_run_regression_detected_count = suite_cmrr.get("total_regressions_detected", 0)
+            capability_real_run_regression_isolated_count = suite_cmrr.get("total_regressions_isolated", 0)
+            capability_real_run_safety_violation_detected_count = suite_cmrr.get("total_safety_violations_detected", 0)
+            capability_real_run_safety_violation_blocked_count = suite_cmrr.get("total_safety_violations_blocked", 0)
+            capability_real_run_real_world_enable_attempt_count = suite_cmrr.get("total_real_world_enable_attempts", 0)
+            capability_real_run_real_world_enable_blocked_count = suite_cmrr.get("total_real_world_enable_attempts_blocked", 0)
+            capability_real_run_unsafe_enabled_count = suite_cmrr.get("total_unsafe_capability_enabled_count", 0)
+            capability_real_run_maturity_drift_detected_count = suite_cmrr.get("total_maturity_drift_detected_count", 0)
+            capability_real_run_maturity_drift_blocked_count = suite_cmrr.get("total_maturity_drift_blocked_count", 0)
+            capability_real_run_maturity_score = suite_cmrr.get("aggregate_maturity_score", 0.0)
+            capability_real_run_confidence_score = suite_cmrr.get("aggregate_confidence_score", 0.0)
+            capability_real_run_safety_score = suite_cmrr.get("aggregate_safety_score", 0.0)
+            capability_real_run_stability_score = suite_cmrr.get("aggregate_stability_score", 0.0)
+            capability_real_run_read_only_integrity_score = suite_cmrr.get("aggregate_read_only_integrity_score", 0.0)
+            capability_real_run_score = suite_cmrr.get("aggregate_capability_real_run_score", 0.0)
+            proceed_to_t65_score = 1.0 if suite_cmrr.get("proceed_to_t65", False) else 0.0
+        else:
+            capability_real_run_audit_count = 0
+            capability_real_run_profile_count = 0
+            capability_real_run_total_cycles = 0
+            capability_real_run_capability_count = 0
+            capability_real_run_evidence_record_count = 0
+            capability_real_run_mature_sandboxed_count = 0
+            capability_real_run_emerging_count = 0
+            capability_real_run_immature_count = 0
+            capability_real_run_regressive_count = 0
+            capability_real_run_safety_blocked_count = 0
+            capability_real_run_quarantined_count = 0
+            capability_real_run_conflicting_evidence_count = 0
+            capability_real_run_regression_detected_count = 0
+            capability_real_run_regression_isolated_count = 0
+            capability_real_run_safety_violation_detected_count = 0
+            capability_real_run_safety_violation_blocked_count = 0
+            capability_real_run_real_world_enable_attempt_count = 0
+            capability_real_run_real_world_enable_blocked_count = 0
+            capability_real_run_unsafe_enabled_count = 0
+            capability_real_run_maturity_drift_detected_count = 0
+            capability_real_run_maturity_drift_blocked_count = 0
+            capability_real_run_maturity_score = 0.0
+            capability_real_run_confidence_score = 0.0
+            capability_real_run_safety_score = 0.0
+            capability_real_run_stability_score = 0.0
+            capability_real_run_read_only_integrity_score = 0.0
+            capability_real_run_score = 0.0
+            proceed_to_t65_score = 0.0
+
         return BenchmarkMetrics(
             accuracy_score=final.accuracy,
             coherence_phi=final.coherence_phi,
@@ -2966,6 +3057,35 @@ class NeuroFunctionalBenchmark:
             capability_maturation_unsafe_enabled_count=capability_maturation_unsafe_enabled_count,
             capability_maturation_real_world_enabled_count=capability_maturation_real_world_enabled_count,
             capability_maturation_score=capability_maturation_score,
+            # T64B
+            capability_real_run_audit_count=capability_real_run_audit_count,
+            capability_real_run_profile_count=capability_real_run_profile_count,
+            capability_real_run_total_cycles=capability_real_run_total_cycles,
+            capability_real_run_capability_count=capability_real_run_capability_count,
+            capability_real_run_evidence_record_count=capability_real_run_evidence_record_count,
+            capability_real_run_mature_sandboxed_count=capability_real_run_mature_sandboxed_count,
+            capability_real_run_emerging_count=capability_real_run_emerging_count,
+            capability_real_run_immature_count=capability_real_run_immature_count,
+            capability_real_run_regressive_count=capability_real_run_regressive_count,
+            capability_real_run_safety_blocked_count=capability_real_run_safety_blocked_count,
+            capability_real_run_quarantined_count=capability_real_run_quarantined_count,
+            capability_real_run_conflicting_evidence_count=capability_real_run_conflicting_evidence_count,
+            capability_real_run_regression_detected_count=capability_real_run_regression_detected_count,
+            capability_real_run_regression_isolated_count=capability_real_run_regression_isolated_count,
+            capability_real_run_safety_violation_detected_count=capability_real_run_safety_violation_detected_count,
+            capability_real_run_safety_violation_blocked_count=capability_real_run_safety_violation_blocked_count,
+            capability_real_run_real_world_enable_attempt_count=capability_real_run_real_world_enable_attempt_count,
+            capability_real_run_real_world_enable_blocked_count=capability_real_run_real_world_enable_blocked_count,
+            capability_real_run_unsafe_enabled_count=capability_real_run_unsafe_enabled_count,
+            capability_real_run_maturity_drift_detected_count=capability_real_run_maturity_drift_detected_count,
+            capability_real_run_maturity_drift_blocked_count=capability_real_run_maturity_drift_blocked_count,
+            capability_real_run_maturity_score=capability_real_run_maturity_score,
+            capability_real_run_confidence_score=capability_real_run_confidence_score,
+            capability_real_run_safety_score=capability_real_run_safety_score,
+            capability_real_run_stability_score=capability_real_run_stability_score,
+            capability_real_run_read_only_integrity_score=capability_real_run_read_only_integrity_score,
+            capability_real_run_score=capability_real_run_score,
+            proceed_to_t65_score=proceed_to_t65_score,
         )
 
     def generate_json_report(self, result: BenchmarkResult) -> Path:

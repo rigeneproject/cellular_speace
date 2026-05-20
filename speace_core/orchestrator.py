@@ -1211,6 +1211,17 @@ class CellularBrainOrchestrator(BaseModel):
         self._last_capability_maturation_audit_result = result.model_dump()
         return self._last_capability_maturation_audit_result
 
+    async def run_capability_maturation_real_run_audit(self) -> Optional[dict]:
+        if not self.capability_maturation_enabled:
+            return None
+        from speace_core.cellular_brain.capability_maturation.capability_maturation_real_run_audit_runner import (
+            CapabilityMaturationRealRunAudit,
+        )
+        audit = CapabilityMaturationRealRunAudit(seed=42)
+        suite = audit.run_audit_suite()
+        self._last_capability_maturation_real_run_audit_result = suite.model_dump()
+        return self._last_capability_maturation_real_run_audit_result
+
     @classmethod
     def build_mvp(cls, genome: SharedGenome) -> "CellularBrainOrchestrator":
         n_inputs = 10

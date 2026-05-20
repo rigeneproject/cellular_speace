@@ -439,6 +439,20 @@ class MorphologyEventType(str, Enum):
     CAPABILITY_READ_ONLY_ENFORCED = "capability_read_only_enforced"
     CAPABILITY_MATURATION_VERDICT_COMPUTED = "capability_maturation_verdict_computed"
     CAPABILITY_MATURATION_COMPLETED = "capability_maturation_completed"
+    # T64B
+    CAPABILITY_REAL_RUN_AUDIT_STARTED = "capability_real_run_audit_started"
+    CAPABILITY_REAL_RUN_PROFILE_STARTED = "capability_real_run_profile_started"
+    CAPABILITY_REAL_RUN_SEQUENCE_BUILT = "capability_real_run_sequence_built"
+    CAPABILITY_REAL_RUN_EVIDENCE_RECORDED = "capability_real_run_evidence_recorded"
+    CAPABILITY_REAL_RUN_MATURITY_TRANSITION_RECORDED = "capability_real_run_maturity_transition_recorded"
+    CAPABILITY_REAL_RUN_REGRESSION_ISOLATED = "capability_real_run_regression_isolated"
+    CAPABILITY_REAL_RUN_SAFETY_BLOCK_VERIFIED = "capability_real_run_safety_block_verified"
+    CAPABILITY_REAL_RUN_QUARANTINE_VERIFIED = "capability_real_run_quarantine_verified"
+    CAPABILITY_REAL_RUN_REAL_WORLD_ENABLE_BLOCKED = "capability_real_run_real_world_enable_blocked"
+    CAPABILITY_REAL_RUN_MATURITY_DRIFT_BLOCKED = "capability_real_run_maturity_drift_blocked"
+    CAPABILITY_REAL_RUN_READ_ONLY_ENFORCED = "capability_real_run_read_only_enforced"
+    CAPABILITY_REAL_RUN_VERDICT_COMPUTED = "capability_real_run_verdict_computed"
+    CAPABILITY_REAL_RUN_AUDIT_COMPLETED = "capability_real_run_audit_completed"
 
 
 class MorphologyEvent(BaseModel):
