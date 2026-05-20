@@ -1261,6 +1261,17 @@ class CellularBrainOrchestrator(BaseModel):
         self._last_skill_transfer_audit_result = result.model_dump()
         return self._last_skill_transfer_audit_result
 
+    async def run_skill_transfer_real_run_audit(self) -> Optional[dict]:
+        if not self.skill_transfer_enabled:
+            return None
+        from speace_core.cellular_brain.skill_transfer.skill_transfer_real_run_audit_runner import (
+            SkillTransferRealRunAudit,
+        )
+        audit = SkillTransferRealRunAudit(seed=42)
+        suite = audit.run_audit_suite()
+        self._last_skill_transfer_audit_result = suite.model_dump()
+        return self._last_skill_transfer_audit_result
+
     @classmethod
     def build_mvp(cls, genome: SharedGenome) -> "CellularBrainOrchestrator":
         n_inputs = 10

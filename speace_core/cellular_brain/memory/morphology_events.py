@@ -467,6 +467,22 @@ class MorphologyEventType(str, Enum):
     SKILL_TRANSFER_READ_ONLY_ENFORCED = "skill_transfer_read_only_enforced"
     SKILL_TRANSFER_VERDICT_COMPUTED = "skill_transfer_verdict_computed"
     SKILL_TRANSFER_COMPLETED = "skill_transfer_completed"
+    # T65B
+    SKILL_TRANSFER_REAL_RUN_AUDIT_STARTED = "skill_transfer_real_run_audit_started"
+    SKILL_TRANSFER_REAL_RUN_PROFILE_STARTED = "skill_transfer_real_run_profile_started"
+    SKILL_TRANSFER_REAL_RUN_SEQUENCE_BUILT = "skill_transfer_real_run_sequence_built"
+    SKILL_TRANSFER_REAL_RUN_CANDIDATE_EVALUATED = "skill_transfer_real_run_candidate_evaluated"
+    SKILL_TRANSFER_REAL_RUN_SCENARIO_EVALUATED = "skill_transfer_real_run_scenario_evaluated"
+    SKILL_TRANSFER_REAL_RUN_RESULT_RECORDED = "skill_transfer_real_run_result_recorded"
+    SKILL_TRANSFER_REAL_RUN_GENERALIZATION_DETECTED = "skill_transfer_real_run_generalization_detected"
+    SKILL_TRANSFER_REAL_RUN_OVERFITTING_DETECTED = "skill_transfer_real_run_overfitting_detected"
+    SKILL_TRANSFER_REAL_RUN_NEGATIVE_TRANSFER_DETECTED = "skill_transfer_real_run_negative_transfer_detected"
+    SKILL_TRANSFER_REAL_RUN_SAFETY_BLOCKED = "skill_transfer_real_run_safety_blocked"
+    SKILL_TRANSFER_REAL_RUN_QUARANTINED = "skill_transfer_real_run_quarantined"
+    SKILL_TRANSFER_REAL_RUN_REAL_WORLD_ENABLE_BLOCKED = "skill_transfer_real_run_real_world_enable_blocked"
+    SKILL_TRANSFER_REAL_RUN_READ_ONLY_ENFORCED = "skill_transfer_real_run_read_only_enforced"
+    SKILL_TRANSFER_REAL_RUN_VERDICT_COMPUTED = "skill_transfer_real_run_verdict_computed"
+    SKILL_TRANSFER_REAL_RUN_AUDIT_COMPLETED = "skill_transfer_real_run_audit_completed"
 
 
 class MorphologyEvent(BaseModel):

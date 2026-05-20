@@ -719,6 +719,31 @@ class BenchmarkMetrics(BaseModel):
     skill_transfer_read_only_integrity_score: float = 0.0
     skill_transfer_score: float = 0.0
     proceed_to_t65b_score: float = 0.0
+    # T65B
+    skill_transfer_real_run_audit_count: int = 0
+    skill_transfer_real_run_profile_count: int = 0
+    skill_transfer_real_run_total_cycles: int = 0
+    skill_transfer_real_run_candidate_count: int = 0
+    skill_transfer_real_run_scenario_count: int = 0
+    skill_transfer_real_run_attempt_count: int = 0
+    skill_transfer_real_run_successful_transfer_count: int = 0
+    skill_transfer_real_run_generalized_sandboxed_count: int = 0
+    skill_transfer_real_run_overfitted_count: int = 0
+    skill_transfer_real_run_negative_transfer_count: int = 0
+    skill_transfer_real_run_safety_blocked_count: int = 0
+    skill_transfer_real_run_quarantined_count: int = 0
+    skill_transfer_real_run_real_world_enable_attempt_count: int = 0
+    skill_transfer_real_run_real_world_enable_blocked_count: int = 0
+    skill_transfer_real_run_unsafe_enabled_count: int = 0
+    skill_transfer_real_run_read_only_violation_count: int = 0
+    skill_transfer_real_run_transfer_score: float = 0.0
+    skill_transfer_real_run_generalization_score: float = 0.0
+    skill_transfer_real_run_novelty_adaptation_score: float = 0.0
+    skill_transfer_real_run_safety_score: float = 0.0
+    skill_transfer_real_run_confidence_score: float = 0.0
+    skill_transfer_real_run_read_only_integrity_score: float = 0.0
+    skill_transfer_real_run_score: float = 0.0
+    proceed_to_t66_score: float = 0.0
 
 
 class BenchmarkResult(BaseModel):
