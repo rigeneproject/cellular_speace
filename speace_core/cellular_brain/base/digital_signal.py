@@ -9,6 +9,7 @@ class DigitalSignal(BaseModel):
     strength: float = Field(default=0.0, ge=0.0)
     meaning: str = ""
     timestamp: float = 0.0
+    payload: Any = None
 
 
 class EpigeneticState(BaseModel):

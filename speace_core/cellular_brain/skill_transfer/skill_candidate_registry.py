@@ -25,7 +25,7 @@ class SkillCandidateRegistry:
         if record is None:
             return
         for key, value in kwargs.items():
-            if key in record.model_fields:
+            if key in SkillTransferCandidate.model_fields:
                 setattr(record, key, value)
 
     def record_count(self) -> int:

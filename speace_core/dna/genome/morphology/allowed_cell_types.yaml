@@ -11,6 +11,10 @@ morphology:
     - blockchain_cell
     - industrial_cell
     - laboratory_cell
+    - auditory_neuron
+    - broca_neuron
+    - wernicke_neuron
+    - semantic_pointer_neuron
   allowed_tissues:
     - cognitive_tissue
     - sensory_tissue

@@ -78,6 +78,16 @@ class CellDifferentiationEngine:
         if region in {"prefrontal", "pfc", "control"}:
             return "prefrontal_neuron"
 
+        # Language-specialized regions
+        if region in {"auditory", "language_input"} or role == "auditory":
+            return "auditory_neuron"
+        if region in {"wernicke", "comprehension", "language_comprehension"} or role == "comprehension":
+            return "wernicke_neuron"
+        if region in {"broca", "production", "language_production"} or role == "production":
+            return "broca_neuron"
+        if region in {"semantic", "symbolic", "grounding"} or role == "semantic_pointer":
+            return "semantic_pointer_neuron"
+
         # Hyperactive → inhibitory (stabilization)
         if fires >= 5:
             return "inhibitory_neuron"
@@ -127,6 +137,32 @@ class CellDifferentiationEngine:
             neuron.inhibition_strength = 1.0
             if neuron.refractory_period == 0:
                 neuron.refractory_period = 2
+
+        # Language-specialized phenotypes
+        if new_type == "auditory_neuron":
+            neuron.neuron_role = "auditory"
+            if not hasattr(neuron, "phoneme_sensitivity"):
+                neuron.phoneme_sensitivity = 0.7
+        if new_type == "broca_neuron":
+            neuron.neuron_role = "production"
+            if not hasattr(neuron, "grammatical_role"):
+                neuron.grammatical_role = ""
+            if not hasattr(neuron, "sequence_buffer"):
+                neuron.sequence_buffer = []
+        if new_type == "wernicke_neuron":
+            neuron.neuron_role = "comprehension"
+            if not hasattr(neuron, "comprehension_strength"):
+                neuron.comprehension_strength = 0.6
+            if not hasattr(neuron, "context_window"):
+                neuron.context_window = []
+        if new_type == "semantic_pointer_neuron":
+            neuron.neuron_role = "semantic_pointer"
+            if not hasattr(neuron, "symbol"):
+                neuron.symbol = None
+            if not hasattr(neuron, "assembly_id"):
+                neuron.assembly_id = None
+            if not hasattr(neuron, "binding_strength"):
+                neuron.binding_strength = 0.0
 
         # Record epigenetic mark
         neuron.epigenetic_marks[new_type] = {

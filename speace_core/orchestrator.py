@@ -69,6 +69,7 @@ from speace_core.cellular_brain.sleep.digital_sleep_controller import DigitalSle
 from speace_core.cellular_brain.immune.digital_immune_controller import DigitalImmuneController
 from speace_core.cellular_brain.tool_registry.tool_registry_controller import ToolRegistryController
 from speace_core.cellular_brain.identity_kernel.identity_kernel import IdentityKernel
+from speace_core.cellular_brain.cognition.global_workspace import GlobalWorkspace
 
 
 class CellularBrainOrchestrator(BaseModel):
@@ -178,6 +179,9 @@ class CellularBrainOrchestrator(BaseModel):
     episodic_memory_enabled: bool = True
     _episodic_memory = None
     _episodic_recall = None
+    # Associative Pattern Completion Memory
+    associative_pattern_completion_enabled: bool = False
+    _associative_pattern_completion = None
 
     # T66 — Runtime coordinators (strangler fig decomposition)
     _memory_coordinator: MemoryCoordinator | None = None
@@ -197,6 +201,10 @@ class CellularBrainOrchestrator(BaseModel):
     # T70 — Autobiographical Identity Kernel
     identity_kernel_enabled: bool = False
     _identity_kernel: IdentityKernel | None = None
+    # T71 — Global Cognitive Workspace
+    global_workspace_enabled: bool = False
+    _global_workspace: GlobalWorkspace | None = None
+    _last_global_workspace_step_result: dict | None = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -293,6 +301,16 @@ class CellularBrainOrchestrator(BaseModel):
         # T70 — Identity Kernel
         if self.identity_kernel_enabled:
             self._identity_kernel = IdentityKernel()
+
+        # T71 — Global Cognitive Workspace
+        if self.global_workspace_enabled:
+            self._global_workspace = GlobalWorkspace(
+                broadcast_dim=64,
+                symbolic_dim=16,
+                num_modules=10,
+                seed=42,
+                memory=self._memory,
+            )
 
     def _build_subsystem_context(self) -> SubsystemContext:
         return SubsystemContext(
@@ -570,6 +588,24 @@ class CellularBrainOrchestrator(BaseModel):
         if self.identity_kernel_enabled and self._identity_kernel is not None:
             self._identity_kernel.tick(self)
 
+        # T71 — Global Cognitive Workspace
+        if self.global_workspace_enabled and self._global_workspace is not None:
+            # Feed current circuit activation signature into workspace
+            all_neurons = (
+                self.circuit.input_neurons
+                + self.circuit.hidden_neurons
+                + self.circuit.output_neurons
+            )
+            activation_signature = [getattr(n, "activation", 0.0) for n in all_neurons]
+            # Pad or truncate to broadcast_dim (64)
+            target_len = self._global_workspace._broadcast_dim
+            if len(activation_signature) < target_len:
+                activation_signature += [0.0] * (target_len - len(activation_signature))
+            else:
+                activation_signature = activation_signature[:target_len]
+            self._global_workspace.broadcast("circuit", activation_signature)
+            self._last_global_workspace_step_result = self._global_workspace.step()
+
         # T44 — Associative Learning Between Assemblies
         if (
             self.semantic_memory_enabled
@@ -772,6 +808,50 @@ class CellularBrainOrchestrator(BaseModel):
                 outcome=outcome,
             )
         return None
+
+    # ------------------------------------------------------------------ #
+    # Associative Pattern Completion Memory
+    # ------------------------------------------------------------------ #
+
+    def get_associative_pattern_completion(self):
+        if self._associative_pattern_completion is None:
+            from speace_core.cellular_brain.memory.associative_pattern_completion import (
+                AssociativePatternCompletion,
+            )
+            self._associative_pattern_completion = AssociativePatternCompletion(
+                memory=self._memory,
+            )
+        return self._associative_pattern_completion
+
+    def store_pattern_completion(self, label: str, pattern: list):
+        if self._memory_coordinator is not None:
+            return self._memory_coordinator.store_pattern_completion(
+                self._build_subsystem_context(), label, pattern
+            )
+        if self.associative_pattern_completion_enabled:
+            engine = self.get_associative_pattern_completion()
+            return engine.store_pattern(label, pattern)
+        return None
+
+    def complete_pattern(self, partial_pattern: list, threshold: float = 0.8):
+        if self._memory_coordinator is not None:
+            return self._memory_coordinator.complete_pattern(
+                self._build_subsystem_context(), partial_pattern, threshold
+            )
+        if self.associative_pattern_completion_enabled:
+            engine = self.get_associative_pattern_completion()
+            return engine.complete_pattern(partial_pattern, threshold)
+        return None
+
+    def get_similar_pattern_states(self, query: list):
+        if self._memory_coordinator is not None:
+            return self._memory_coordinator.get_similar_pattern_states(
+                self._build_subsystem_context(), query
+            )
+        if self.associative_pattern_completion_enabled:
+            engine = self.get_associative_pattern_completion()
+            return engine.get_similar_states(query)
+        return []
 
     def _run_cellular_adaptive_defense_and_repair(self) -> None:
         """T42 — Run stress, damage, repair, defense, and epigenetic adaptation."""
@@ -1337,6 +1417,34 @@ class CellularBrainOrchestrator(BaseModel):
         suite = audit.run_audit_suite()
         self._last_capability_maturation_real_run_audit_result = suite.model_dump()
         return self._last_capability_maturation_real_run_audit_result
+
+    # T71 — Global Cognitive Workspace hooks
+    def get_global_workspace(self):
+        if self._global_workspace is None:
+            self._global_workspace = GlobalWorkspace(
+                broadcast_dim=64,
+                symbolic_dim=16,
+                num_modules=10,
+                seed=42,
+                memory=self._memory,
+            )
+        return self._global_workspace
+
+    def get_global_workspace_state(self) -> Optional[dict]:
+        if not self.global_workspace_enabled or self._global_workspace is None:
+            return None
+        return self._global_workspace.get_global_state()
+
+    def get_global_workspace_attention_focus(self) -> Optional[str]:
+        if not self.global_workspace_enabled or self._global_workspace is None:
+            return None
+        return self._global_workspace.get_attention_focus()
+
+    def broadcast_to_global_workspace(self, module_id: str, representation: List[float]) -> None:
+        if not self.global_workspace_enabled:
+            return
+        gw = self.get_global_workspace()
+        gw.broadcast(module_id, representation)
 
     # T65 hooks
     def get_skill_transfer_layer(self):

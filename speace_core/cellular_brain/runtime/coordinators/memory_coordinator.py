@@ -96,3 +96,28 @@ class MemoryCoordinator(SubsystemPlugin):
                 outcome=outcome,
             )
         return None
+
+    # ------------------------------------------------------------------ #
+    # Associative Pattern Completion Memory
+    # ------------------------------------------------------------------ #
+
+    def store_pattern_completion(self, context: Any, label: str, pattern):
+        orch = context.orchestrator_ref()
+        if orch.associative_pattern_completion_enabled:
+            engine = orch.get_associative_pattern_completion()
+            return engine.store_pattern(label, pattern)
+        return None
+
+    def complete_pattern(self, context: Any, partial_pattern, threshold: float = 0.8):
+        orch = context.orchestrator_ref()
+        if orch.associative_pattern_completion_enabled:
+            engine = orch.get_associative_pattern_completion()
+            return engine.complete_pattern(partial_pattern, threshold)
+        return None
+
+    def get_similar_pattern_states(self, context: Any, query):
+        orch = context.orchestrator_ref()
+        if orch.associative_pattern_completion_enabled:
+            engine = orch.get_associative_pattern_completion()
+            return engine.get_similar_states(query)
+        return []

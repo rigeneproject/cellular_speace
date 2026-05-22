@@ -483,6 +483,15 @@ class MorphologyEventType(str, Enum):
     SKILL_TRANSFER_REAL_RUN_READ_ONLY_ENFORCED = "skill_transfer_real_run_read_only_enforced"
     SKILL_TRANSFER_REAL_RUN_VERDICT_COMPUTED = "skill_transfer_real_run_verdict_computed"
     SKILL_TRANSFER_REAL_RUN_AUDIT_COMPLETED = "skill_transfer_real_run_audit_completed"
+    # Associative Pattern Completion Memory
+    PATTERN_STORED = "pattern_stored"
+    PATTERN_COMPLETED = "pattern_completed"
+    # T71 — Global Cognitive Workspace
+    GLOBAL_WORKSPACE_BROADCAST_QUEUED = "global_workspace_broadcast_queued"
+    GLOBAL_WORKSPACE_ATTENTION_ROUTED = "global_workspace_attention_routed"
+    GLOBAL_WORKSPACE_STEP_COMPLETED = "global_workspace_step_completed"
+    GLOBAL_WORKSPACE_STATE_QUERIED = "global_workspace_state_queried"
+    GLOBAL_WORKSPACE_FOCUS_QUERIED = "global_workspace_focus_queried"
 
 
 class MorphologyEvent(BaseModel):

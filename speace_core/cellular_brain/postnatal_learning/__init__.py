@@ -8,6 +8,10 @@ from speace_core.cellular_brain.postnatal_learning.postnatal_learning_models imp
     PostnatalLearningProfileResult,
     PostnatalLearningSuiteResult,
 )
+from speace_core.cellular_brain.postnatal_learning.linguistic_curriculum import (
+    LinguisticCurriculum,
+    LinguisticStage,
+)
 
 __all__ = [
     "PostnatalLearningAudit",
@@ -18,4 +22,6 @@ __all__ = [
     "PostnatalLearningAuditProfile",
     "PostnatalLearningProfileResult",
     "PostnatalLearningSuiteResult",
+    "LinguisticCurriculum",
+    "LinguisticStage",
 ]
