@@ -118,5 +118,18 @@ def run_mvp(
     asyncio.run(_run())
 
 
+@app.command()
+def dashboard() -> None:
+    """Launch the SPEACE organismic web dashboard."""
+    try:
+        from speace_core.dashboard.server import run_server
+    except ImportError as exc:
+        typer.echo("Error: Flask is not installed.")
+        typer.echo("Install it with: pip install \"speace-core[dashboard]\"")
+        raise typer.Exit(1) from exc
+    typer.echo("Starting SPEACE dashboard at http://127.0.0.1:8080")
+    run_server(host="127.0.0.1", port=8080)
+
+
 if __name__ == "__main__":
     app()
