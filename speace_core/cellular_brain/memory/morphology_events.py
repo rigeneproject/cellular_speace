@@ -492,6 +492,9 @@ class MorphologyEventType(str, Enum):
     GLOBAL_WORKSPACE_STEP_COMPLETED = "global_workspace_step_completed"
     GLOBAL_WORKSPACE_STATE_QUERIED = "global_workspace_state_queried"
     GLOBAL_WORKSPACE_FOCUS_QUERIED = "global_workspace_focus_queried"
+    # Embodied Action Actuator
+    ACTION_EXECUTED = "action_executed"
+    ACTION_BLOCKED = "action_blocked"
 
 
 class MorphologyEvent(BaseModel):

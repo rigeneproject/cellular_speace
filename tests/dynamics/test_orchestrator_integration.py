@@ -171,3 +171,72 @@ class TestOrchestratorDynamicsIntegration:
         asyncio.run(orch._tick())
         # After tick, engine time should have advanced
         assert orch._temporal_dynamics.t == pytest.approx(1.0, abs=1e-9)
+
+
+class TestOrchestratorEmbodimentIntegration:
+    def test_embodiment_flags_disabled_by_default(self):
+        genome = SharedGenome()
+        orch = CellularBrainOrchestrator.build_mvp(genome=genome)
+        assert orch.embodiment_enabled is False
+        assert orch._sensor_array is None
+        assert orch._physical_environment is None
+        assert orch._embodied_actuator is None
+        assert orch._embodiment_monitor is None
+
+    def test_orchestrator_initializes_embodiment_when_enabled(self):
+        genome = SharedGenome()
+        orch = CellularBrainOrchestrator.build_mvp(genome=genome)
+        orch.embodiment_enabled = True
+        orch.model_post_init(None)
+
+        assert orch._sensor_array is not None
+        assert orch._physical_environment is not None
+        assert orch._embodied_actuator is not None
+        assert orch._embodiment_monitor is not None
+        assert orch._last_sensor_snapshot is not None
+
+    def test_embodiment_tick_closes_sensorimotor_loop(self):
+        genome = SharedGenome()
+        orch = CellularBrainOrchestrator.build_mvp(genome=genome)
+        orch.embodiment_enabled = True
+        orch.model_post_init(None)
+
+        asyncio.run(orch._tick())
+
+        # Sensor snapshot should be updated after tick
+        assert orch._last_sensor_snapshot is not None
+        # Embodiment monitor should have recorded a tick
+        assert orch._embodiment_monitor._tick_count == 1
+
+    def test_embodiment_with_active_inference_registers_actions(self):
+        genome = SharedGenome()
+        orch = CellularBrainOrchestrator.build_mvp(genome=genome)
+        orch.embodiment_enabled = True
+        orch.active_inference_enabled = True
+        orch.model_post_init(None)
+
+        assert orch._active_inference is not None
+        assert "stable" in orch._active_inference.beliefs
+        assert "unstable" in orch._active_inference.beliefs
+        assert "observe" in orch._active_inference.actions
+        assert "actuate" in orch._active_inference.actions
+
+    def test_flatten_sensor_snapshot(self):
+        snapshot = {
+            "cpu": {"usage_percent": 25.0},
+            "memory": {"used_bytes": 2048.0},
+            "disk": {"drives": [{"used_bytes": 1024.0}]},
+            "network": {"bytes_received": 100.0, "bytes_sent": 50.0},
+            "temperature": {"cpu_celsius": 45.0},
+            "process": {"process_count": 42.0},
+            "power": {"battery_percent": 80.0},
+        }
+        flat = CellularBrainOrchestrator._flatten_sensor_snapshot(snapshot)
+        assert flat["cpu_avg"] == 25.0
+        assert flat["mem_used"] == 2048.0
+        assert flat["disk_used"] == 1024.0
+        assert flat["net_in"] == 100.0
+        assert flat["net_out"] == 50.0
+        assert flat["temp_avg"] == 45.0
+        assert flat["process_count"] == 42.0
+        assert flat["battery_level"] == 80.0

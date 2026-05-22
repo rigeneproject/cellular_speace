@@ -1,9 +1,22 @@
 import asyncio
 import random
+import time
 from typing import Any, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from speace_core.cellular_brain.embodiment.cyber_physical_sensor_array import (
+    CyberPhysicalSensorArray,
+)
+from speace_core.cellular_brain.embodiment.physical_environment_model import (
+    PhysicalEnvironmentModel,
+)
+from speace_core.cellular_brain.embodiment.embodied_action_actuator import (
+    EmbodiedActionActuator,
+)
+from speace_core.cellular_brain.embodiment.embodiment_monitor import (
+    EmbodimentMonitor,
+)
 from speace_core.cellular_brain.base.digital_signal import DigitalSignal
 from speace_core.cellular_brain.cells.digital_astrocyte import DigitalAstrocyte
 from speace_core.cellular_brain.cells.digital_microglia import DigitalMicroglia
@@ -234,6 +247,16 @@ class CellularBrainOrchestrator(BaseModel):
     _homeostatic_drive: GlobalHomeostaticDrive | None = None
     _criticality_monitor: CriticalityMonitor | None = None
 
+    # T72 — Sensorimotor Embodiment
+    embodiment_enabled: bool = False
+    _sensor_array: CyberPhysicalSensorArray | None = None
+    _physical_environment: PhysicalEnvironmentModel | None = None
+    _embodied_actuator: EmbodiedActionActuator | None = None
+    _embodiment_monitor: EmbodimentMonitor | None = None
+    _last_sensor_snapshot: dict | None = None
+    _last_predicted_state_dict: dict | None = None
+    _last_action_proposed: dict | None = None
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def model_post_init(self, __context: object) -> None:
@@ -431,6 +454,32 @@ class CellularBrainOrchestrator(BaseModel):
                 max_history=cm_cfg.get("max_history", 10000),
             )
 
+        # T72 — Sensorimotor Embodiment initialization
+        if self.embodiment_enabled:
+            self._sensor_array = CyberPhysicalSensorArray()
+            self._sensor_array.start_continuous_sampling(interval_ms=1000)
+            self._physical_environment = PhysicalEnvironmentModel()
+            # Seed baseline from first reading
+            first_reading = self._sensor_array.read_all()
+            flat_first = self._flatten_sensor_snapshot(first_reading)
+            self._physical_environment.update(flat_first)
+            self._embodied_actuator = EmbodiedActionActuator()
+            self._embodiment_monitor = EmbodimentMonitor()
+            self._last_sensor_snapshot = first_reading
+            self._last_predicted_state_dict = None
+            self._last_action_proposed = None
+
+            # Register embodiment states and actions for active inference
+            if self.active_inference_enabled and self._active_inference is not None:
+                self._active_inference.register_state("stable", 0.5)
+                self._active_inference.register_state("unstable", 0.5)
+                self._active_inference.register_action(
+                    "observe", {"stable": 0.7, "unstable": 0.3}
+                )
+                self._active_inference.register_action(
+                    "actuate", {"stable": 0.3, "unstable": 0.7}
+                )
+
     def _build_subsystem_context(self) -> SubsystemContext:
         return SubsystemContext(
             orchestrator_ref=lambda: self,
@@ -558,6 +607,57 @@ class CellularBrainOrchestrator(BaseModel):
             for n in all_neurons:
                 self._criticality_monitor.record_activation(n.cell_id, float(self.current_tick))
             _ = self._criticality_monitor.recommend_modulation()
+
+        # ------------------------------------------------------------------ #
+        # T72 — Sensorimotor Embodiment Loop
+        # ------------------------------------------------------------------ #
+        if self.embodiment_enabled and self._sensor_array is not None:
+            sensor_before = self._last_sensor_snapshot
+            sensor_after = self._sensor_array.read_all()
+            flat_after = self._flatten_sensor_snapshot(sensor_after)
+
+            if self._physical_environment is not None:
+                self._physical_environment.update(flat_after)
+                prediction_error = self._physical_environment.get_prediction_error(flat_after)
+                predicted_next = self._physical_environment.predict_next_state()
+
+                if self.predictive_coding_enabled and self._predictive_coding is not None:
+                    input_dim = self._predictive_coding.layers["sensory"]["dim"]
+                    pc_input = np.full(input_dim, prediction_error)
+                    self._predictive_coding.update("sensory", pc_input)
+
+                if self.active_inference_enabled and self._active_inference is not None:
+                    if prediction_error > 1.0:
+                        self._active_inference.observe("unstable", likelihood=2.0)
+                    else:
+                        self._active_inference.observe("stable", likelihood=2.0)
+                    selected_action = self._active_inference.step()
+                    if selected_action is not None and self._embodied_actuator is not None:
+                        signal_type = (
+                            "request_sleep"
+                            if selected_action == "actuate"
+                            else "request_resume"
+                        )
+                        self._embodied_actuator.propose_action(
+                            "send_signal_to_self",
+                            {"signal_type": signal_type},
+                        )
+                        self._last_action_proposed = {
+                            "action_id": selected_action,
+                            "timestamp": time.time(),
+                        }
+
+            if self._embodiment_monitor is not None and sensor_before is not None:
+                self._embodiment_monitor.evaluate_tick(
+                    sensor_before=sensor_before,
+                    action=self._last_action_proposed,
+                    sensor_after=sensor_after,
+                    prediction=self._last_predicted_state_dict,
+                )
+
+            self._last_sensor_snapshot = sensor_after
+            self._last_predicted_state_dict = predicted_next if self._physical_environment is not None else None
+            self._last_action_proposed = None
 
         # Community detection (observational only in T17)
         if self.community_detection_enabled:
@@ -1125,6 +1225,31 @@ class CellularBrainOrchestrator(BaseModel):
         if self.execution_mode == "event_driven_burst":
             snapshot.burst_id = self._burst_engine.burst_counter
         return snapshot
+
+    @staticmethod
+    def _flatten_sensor_snapshot(snapshot: dict) -> dict:
+        """Flatten a nested CyberPhysicalSensorArray snapshot for PhysicalEnvironmentModel."""
+        flat: dict = {}
+        cpu = snapshot.get("cpu", {})
+        flat["cpu_avg"] = cpu.get("usage_percent", 0.0) or 0.0
+        mem = snapshot.get("memory", {})
+        flat["mem_used"] = mem.get("used_bytes", 0.0) or 0.0
+        disk = snapshot.get("disk", {})
+        drives = disk.get("drives", [])
+        if drives:
+            flat["disk_used"] = drives[0].get("used_bytes", 0.0) or 0.0
+        else:
+            flat["disk_used"] = 0.0
+        net = snapshot.get("network", {})
+        flat["net_in"] = net.get("bytes_received", 0.0) or 0.0
+        flat["net_out"] = net.get("bytes_sent", 0.0) or 0.0
+        temp = snapshot.get("temperature", {})
+        flat["temp_avg"] = temp.get("cpu_celsius", 0.0) or 0.0
+        proc = snapshot.get("process", {})
+        flat["process_count"] = proc.get("process_count", 0.0) or 0.0
+        power = snapshot.get("power", {})
+        flat["battery_level"] = power.get("battery_percent", 0.0) or 0.0
+        return flat
 
     @property
     def latest_metrics(self) -> SystemMetrics | None:
