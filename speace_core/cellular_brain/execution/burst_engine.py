@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from speace_core.cellular_brain.circuits.neural_circuit import NeuralCircuit
 from speace_core.cellular_brain.cells.digital_neuron import DigitalNeuron
@@ -14,8 +14,7 @@ class FireCandidate(BaseModel):
     source: Optional[str] = None
     created_at_burst: int = 0
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class BurstResult(BaseModel):

@@ -1,7 +1,7 @@
 import random
 from typing import List
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from speace_core.cellular_brain.base.digital_signal import DigitalSignal
 from speace_core.cellular_brain.cells.digital_astrocyte import DigitalAstrocyte
@@ -25,8 +25,7 @@ class NeuralCircuit(BaseModel):
     feedback_buffer: List[float] = []
     memory: MorphologicalMemory | None = None
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def inject_input(self, pattern: List[float]) -> None:
         for neuron, strength in zip(self.input_neurons, pattern):

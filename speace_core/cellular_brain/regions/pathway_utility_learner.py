@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from speace_core.cellular_brain.memory.morphological_memory import MorphologicalMemory
 from speace_core.cellular_brain.memory.morphology_events import MorphologyEventType
@@ -28,8 +28,7 @@ class PathwayUtilityRecord(BaseModel):
     last_delta_cognitive_score: float = 0.0
     last_delta_energy: float = 0.0
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class PathwayRewardSignal(BaseModel):
@@ -44,8 +43,7 @@ class PathwayRewardSignal(BaseModel):
 
     composite_reward: float = 0.0
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class PathwayUtilityLearningResult(BaseModel):
@@ -58,8 +56,7 @@ class PathwayUtilityLearningResult(BaseModel):
     best_pathway_id: Optional[str] = None
     worst_pathway_id: Optional[str] = None
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class PathwayUtilityLearner:

@@ -1,7 +1,7 @@
 import json
 import random
 import uuid
-from datetime import datetime
+from datetime import datetime, UTC
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -563,13 +563,13 @@ class PostnatalLearningRealRunAudit:
         return True
 
     def _generate_reports(self, suite: PostnatalLearningRealRunSuiteResult) -> None:
-        ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        ts = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
         json_path = self._reports_dir / f"t63b_audit_{ts}.json"
         json_path.write_text(json.dumps(suite.model_dump(), indent=2, default=str), encoding="utf-8")
         md_path = self._reports_dir / f"t63b_audit_{ts}.md"
         lines = [
             "# T63B — Postnatal Learning Real-Run Curriculum Audit Report",
-            f"**Timestamp:** {datetime.utcnow().isoformat()}",
+            f"**Timestamp:** {datetime.now(UTC).isoformat()}",
             "",
             "## Suite Result",
             f"- **Aggregate verdict:** {suite.aggregate_verdict}",

@@ -38,4 +38,5 @@ class EventBus:
             if asyncio.isawaitable(result):
                 await result
         except Exception:
-            logger.exception("event_bus_dispatch_failed", handler=handler.__name__)
+            handler_name = getattr(handler, "__name__", handler.__class__.__name__)
+            logger.exception("event_bus_dispatch_failed", handler=handler_name)

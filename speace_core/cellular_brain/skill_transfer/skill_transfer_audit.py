@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import datetime, UTC
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -68,14 +68,14 @@ class SkillTransferAudit:
         return result
 
     def _generate_reports(self, result: SkillTransferAuditResult) -> None:
-        ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        ts = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
         json_path = self._reports_dir / f"t65_audit_{ts}.json"
         json_path.write_text(json.dumps(result.model_dump(), indent=2, default=str), encoding="utf-8")
 
         md_path = self._reports_dir / f"t65_audit_{ts}.md"
         lines = [
             "# T65 — Skill Transfer Audit Report",
-            f"**Timestamp:** {datetime.utcnow().isoformat()}",
+            f"**Timestamp:** {datetime.now(UTC).isoformat()}",
             "",
             "## Summary",
             f"- **Verdict:** {result.transfer_verdict}",

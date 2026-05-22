@@ -1,6 +1,6 @@
 import json
 import random
-from datetime import datetime
+from datetime import datetime, UTC
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -97,7 +97,7 @@ class ExternalWorldModelSandbox:
         suite_result: dict,
         suffix: str = "",
     ) -> tuple[Path, Path]:
-        ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        ts = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
         if suffix:
             ts = f"{ts}_{suffix}"
         json_path = self._reports_dir / f"t61_audit_{ts}.json"
@@ -105,7 +105,7 @@ class ExternalWorldModelSandbox:
         json_path.write_text(json.dumps(suite_result, indent=2, default=str), encoding="utf-8")
         md_lines = [
             "# T61 — External World Model Sandbox Audit Report",
-            f"**Timestamp:** {datetime.utcnow().isoformat()}",
+            f"**Timestamp:** {datetime.now(UTC).isoformat()}",
             "",
             "## Suite Result",
             f"- **Aggregate verdict:** {suite_result.get('aggregate_verdict', 'N/A')}",

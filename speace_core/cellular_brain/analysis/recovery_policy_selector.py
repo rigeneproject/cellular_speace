@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from speace_core.cellular_brain.analysis.long_horizon_adaptation_audit import (
     LongHorizonAuditResult,
@@ -113,8 +113,7 @@ class RecoveryPolicy(BaseModel):
         default_factory=RegressionGuardThresholds
     )
 
-    class Config:
-        extra = "allow"
+    model_config = ConfigDict(extra="allow")
 
 
 class RecoveryPolicySelectionResult(BaseModel):

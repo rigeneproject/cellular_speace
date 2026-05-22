@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from speace_core.cellular_brain.benchmark.neurofunctional_benchmark import (
     BenchmarkResult,
@@ -37,8 +37,7 @@ class DeepRegionAuditProfile(BaseModel):
     region_stability_controller_enabled: bool = False
     description: str = ""
 
-    class Config:
-        extra = "allow"
+    model_config = ConfigDict(extra="allow")
 
 
 class DeepRegionAuditResult(BaseModel):

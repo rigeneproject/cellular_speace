@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, List
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from speace_core.cellular_brain.base.digital_signal import DigitalSignal, EpigeneticState
 
@@ -19,8 +19,7 @@ class DigitalCell(ABC, BaseModel):
 
     _shared_dna: "SharedGenome" = None  # type: ignore[assignment]
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def bind_genome(self, genome: "SharedGenome") -> None:
         self._shared_dna = genome

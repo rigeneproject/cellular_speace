@@ -1,6 +1,6 @@
 import json
 import random
-from datetime import datetime
+from datetime import datetime, UTC
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -429,17 +429,17 @@ class ActionGovernanceAudit:
         return "EXTERNAL_ACTION_GOVERNANCE_INSUFFICIENT_EVIDENCE"
 
     def generate_json_report(self, suite_result: ActionGovernanceSuiteResult) -> str:
-        ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        ts = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
         path = self._reports_dir / f"t62_audit_{ts}.json"
         path.write_text(json.dumps(suite_result.model_dump(), indent=2, default=str), encoding="utf-8")
         return str(path)
 
     def generate_markdown_report(self, suite_result: ActionGovernanceSuiteResult) -> str:
-        ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        ts = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
         path = self._reports_dir / f"t62_audit_{ts}.md"
         lines = [
             "# T62 — External Action Governance Sandbox Audit Report",
-            f"**Timestamp:** {datetime.utcnow().isoformat()}",
+            f"**Timestamp:** {datetime.now(UTC).isoformat()}",
             "",
             "## Suite Result",
             f"- **Aggregate verdict:** {suite_result.aggregate_verdict}",

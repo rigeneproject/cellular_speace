@@ -1,5 +1,5 @@
 import random
-from datetime import datetime
+from datetime import datetime, UTC
 from typing import Any, Dict, List, Optional
 
 from speace_core.cellular_brain.world_model.world_model_models import (
@@ -28,7 +28,7 @@ class WorldStateStore:
         snapshot_id = f"wms_{len(self._history)}_{self._rng.randint(0, 999999)}"
         snapshot = WorldModelSnapshot(
             snapshot_id=snapshot_id,
-            timestamp=datetime.utcnow().isoformat(),
+            timestamp=datetime.now(UTC).isoformat(),
             entities=entities or [],
             zones=zones or [],
             metadata=metadata or {},
