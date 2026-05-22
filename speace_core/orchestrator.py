@@ -91,6 +91,8 @@ from speace_core.cellular_brain.dynamics.predictive_coding_engine import Predict
 from speace_core.cellular_brain.dynamics.active_inference_engine import ActiveInferenceEngine
 from speace_core.cellular_brain.dynamics.global_homeostatic_drive import GlobalHomeostaticDrive
 from speace_core.cellular_brain.dynamics.criticality_monitor import CriticalityMonitor
+from speace_core.cellular_brain.regulation.emergent_dynamics_stabilizer import EmergentDynamicsStabilizer
+from speace_core.cellular_brain.regulation.cognitive_attractor_tracker import CognitiveAttractorTracker
 
 import numpy as np
 
@@ -246,6 +248,11 @@ class CellularBrainOrchestrator(BaseModel):
     _active_inference: ActiveInferenceEngine | None = None
     _homeostatic_drive: GlobalHomeostaticDrive | None = None
     _criticality_monitor: CriticalityMonitor | None = None
+
+    # Emergent Dynamics Stabilizer
+    emergent_dynamics_stabilizer_enabled: bool = False
+    _emergent_dynamics_stabilizer: EmergentDynamicsStabilizer | None = None
+    _cognitive_attractor_tracker: CognitiveAttractorTracker | None = None
 
     # T72 — Sensorimotor Embodiment
     embodiment_enabled: bool = False
@@ -453,6 +460,11 @@ class CellularBrainOrchestrator(BaseModel):
                 branching_bin_size=cm_cfg.get("branching_bin_size", 5.0),
                 max_history=cm_cfg.get("max_history", 10000),
             )
+
+        # Emergent Dynamics Stabilizer
+        if self.emergent_dynamics_stabilizer_enabled:
+            self._emergent_dynamics_stabilizer = EmergentDynamicsStabilizer()
+            self._cognitive_attractor_tracker = CognitiveAttractorTracker()
 
         # T72 — Sensorimotor Embodiment initialization
         if self.embodiment_enabled:
@@ -910,6 +922,59 @@ class CellularBrainOrchestrator(BaseModel):
                 self._associative_learning_engine.observe_assemblies(
                     active_assemblies, tick=self.current_tick
                 )
+
+        # Emergent Dynamics Stabilizer step
+        if self.emergent_dynamics_stabilizer_enabled and self._emergent_dynamics_stabilizer is not None:
+            all_neurons = (
+                self.circuit.input_neurons
+                + self.circuit.hidden_neurons
+                + self.circuit.output_neurons
+            )
+            activations = [getattr(n, "activation", 0.0) for n in all_neurons]
+            energies = {n.cell_id: getattr(n, "energy", 1.0) for n in all_neurons}
+
+            drive_levels = {}
+            if self.homeostatic_drive_enabled and self._homeostatic_drive is not None:
+                for name in self._homeostatic_drive.list_drives():
+                    try:
+                        drive_levels[name] = self._homeostatic_drive.get_drive_signal(name)
+                    except KeyError:
+                        pass
+
+            prediction_errors = {}
+            if self.predictive_coding_enabled and self._predictive_coding is not None:
+                for layer_id in self._predictive_coding.layers:
+                    prediction_errors[layer_id] = self._predictive_coding.get_prediction_error(layer_id)
+
+            workspace_state = {}
+            if self.global_workspace_enabled and self._global_workspace is not None:
+                workspace_state = self._global_workspace.get_global_state()
+
+            self_model_coherence = metrics.coherence_phi if metrics else 0.0
+            embodiment_depth = 0.0
+            if self.embodiment_enabled and self._embodiment_monitor is not None:
+                embodiment_depth = self._embodiment_monitor.get_embodiment_report().get("embodiment_depth", 0.0)
+
+            branching_ratio = 1.0
+            if self.criticality_monitor_enabled and self._criticality_monitor is not None:
+                branching_ratio = self._criticality_monitor.get_branching_ratio()
+
+            system_state = {
+                "activations": activations,
+                "drive_levels": drive_levels,
+                "energy_levels": energies,
+                "prediction_errors": prediction_errors,
+                "workspace_state": workspace_state,
+                "self_model_coherence": self_model_coherence,
+                "embodiment_depth": embodiment_depth,
+                "branching_ratio": branching_ratio,
+            }
+
+            result = self._emergent_dynamics_stabilizer.step(system_state)
+            # If attractor tracker is present, record the activation state
+            if self._cognitive_attractor_tracker is not None:
+                self._cognitive_attractor_tracker.record_state(activations)
+                self._cognitive_attractor_tracker.persist()
 
         # Record morphological snapshot every tick
         snapshot = self._build_morphology_snapshot(metrics)
