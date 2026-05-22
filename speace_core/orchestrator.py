@@ -65,6 +65,10 @@ from speace_core.cellular_brain.runtime.coordinators.evolution_coordinator impor
 from speace_core.cellular_brain.runtime.coordinators.metabolism_coordinator import MetabolismCoordinator
 from speace_core.cellular_brain.runtime.subsystem_scheduler import SubsystemScheduler
 from speace_core.cellular_brain.runtime.subsystem_context import SubsystemContext, TickState
+from speace_core.cellular_brain.sleep.digital_sleep_controller import DigitalSleepController
+from speace_core.cellular_brain.immune.digital_immune_controller import DigitalImmuneController
+from speace_core.cellular_brain.tool_registry.tool_registry_controller import ToolRegistryController
+from speace_core.cellular_brain.identity_kernel.identity_kernel import IdentityKernel
 
 
 class CellularBrainOrchestrator(BaseModel):
@@ -181,6 +185,19 @@ class CellularBrainOrchestrator(BaseModel):
     _metabolism_coordinator: MetabolismCoordinator | None = None
     _subsystem_scheduler: SubsystemScheduler | None = None
 
+    # T67 — Digital Sleep & Memory Consolidation
+    sleep_enabled: bool = False
+    _sleep_controller: DigitalSleepController | None = None
+    # T68 — Digital Immune System
+    immune_enabled: bool = False
+    _immune_controller: DigitalImmuneController | None = None
+    # T69 — Sandboxed Embodied Tool Registry
+    tool_registry_enabled: bool = False
+    _tool_registry_controller: ToolRegistryController | None = None
+    # T70 — Autobiographical Identity Kernel
+    identity_kernel_enabled: bool = False
+    _identity_kernel: IdentityKernel | None = None
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def model_post_init(self, __context: object) -> None:
@@ -263,6 +280,19 @@ class CellularBrainOrchestrator(BaseModel):
         self._subsystem_scheduler.assign("memory", self._memory_coordinator)
         self._subsystem_scheduler.assign("evolution", self._evolution_coordinator)
         self._subsystem_scheduler.assign("metabolism", self._metabolism_coordinator)
+
+        # T67 — Digital Sleep
+        if self.sleep_enabled:
+            self._sleep_controller = DigitalSleepController()
+        # T68 — Digital Immune
+        if self.immune_enabled:
+            self._immune_controller = DigitalImmuneController()
+        # T69 — Tool Registry
+        if self.tool_registry_enabled:
+            self._tool_registry_controller = ToolRegistryController()
+        # T70 — Identity Kernel
+        if self.identity_kernel_enabled:
+            self._identity_kernel = IdentityKernel()
 
     def _build_subsystem_context(self) -> SubsystemContext:
         return SubsystemContext(
@@ -524,9 +554,21 @@ class CellularBrainOrchestrator(BaseModel):
         # T42 — Cellular Adaptive Defense & Repair
         self._run_cellular_adaptive_defense_and_repair()
 
+        # T68 — Digital Immune System
+        if self.immune_enabled and self._immune_controller is not None:
+            self._immune_controller.tick(self)
+
         # T43 — Semantic Cell Assembly Memory
         if self.semantic_memory_enabled and self._cell_assembly_engine is not None:
             self._cell_assembly_engine.run_semantic_memory_cycle(self)
+
+        # T67 — Digital Sleep & Memory Consolidation
+        if self.sleep_enabled and self._sleep_controller is not None:
+            self._sleep_controller.tick(self)
+
+        # T70 — Autobiographical Identity Kernel
+        if self.identity_kernel_enabled and self._identity_kernel is not None:
+            self._identity_kernel.tick(self)
 
         # T44 — Associative Learning Between Assemblies
         if (

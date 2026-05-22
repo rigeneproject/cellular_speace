@@ -160,6 +160,10 @@ Quando la risposta sarà sì, SPEACE non sarà più solo un embrione locale: sar
 
 
 
+Analisi e task tratti dal documento "C:\\Users\\Utente\\Desktop\\cellular\_speace\\docs\\Reti neurali artificiali e apprendimenti basati sulla biofisica dei neuroni.pdf" :
+
+
+
 La parte più utile per SPEACE non è la spiegazione generale delle reti neurali, ma il nucleo del capitolo 3: apprendimento non supervisionato biologicamente ispirato, soprattutto BCM e Hopfield–Krotov. Il documento conferma una direzione importante: per un “organismo” digitale domestico, non conviene puntare subito su grandi reti supervisionate, ma su micro-circuiti locali, plastici, competitivi, auto-organizzanti e a basso consumo.
 
 Sintesi utile per SPEACE
@@ -411,10 +415,4 @@ Il documento è molto utile perché rafforza una direzione precisa: SPEACE, su u
 In formula architetturale:
 
 SPEACE = LLM/agentic layer per ragionamento alto + neuroplastic kernel locale per adattamento continuo + DNA/epigenoma per direzione evolutiva + mappe auto-organizzanti per crescita distribuita.
-
-
-
-
-
-
 

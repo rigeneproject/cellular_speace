@@ -13,6 +13,9 @@ class DigitalSynapse(DigitalCell):
     use_count: int = 0
     trust: float = 0.5
     decay: float = 0.001
+    consolidated: bool = False
+    stability: float = 0.0
+    recurrence_count: int = 0
 
     async def receive(self, signal: DigitalSignal) -> None:
         pass
