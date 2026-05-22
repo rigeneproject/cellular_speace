@@ -1,8 +1,8 @@
 import asyncio
 import random
-from typing import List
+from typing import Any, List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 from speace_core.cellular_brain.base.digital_signal import DigitalSignal
 from speace_core.cellular_brain.cells.digital_astrocyte import DigitalAstrocyte
@@ -67,7 +67,7 @@ class CellularBrainOrchestrator(BaseModel):
     circuit: NeuralCircuit
     tick_interval: float = 0.0
     current_tick: int = 0
-    metrics_log: List[SystemMetrics] = []
+    metrics_log: List[SystemMetrics] = Field(default_factory=list)
 
     _homeostasis: HomeostasisEngine = None  # type: ignore[assignment]
     _plasticity: PlasticityEngine = None  # type: ignore[assignment]
@@ -170,8 +170,7 @@ class CellularBrainOrchestrator(BaseModel):
     _episodic_memory = None
     _episodic_recall = None
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def model_post_init(self, __context: object) -> None:
         self._homeostasis = HomeostasisEngine()

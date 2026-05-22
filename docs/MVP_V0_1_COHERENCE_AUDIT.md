@@ -99,7 +99,7 @@ T3.4 — pending (ma CellFactory esisteva e testato)
 | # | Incoerenza | Gravitá | Stato |
 |---|---|---|---|
 | 1 | Task tracker non aggiornato dopo implementazione | Media | Risolta |
-| 2 | Typo `Oligodendrocite` invece di `Oligodendrocyte` in 9 file | Bassa | Risolta (rename + sostituzione globale) |
+| 2 | Typo `Oligodendrocyte` invece di `Oligodendrocyte` in 9 file | Bassa | Risolta (rename + sostituzione globale) |
 | 3 | CLI test rimosso per instabilitá path relativo | Bassa | Accettato — CLI testato manualmente |
 | 4 | MyelinationEngine non wired nel tick loop principale | Bassa | Noto — schedulato per v0.2 |
 | 5 | Pydantic v2 deprecation warning `class Config` | Bassa | Noto — schedulato per v0.2 |
@@ -111,7 +111,7 @@ T3.4 — pending (ma CellFactory esisteva e testato)
 - [x] Aggiornare task tracker (T2.x, T3.x chiusi)
 - [x] Rinominare `digital_oligodendrocite.py` → `digital_oligodendrocyte.py`
 - [x] Rinominare `test_digital_oligodendrocite.py` → `test_digital_oligodendrocyte.py`
-- [x] Sostituire tutte le occorrenze di `Oligodendrocite`/`oligodendrocite` nel codice e docs
+- [x] Sostituire tutte le occorrenze di `Oligodendrocyte`/`oligodendrocite` nel codice e docs
 - [x] Verificare che i test passino dopo le modifiche (30/30 pass, 83% coverage)
 - [x] Verificare tag git `v0.1.0-mvp` punta a commit `ecbca2a`
 

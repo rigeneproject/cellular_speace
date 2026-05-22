@@ -1,7 +1,11 @@
 import asyncio
 from typing import Callable, Dict, List
 
+import structlog
+
 from speace_core.cellular_brain.base.digital_signal import DigitalSignal
+
+logger = structlog.get_logger(__name__)
 
 
 class EventBus:
@@ -34,4 +38,4 @@ class EventBus:
             if asyncio.isawaitable(result):
                 await result
         except Exception:
-            pass
+            logger.exception("event_bus_dispatch_failed", handler=handler.__name__)
