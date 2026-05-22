@@ -23,3 +23,16 @@ monitoring_dashboard:
     energy_min: 0.2
     severity_max: 2.0
     branching_ratio_deviation: 0.3
+  alert_thresholds:
+    chaos_warning: 0.4
+    chaos_critical: 0.8
+    rigidity_warning: 0.3
+    rigidity_critical: 0.7
+    drift_warning: 0.2
+    drift_critical: 0.5
+    prediction_error_warning: 5.0
+    prediction_error_critical: 20.0
+    coherence_phi_warning: 0.2
+    coherence_phi_critical: 0.1
+    branching_deviation_warning: 0.2
+    branching_deviation_critical: 0.4

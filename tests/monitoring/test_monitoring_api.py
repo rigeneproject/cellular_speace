@@ -94,6 +94,24 @@ class TestHttpEndpoints:
         assert r.status_code == 200
         assert b"WebSocket" in r.content
 
+    def test_alerts(self, client):
+        r = client.get("/api/alerts")
+        assert r.status_code == 200
+        data = r.json()
+        assert "alerts" in data
+        assert "health_score" in data
+        assert "recent_alerts" in data
+        assert isinstance(data["alerts"], list)
+        assert 0.0 <= data["health_score"] <= 1.0
+
+    def test_health_score(self, client):
+        r = client.get("/api/health_score")
+        assert r.status_code == 200
+        data = r.json()
+        assert "health_score" in data
+        assert 0.0 <= data["health_score"] <= 1.0
+        assert "timestamp" in data
+
 
 class TestWebSocket:
     def test_ws_state(self, client):

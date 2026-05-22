@@ -213,6 +213,23 @@
     renderAnomalies(ap.anomalies || []);
     setPanelStatus('panel-anomaly', overall);
 
+    // T102 — Alert Telemetry
+    const al = s.alert_engine || {};
+    const alAlerts = Array.isArray(al.alerts) ? al.alerts : [];
+    document.getElementById('al-health').textContent = fmtNum(al.health_score, 3);
+    document.getElementById('al-count').textContent = alAlerts.length;
+    const alCrit = alAlerts.filter(a => a.severity === 'critical').length;
+    const alWarn = alAlerts.filter(a => a.severity === 'warning').length;
+    document.getElementById('al-critical').textContent = alCrit;
+    document.getElementById('al-warning').textContent = alWarn;
+    const alMaxSev = alCrit > 0 ? 'critical' : alWarn > 0 ? 'warning' : 'normal';
+    setBadge('al-badge', alMaxSev);
+    renderList('al-timeline', alAlerts, a => {
+      const t = a.timestamp ? new Date(a.timestamp * 1000).toISOString().split('T')[1].replace('Z', '').slice(0, 8) : '—';
+      return `<li><span class="anomaly-type">${a.alert_type || 'unknown'}</span><span class="anomaly-severity ${a.severity || 'warning'}">${(a.severity || 'warning').toUpperCase()}</span><span class="meta">${t}</span></li>`;
+    });
+    setPanelStatus('panel-alerts', alMaxSev);
+
     // Header meta from health (if loaded separately)
     if (s.timestamp) {
       const ts = new Date(s.timestamp * 1000).toISOString().split('T')[1].replace('Z', '');

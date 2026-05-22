@@ -162,6 +162,31 @@
       <h3 style="font-size:0.7rem; color:var(--text-secondary); margin:0.5rem 0 0.25rem;">Active Anomalies</h3>
       <ul class="anomaly-list" id="a-list"></ul>
     </section>
+
+    <!-- T102 — Alert Panel -->
+    <section class="panel panel-grid-2" id="panel-alerts">
+      <h2>Alert Telemetry <span class="badge" id="al-badge">normal</span></h2>
+      <div class="score-grid" style="margin-bottom:0.75rem;">
+        <div class="score-card">
+          <div class="label">Health Score (Φ/ΔD)</div>
+          <div class="value" id="al-health">0.00</div>
+        </div>
+        <div class="score-card">
+          <div class="label">Active Alerts</div>
+          <div class="value" id="al-count">0</div>
+        </div>
+        <div class="score-card">
+          <div class="label">Critical</div>
+          <div class="value" id="al-critical">0</div>
+        </div>
+        <div class="score-card">
+          <div class="label">Warning</div>
+          <div class="value" id="al-warning">0</div>
+        </div>
+      </div>
+      <h3 style="font-size:0.7rem; color:var(--text-secondary); margin:0.5rem 0 0.25rem;">Event Timeline</h3>
+      <ul class="anomaly-list" id="al-timeline"></ul>
+    </section>
   </main>
 
   <div class="error-banner" id="error-banner"></div>

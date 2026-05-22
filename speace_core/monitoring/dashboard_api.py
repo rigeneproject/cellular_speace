@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Dict
 
 from speace_core.cli import SPEACE_VERSION
+from speace_core.monitoring.alert_engine import AlertEngine
 from speace_core.monitoring.anomaly_panel import AnomalyPanel
 from speace_core.monitoring.metrics_bus import MetricsBus
 from speace_core.monitoring.organism_state_collector import OrganismStateCollector
@@ -40,6 +41,7 @@ _data_root = Path("data")
 _collector = OrganismStateCollector(data_root=str(_data_root))
 _safety = SafetyStatus(data_root=str(_data_root))
 _anomaly = AnomalyPanel()
+_alert_engine = AlertEngine()
 
 # Load genome thresholds if available
 _genome_path = Path(__file__).resolve().parent.parent / "dna" / "genome" / "monitoring_dashboard.yaml"
@@ -57,6 +59,9 @@ if _genome_path.exists():
                 severity_max=_thresh.get("severity_max", 2.0),
                 branching_ratio_deviation=_thresh.get("branching_ratio_deviation", 0.3),
             )
+        _alert_thresh = _md.get("alert_thresholds", {})
+        if _alert_thresh:
+            _alert_engine = AlertEngine(thresholds=_alert_thresh)
     except Exception:
         pass
 
@@ -65,6 +70,14 @@ def _post_process(state: Dict[str, Any]) -> Dict[str, Any]:
         state["anomaly_panel"] = _anomaly.analyze(state)
     except Exception:
         state["anomaly_panel"] = {"anomalies": [], "overall_status": "unknown", "anomaly_count": 0}
+    try:
+        alerts = _alert_engine.evaluate(state)
+        state["alert_engine"] = {
+            "alerts": alerts,
+            "health_score": _alert_engine.health_score(state),
+        }
+    except Exception:
+        state["alert_engine"] = {"alerts": [], "health_score": 0.0}
     return state
 
 
@@ -153,6 +166,39 @@ async def api_safety() -> Dict[str, Any]:
     safety["governance_mode"] = "observation_only"
     safety["allow_actuator_commands"] = False
     return safety
+
+
+# --------------------------------------------------------------------------- #
+# T102 — Alerts and Health Score
+# --------------------------------------------------------------------------- #
+
+
+@app.get("/api/alerts")
+async def api_alerts(limit: int = 20) -> Dict[str, Any]:
+    state = _metrics_bus.latest()
+    if not state:
+        state = _collector.collect_all()
+        state["timestamp"] = time.time()
+    alerts = _alert_engine.evaluate(state)
+    recent = _alert_engine.recent_alerts(limit=limit)
+    return {
+        "alerts": alerts,
+        "recent_alerts": recent,
+        "health_score": _alert_engine.health_score(state),
+        "timestamp": time.time(),
+    }
+
+
+@app.get("/api/health_score")
+async def api_health_score() -> Dict[str, Any]:
+    state = _metrics_bus.latest()
+    if not state:
+        state = _collector.collect_all()
+        state["timestamp"] = time.time()
+    return {
+        "health_score": _alert_engine.health_score(state),
+        "timestamp": time.time(),
+    }
 
 
 # --------------------------------------------------------------------------- #
