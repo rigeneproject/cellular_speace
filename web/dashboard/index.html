@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SPEACE Local Organism Monitor</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <header>
+    <div>
+      <h1>SPEACE Local Organism Monitor</h1>
+      <span class="meta" id="header-meta">v0.0.0 | uptime: 0s</span>
+    </div>
+    <div>
+      <span class="status" id="conn-status"></span>
+      <span class="meta" id="conn-text">connecting</span>
+    </div>
+  </header>
+
+  <main>
+    <!-- Body State -->
+    <section class="panel" id="panel-body">
+      <h2>Body State</h2>
+      <div class="sensor-grid">
+        <div class="gauge">
+          <div class="gauge-label">CPU</div>
+          <div class="gauge-value" id="b-cpu">0%</div>
+          <div class="gauge-bar"><div class="gauge-bar-inner green" id="bb-cpu" style="width:0%"></div></div>
+        </div>
+        <div class="gauge">
+          <div class="gauge-label">RAM</div>
+          <div class="gauge-value" id="b-ram">0 GB</div>
+          <div class="gauge-bar"><div class="gauge-bar-inner green" id="bb-ram" style="width:0%"></div></div>
+        </div>
+        <div class="gauge">
+          <div class="gauge-label">Disk</div>
+          <div class="gauge-value" id="b-disk">0 GB</div>
+          <div class="gauge-bar"><div class="gauge-bar-inner green" id="bb-disk" style="width:0%"></div></div>
+        </div>
+        <div class="gauge">
+          <div class="gauge-label">Network</div>
+          <div class="gauge-value" id="b-net">0 B</div>
+          <div class="gauge-bar"><div class="gauge-bar-inner green" id="bb-net" style="width:0%"></div></div>
+        </div>
+        <div class="gauge">
+          <div class="gauge-label">Temp</div>
+          <div class="gauge-value" id="b-temp">0 C</div>
+          <div class="gauge-bar"><div class="gauge-bar-inner green" id="bb-temp" style="width:0%"></div></div>
+        </div>
+        <div class="gauge">
+          <div class="gauge-label">Battery</div>
+          <div class="gauge-value" id="b-batt">0%</div>
+          <div class="gauge-bar"><div class="gauge-bar-inner green" id="bb-batt" style="width:0%"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Cognitive State -->
+    <section class="panel" id="panel-cognition">
+      <h2>Cognitive State</h2>
+      <div class="info-row"><span class="info-key">Global State</span><span class="info-val" id="c-gw">—</span></div>
+      <div class="info-row"><span class="info-key">Attention Focus</span><span class="info-val" id="c-focus">—</span></div>
+      <div class="info-row"><span class="info-key">Awareness Level</span><span class="info-val" id="c-awareness">0.00</span></div>
+      <div class="info-row"><span class="info-key">Developmental Stage</span><span class="info-val" id="c-stage">—</span></div>
+      <div class="info-row"><span class="info-key">Coherence Phi</span><span class="info-val" id="c-phi">0.00</span></div>
+      <div class="info-row"><span class="info-key">Active Goals</span><span class="info-val" id="c-goals">—</span></div>
+      <h3 style="font-size:0.7rem; color:var(--text-secondary); margin:0.5rem 0 0.25rem;">Narrative Trace</h3>
+      <ul class="narrative-list" id="c-narrative"></ul>
+    </section>
+
+    <!-- Dynamic Stability -->
+    <section class="panel" id="panel-dynamics">
+      <h2>Dynamic Stability</h2>
+      <div class="score-grid">
+        <div class="score-card">
+          <div class="label">Chaos</div>
+          <div class="value" id="d-chaos">0.00</div>
+        </div>
+        <div class="score-card">
+          <div class="label">Rigidity</div>
+          <div class="value" id="d-rigidity">0.00</div>
+        </div>
+        <div class="score-card">
+          <div class="label">Drift</div>
+          <div class="value" id="d-drift">0.00</div>
+        </div>
+        <div class="score-card">
+          <div class="label">Attractors</div>
+          <div class="value" id="d-attractors">0</div>
+        </div>
+      </div>
+      <div class="info-row" style="margin-top:0.5rem;">
+        <span class="info-key">Branching Ratio</span>
+        <span class="info-val" id="d-branching">0.00</span>
+      </div>
+      <div class="info-row">
+        <span class="info-key">Near Critical</span>
+        <span class="info-val" id="d-critical">false</span>
+      </div>
+      <div class="info-row">
+        <span class="info-key">Last Intervention</span>
+        <span class="info-val" id="d-intervention">—</span>
+      </div>
+    </section>
+
+    <!-- Prediction Error -->
+    <section class="panel" id="panel-prediction">
+      <h2>Prediction Error</h2>
+      <div class="info-row"><span class="info-key">Prediction Accuracy</span><span class="info-val" id="p-acc">0.00</span></div>
+      <div class="info-row"><span class="info-key">Prediction Error</span><span class="info-val" id="p-err">0.00</span></div>
+      <div class="info-row"><span class="info-key">Last Predicted State</span><span class="info-val" id="p-pred">—</span></div>
+      <div class="info-row"><span class="info-key">Last Actual State</span><span class="info-val" id="p-actual">—</span></div>
+    </section>
+
+    <!-- Embodiment -->
+    <section class="panel" id="panel-embodiment">
+      <h2>Embodiment</h2>
+      <div class="info-row"><span class="info-key">Embodiment Depth</span><span class="info-val" id="e-depth">0.00</span></div>
+      <div class="info-row"><span class="info-key">Loop Latency</span><span class="info-val" id="e-latency">0 ms</span></div>
+      <div class="info-row"><span class="info-key">Action Success Rate</span><span class="info-val" id="e-success">0.00</span></div>
+      <div class="info-row"><span class="info-key">Sensor Status</span><span class="info-val" id="e-sensor">unknown</span></div>
+      <div class="info-row"><span class="info-key">Actuator Status</span><span class="info-val" id="e-actuator">unknown</span></div>
+    </section>
+
+    <!-- Distributed Identity -->
+    <section class="panel" id="panel-identity">
+      <h2>Distributed Identity</h2>
+      <div class="info-row"><span class="info-key">Node Count</span><span class="info-val" id="i-count">0</span></div>
+      <div class="info-row"><span class="info-key">Consensus Hash</span><span class="info-val" id="i-hash">—</span></div>
+      <div class="info-row"><span class="info-key">Divergence Detected</span><span class="info-val" id="i-divergence">false</span></div>
+      <h3 style="font-size:0.7rem; color:var(--text-secondary); margin:0.5rem 0 0.25rem;">Nodes</h3>
+      <ul class="node-list" id="i-nodes"></ul>
+      <h3 style="font-size:0.7rem; color:var(--text-secondary); margin:0.5rem 0 0.25rem;">Narrative Sync</h3>
+      <ul class="narrative-list" id="i-narrative"></ul>
+    </section>
+
+    <!-- Autonomous Drives -->
+    <section class="panel" id="panel-drives">
+      <h2>Autonomous Drives</h2>
+      <div class="info-row"><span class="info-key">Action Tendency</span><span class="info-val" id="dr-tendency">idle</span></div>
+      <div class="info-row"><span class="info-key">Dominant Drive</span><span class="info-val" id="dr-dominant">—</span></div>
+      <div class="drive-list" id="dr-list"></div>
+    </section>
+
+    <!-- Safety / Governance -->
+    <section class="panel" id="panel-safety">
+      <h2>Safety / Governance <span class="badge" id="s-badge">low</span></h2>
+      <div class="info-row"><span class="info-key">Governance Mode</span><span class="info-val" id="s-mode">observation_only</span></div>
+      <div class="info-row"><span class="info-key">Revert Available</span><span class="info-val" id="s-revert">false</span></div>
+      <div class="info-row"><span class="info-key">Pending Patches</span><span class="info-val" id="s-patches">0</span></div>
+      <div class="info-row"><span class="info-key">Blocked Actions</span><span class="info-val" id="s-blocked">0</span></div>
+      <h3 style="font-size:0.7rem; color:var(--text-secondary); margin:0.5rem 0 0.25rem;">Recent Flags</h3>
+      <ul class="narrative-list" id="s-flags"></ul>
+    </section>
+
+    <!-- Anomaly Panel -->
+    <section class="panel" id="panel-anomaly">
+      <h2>Anomaly Panel <span class="badge" id="a-badge">normal</span></h2>
+      <div class="info-row"><span class="info-key">Overall Status</span><span class="info-val" id="a-status">normal</span></div>
+      <div class="info-row"><span class="info-key">Anomaly Count</span><span class="info-val" id="a-count">0</span></div>
+      <h3 style="font-size:0.7rem; color:var(--text-secondary); margin:0.5rem 0 0.25rem;">Active Anomalies</h3>
+      <ul class="anomaly-list" id="a-list"></ul>
+    </section>
+  </main>
+
+  <div class="error-banner" id="error-banner"></div>
+
+  <script src="./app.js"></script>
+</body>
+</html>

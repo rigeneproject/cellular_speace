@@ -1,0 +1,25 @@
+monitoring_dashboard:
+  host: "127.0.0.1"
+  port: 8787
+  update_interval_ms: 1000
+  websocket_path: "/ws/state"
+  panels:
+    body: true
+    cognition: true
+    dynamics: true
+    prediction_error: true
+    embodiment: true
+    identity: true
+    drives: true
+    safety: true
+    anomaly: true
+  read_only: true
+  allow_actuator_commands: false
+  safety_defaults:
+    max_risk_level: "medium"
+    auto_revert_on_critical: true
+  anomaly_thresholds:
+    coherence_phi_min: 0.1
+    energy_min: 0.2
+    severity_max: 2.0
+    branching_ratio_deviation: 0.3
