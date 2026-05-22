@@ -70,6 +70,16 @@ from speace_core.cellular_brain.immune.digital_immune_controller import DigitalI
 from speace_core.cellular_brain.tool_registry.tool_registry_controller import ToolRegistryController
 from speace_core.cellular_brain.identity_kernel.identity_kernel import IdentityKernel
 from speace_core.cellular_brain.cognition.global_workspace import GlobalWorkspace
+from speace_core.cellular_brain.dynamics.temporal_dynamics_engine import TemporalDynamicsEngine
+from speace_core.cellular_brain.dynamics.neural_oscillator_bank import NeuralOscillatorBank
+from speace_core.cellular_brain.dynamics.phase_coupling_engine import PhaseCouplingEngine
+from speace_core.cellular_brain.dynamics.energy_field_engine import EnergyFieldEngine
+from speace_core.cellular_brain.dynamics.predictive_coding_engine import PredictiveCodingEngine
+from speace_core.cellular_brain.dynamics.active_inference_engine import ActiveInferenceEngine
+from speace_core.cellular_brain.dynamics.global_homeostatic_drive import GlobalHomeostaticDrive
+from speace_core.cellular_brain.dynamics.criticality_monitor import CriticalityMonitor
+
+import numpy as np
 
 
 class CellularBrainOrchestrator(BaseModel):
@@ -206,6 +216,24 @@ class CellularBrainOrchestrator(BaseModel):
     _global_workspace: GlobalWorkspace | None = None
     _last_global_workspace_step_result: dict | None = None
 
+    # Continuous dynamics modules (disabled by default)
+    temporal_dynamics_enabled: bool = False
+    neural_oscillator_enabled: bool = False
+    phase_coupling_enabled: bool = False
+    energy_field_enabled: bool = False
+    predictive_coding_enabled: bool = False
+    active_inference_enabled: bool = False
+    homeostatic_drive_enabled: bool = False
+    criticality_monitor_enabled: bool = False
+    _temporal_dynamics: TemporalDynamicsEngine | None = None
+    _oscillator_bank: NeuralOscillatorBank | None = None
+    _phase_coupling: PhaseCouplingEngine | None = None
+    _energy_field: EnergyFieldEngine | None = None
+    _predictive_coding: PredictiveCodingEngine | None = None
+    _active_inference: ActiveInferenceEngine | None = None
+    _homeostatic_drive: GlobalHomeostaticDrive | None = None
+    _criticality_monitor: CriticalityMonitor | None = None
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def model_post_init(self, __context: object) -> None:
@@ -312,6 +340,97 @@ class CellularBrainOrchestrator(BaseModel):
                 memory=self._memory,
             )
 
+        # Continuous dynamics modules initialization
+        all_neurons = (
+            self.circuit.input_neurons
+            + self.circuit.hidden_neurons
+            + self.circuit.output_neurons
+        )
+        dynamics_cfg = self.genome.dynamics.model_dump() if self.genome.dynamics else {}
+
+        if self.temporal_dynamics_enabled:
+            td_cfg = dynamics_cfg.get("temporal_dynamics", {})
+            self._temporal_dynamics = TemporalDynamicsEngine(
+                neurons=all_neurons,
+                synapses=self.circuit.synapses,
+                tau=td_cfg.get("tau", 1.0),
+                tau_w=td_cfg.get("tau_w", 10.0),
+                tau_e=td_cfg.get("tau_e", 5.0),
+                noise_std=td_cfg.get("noise_std", 0.0),
+                supply=td_cfg.get("supply", 0.1),
+                consumption=td_cfg.get("consumption", 0.05),
+                plasticity_rate=td_cfg.get("plasticity_rate", 0.05),
+            )
+
+        if self.neural_oscillator_enabled:
+            self._oscillator_bank = NeuralOscillatorBank()
+            for n in all_neurons:
+                self._oscillator_bank.register_neuron(n.cell_id, band="theta", coupling_strength=0.1)
+
+        if self.phase_coupling_enabled:
+            self._phase_coupling = PhaseCouplingEngine()
+            # Register oscillator bank bands as oscillators if available
+            if self._oscillator_bank is not None:
+                for band, params in self._oscillator_bank.bands.items():
+                    self._phase_coupling.register_oscillator(band, freq=params["freq"])
+
+        if self.energy_field_enabled:
+            ef_cfg = dynamics_cfg.get("energy_field", {})
+            self._energy_field = EnergyFieldEngine(
+                global_supply_rate=ef_cfg.get("global_supply_rate", 0.02),
+                recovery_boost=ef_cfg.get("recovery_boost", 0.03),
+                fatigue_threshold=ef_cfg.get("fatigue_threshold", 0.2),
+            )
+            for n in all_neurons:
+                self._energy_field.register_neuron(
+                    n.cell_id,
+                    baseline_supply=0.1,
+                    consumption_rate=0.05,
+                    diffusion_rate=0.01,
+                    initial_energy=getattr(n, "energy", 1.0),
+                )
+            for s in self.circuit.synapses:
+                if s.state != "pruned":
+                    self._energy_field.register_synapse(s.source, s.target)
+
+        if self.predictive_coding_enabled:
+            pc_cfg = dynamics_cfg.get("predictive_coding", {})
+            self._predictive_coding = PredictiveCodingEngine(
+                learning_rate=pc_cfg.get("learning_rate", 0.1)
+            )
+            input_dim = len(self.circuit.input_neurons)
+            hidden_dim = len(self.circuit.hidden_neurons)
+            output_dim = len(self.circuit.output_neurons)
+            self._predictive_coding.register_layer("sensory", input_dim, 0)
+            self._predictive_coding.register_layer("association", hidden_dim, 1)
+            self._predictive_coding.register_layer("abstract", output_dim, 2)
+            if input_dim and hidden_dim:
+                self._predictive_coding.set_connection("association", "sensory")
+            if hidden_dim and output_dim:
+                self._predictive_coding.set_connection("abstract", "association")
+
+        if self.active_inference_enabled:
+            self._active_inference = ActiveInferenceEngine()
+
+        if self.homeostatic_drive_enabled:
+            hd_cfg = dynamics_cfg.get("homeostatic_drive", {})
+            self._homeostatic_drive = GlobalHomeostaticDrive(
+                plasticity_range=tuple(hd_cfg.get("plasticity_range", [0.0, 2.0])),
+                exploration_range=tuple(hd_cfg.get("exploration_range", [0.0, 2.0])),
+                energy_supply_range=tuple(hd_cfg.get("energy_supply_range", [0.5, 1.5])),
+                stability_range=tuple(hd_cfg.get("stability_range", [0.5, 1.5])),
+                survival_suppression_threshold=hd_cfg.get("survival_suppression_threshold", 0.3),
+                efficiency_plasticity_threshold=hd_cfg.get("efficiency_plasticity_threshold", -0.2),
+            )
+
+        if self.criticality_monitor_enabled:
+            cm_cfg = dynamics_cfg.get("criticality_monitor", {})
+            self._criticality_monitor = CriticalityMonitor(
+                avalanche_window=cm_cfg.get("avalanche_window", 10.0),
+                branching_bin_size=cm_cfg.get("branching_bin_size", 5.0),
+                max_history=cm_cfg.get("max_history", 10000),
+            )
+
     def _build_subsystem_context(self) -> SubsystemContext:
         return SubsystemContext(
             orchestrator_ref=lambda: self,
@@ -367,6 +486,78 @@ class CellularBrainOrchestrator(BaseModel):
             pruned_count=sum(1 for s in self.circuit.synapses if s.state == "pruned"),
         )
         self.metrics_log.append(metrics)
+
+        # ------------------------------------------------------------------ #
+        # Continuous dynamics integration (additive, disabled by default)
+        # ------------------------------------------------------------------ #
+        if self.temporal_dynamics_enabled and self._temporal_dynamics is not None:
+            for n in all_neurons:
+                self._temporal_dynamics.inject_input(
+                    n.cell_id, getattr(n, "activation", 0.0)
+                )
+            self._temporal_dynamics.step(dt=1.0)
+
+        if self.neural_oscillator_enabled and self._oscillator_bank is not None:
+            self._oscillator_bank.step(dt=1.0)
+            if self.temporal_dynamics_enabled and self._temporal_dynamics is not None:
+                modulation = {}
+                for n in all_neurons:
+                    if n.cell_id in self._oscillator_bank.list_registered_neurons():
+                        modulation[n.cell_id] = self._oscillator_bank.get_neural_modulation(n.cell_id)
+                if modulation:
+                    self._temporal_dynamics.couple_oscillations(modulation)
+
+        if self.phase_coupling_enabled and self._phase_coupling is not None:
+            self._phase_coupling.step(dt=1.0)
+
+        if self.energy_field_enabled and self._energy_field is not None:
+            activations = {}
+            if self.temporal_dynamics_enabled and self._temporal_dynamics is not None:
+                for n in all_neurons:
+                    try:
+                        activations[n.cell_id] = self._temporal_dynamics.get_neuron_state(n.cell_id)
+                    except KeyError:
+                        activations[n.cell_id] = getattr(n, "activation", 0.0)
+            else:
+                for n in all_neurons:
+                    activations[n.cell_id] = getattr(n, "activation", 0.0)
+            self._energy_field.step(dt=1.0, activations=activations)
+
+        if self.predictive_coding_enabled and self._predictive_coding is not None:
+            if self.circuit.input_neurons:
+                sensory_input = np.array(
+                    [getattr(n, "activation", 0.0) for n in self.circuit.input_neurons]
+                )
+                self._predictive_coding.update("sensory", sensory_input)
+            self._predictive_coding.step()
+
+        if self.active_inference_enabled and self._active_inference is not None:
+            self._active_inference.step()
+
+        if self.homeostatic_drive_enabled and self._homeostatic_drive is not None:
+            self._homeostatic_drive.update_drive("exploration", metrics.noise_level)
+            self._homeostatic_drive.update_drive("stability", metrics.coherence_phi)
+            self._homeostatic_drive.update_drive("survival", 1.0 - metrics.mean_energy)
+            self._homeostatic_drive.update_drive("efficiency", metrics.mean_energy)
+            modulation = self._homeostatic_drive.step()
+            # Apply modulations to circuit parameters
+            for n in all_neurons:
+                n.plasticity_rate = max(
+                    0.001, min(1.0, n.plasticity_rate * modulation["plasticity_multiplier"])
+                )
+                n.threshold = max(
+                    0.1,
+                    min(
+                        1.0,
+                        n.threshold
+                        / (modulation["exploration_multiplier"] if modulation["exploration_multiplier"] != 0 else 1.0),
+                    ),
+                )
+
+        if self.criticality_monitor_enabled and self._criticality_monitor is not None:
+            for n in all_neurons:
+                self._criticality_monitor.record_activation(n.cell_id, float(self.current_tick))
+            _ = self._criticality_monitor.recommend_modulation()
 
         # Community detection (observational only in T17)
         if self.community_detection_enabled:

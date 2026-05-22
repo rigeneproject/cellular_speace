@@ -132,6 +132,50 @@ immune:
   myelination_success_threshold: 0.8
   latency_reduction: 0.3
 
+# Continuous dynamics substrate parameters
+dynamics:
+  temporal_dynamics:
+    enabled: false
+    tau: 1.0
+    tau_w: 10.0
+    tau_e: 5.0
+    noise_std: 0.0
+    supply: 0.1
+    consumption: 0.05
+    plasticity_rate: 0.05
+  neural_oscillator:
+    enabled: false
+    theta_freq: 5.0
+    alpha_freq: 10.0
+    beta_freq: 20.0
+    gamma_freq: 40.0
+  phase_coupling:
+    enabled: false
+    default_coupling_strength: 1.0
+  energy_field:
+    enabled: false
+    global_supply_rate: 0.02
+    recovery_boost: 0.03
+    fatigue_threshold: 0.2
+  predictive_coding:
+    enabled: false
+    learning_rate: 0.1
+  active_inference:
+    enabled: false
+  homeostatic_drive:
+    enabled: false
+    plasticity_range: [0.0, 2.0]
+    exploration_range: [0.0, 2.0]
+    energy_supply_range: [0.5, 1.5]
+    stability_range: [0.5, 1.5]
+    survival_suppression_threshold: 0.3
+    efficiency_plasticity_threshold: -0.2
+  criticality_monitor:
+    enabled: false
+    avalanche_window: 10.0
+    branching_bin_size: 5.0
+    max_history: 10000
+
 ilf_core:
   principle: informational_life_field
   objective: maximize_semantic_and_systemic_coherence

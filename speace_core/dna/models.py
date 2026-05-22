@@ -51,12 +51,24 @@ class CellDifferentiationRule(BaseModel):
     inhibition_affinity: float = 0.0
 
 
+class DynamicsParams(BaseModel):
+    temporal_dynamics: Dict[str, Any] = Field(default_factory=dict)
+    neural_oscillator: Dict[str, Any] = Field(default_factory=dict)
+    phase_coupling: Dict[str, Any] = Field(default_factory=dict)
+    energy_field: Dict[str, Any] = Field(default_factory=dict)
+    predictive_coding: Dict[str, Any] = Field(default_factory=dict)
+    active_inference: Dict[str, Any] = Field(default_factory=dict)
+    homeostatic_drive: Dict[str, Any] = Field(default_factory=dict)
+    criticality_monitor: Dict[str, Any] = Field(default_factory=dict)
+
+
 class SharedGenome(BaseModel):
     identity: GenomeIdentity = Field(default_factory=GenomeIdentity)
     morphology: GenomeMorphology = Field(default_factory=GenomeMorphology)
     expression_rules: Dict[str, CellExpressionRules] = Field(default_factory=dict)
     homeostasis: HomeostasisParams = Field(default_factory=HomeostasisParams)
     immune: ImmuneParams = Field(default_factory=ImmuneParams)
+    dynamics: DynamicsParams = Field(default_factory=DynamicsParams)
     ilf_core: Dict[str, Any] = Field(default_factory=dict)
     edd_cvt_core: Dict[str, Any] = Field(default_factory=dict)
     cell_differentiation_rules: Dict[str, CellDifferentiationRule] = Field(
