@@ -1,7 +1,7 @@
 import random
 from typing import List
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, PrivateAttr, model_validator
 
 from speace_core.cellular_brain.base.digital_signal import DigitalSignal
 from speace_core.cellular_brain.cells.digital_astrocyte import DigitalAstrocyte
@@ -26,6 +26,44 @@ class NeuralCircuit(BaseModel):
     memory: MorphologicalMemory | None = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    _neuron_index: dict[str, DigitalNeuron] = PrivateAttr(default_factory=dict)
+    _synapse_index: dict[tuple[str, str], DigitalSynapse] = PrivateAttr(default_factory=dict)
+
+    @model_validator(mode="after")
+    def _sync_indexes(self):
+        self._neuron_index.clear()
+        for n in self.input_neurons + self.hidden_neurons + self.output_neurons:
+            self._neuron_index[n.cell_id] = n
+        self._synapse_index.clear()
+        for s in self.synapses:
+            self._synapse_index[(s.source, s.target)] = s
+        return self
+
+    def add_neuron(self, neuron: DigitalNeuron) -> None:
+        self.hidden_neurons.append(neuron)
+        self._neuron_index[neuron.cell_id] = neuron
+
+    def remove_neuron(self, cell_id: str) -> None:
+        neuron = self._neuron_index.pop(cell_id, None)
+        if neuron is None:
+            return
+        if neuron in self.input_neurons:
+            self.input_neurons.remove(neuron)
+        elif neuron in self.hidden_neurons:
+            self.hidden_neurons.remove(neuron)
+        elif neuron in self.output_neurons:
+            self.output_neurons.remove(neuron)
+
+    def add_synapse(self, synapse: DigitalSynapse) -> None:
+        self.synapses.append(synapse)
+        self._synapse_index[(synapse.source, synapse.target)] = synapse
+
+    def remove_synapse(self, source: str, target: str) -> None:
+        key = (source, target)
+        synapse = self._synapse_index.pop(key, None)
+        if synapse is not None:
+            self.synapses.remove(synapse)
 
     def inject_input(self, pattern: List[float]) -> None:
         for neuron, strength in zip(self.input_neurons, pattern):
@@ -97,16 +135,10 @@ class NeuralCircuit(BaseModel):
                     )
 
     def _find_synapse(self, source: str, target: str) -> DigitalSynapse | None:
-        for syn in self.synapses:
-            if syn.source == source and syn.target == target:
-                return syn
-        return None
+        return self._synapse_index.get((source, target))
 
     def _find_neuron(self, cell_id: str) -> DigitalNeuron | None:
-        for n in self.input_neurons + self.hidden_neurons + self.output_neurons:
-            if n.cell_id == cell_id:
-                return n
-        return None
+        return self._neuron_index.get(cell_id)
 
     @property
     def output_activations(self) -> List[float]:

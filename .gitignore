@@ -1,5 +1,5 @@
 # Byte-compiled / optimized / DLL files
-__pycache__/
+**/__pycache__/
 *.py[cod]
 *$py.class
 
@@ -25,3 +25,6 @@ cov.json
 # Temp files
 docs/_temp*.txt
 *.tmp
+
+# PDF docs
+docs/*.pdf

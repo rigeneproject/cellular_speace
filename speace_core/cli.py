@@ -9,6 +9,66 @@ from speace_core.orchestrator import CellularBrainOrchestrator
 
 app = typer.Typer(name="speace", help="SPEACE Cellular Brain CLI")
 
+SPEACE_VERSION = "0.1.0"
+
+
+def _default_genome_path() -> pathlib.Path:
+    return pathlib.Path(__file__).resolve().parent / "dna" / "genome" / "default_genome.yaml"
+
+
+@app.command()
+def version() -> None:
+    """Show SPEACE version."""
+    typer.echo(f"speace-core {SPEACE_VERSION}")
+
+
+@app.command()
+def status(
+    genome_path: Optional[pathlib.Path] = typer.Option(
+        None, "--genome", "-g", help="Path to genome YAML"
+    ),
+) -> None:
+    """Show SPEACE system status."""
+    if genome_path is None:
+        genome_path = _default_genome_path()
+    genome = load_genome(genome_path)
+    identity = getattr(genome, "identity", {}) or {}
+    species = getattr(identity, "species_name", "SPEACE")
+    stage = getattr(identity, "developmental_stage", "unknown")
+    typer.echo(f"System: {species}")
+    typer.echo(f"Version: {SPEACE_VERSION}")
+    typer.echo(f"Stage: {stage}")
+    typer.echo(f"Genome: {genome_path.name}")
+    typer.echo("Status: ready")
+
+
+@app.command()
+def audit(
+    genome_path: Optional[pathlib.Path] = typer.Option(
+        None, "--genome", "-g", help="Path to genome YAML"
+    ),
+    ticks: int = typer.Option(10, "--ticks", "-t", help="Number of audit ticks"),
+) -> None:
+    """Run a quick system audit."""
+    if genome_path is None:
+        genome_path = _default_genome_path()
+    genome = load_genome(genome_path)
+    orchestrator = CellularBrainOrchestrator.build_mvp(genome)
+
+    async def _run() -> None:
+        typer.echo("Starting audit...")
+        await orchestrator.run_ticks(ticks)
+        metrics = orchestrator.latest_metrics
+        if metrics:
+            typer.echo(f"Tick: {metrics.tick}")
+            typer.echo(f"Coherence Phi: {metrics.coherence_phi:.4f}")
+            typer.echo(f"Mean Energy: {metrics.mean_energy:.4f}")
+            typer.echo(f"Active Neurons: {metrics.active_neurons}")
+            typer.echo(f"Pruned Synapses: {metrics.pruned_synapses}")
+        typer.echo("Audit complete.")
+
+    asyncio.run(_run())
+
 
 @app.command()
 def run_mvp(
@@ -20,9 +80,7 @@ def run_mvp(
 ) -> None:
     """Run the SPEACE MVP cellular brain."""
     if genome_path is None:
-        genome_path = (
-            pathlib.Path(__file__).resolve().parent / "dna" / "genome" / "default_genome.yaml"
-        )
+        genome_path = _default_genome_path()
     genome = load_genome(genome_path)
     orchestrator = CellularBrainOrchestrator.build_mvp(genome)
 

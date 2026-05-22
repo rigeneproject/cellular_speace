@@ -60,6 +60,11 @@ from speace_core.cellular_brain.cells.cellular_repair_engine import CellularRepa
 from speace_core.cellular_brain.cells.cellular_defense_engine import CellularDefenseEngine
 from speace_core.cellular_brain.cells.cellular_epigenetic_adapter import CellularEpigeneticAdapter
 from speace_core.dna.models import SharedGenome
+from speace_core.cellular_brain.runtime.coordinators.memory_coordinator import MemoryCoordinator
+from speace_core.cellular_brain.runtime.coordinators.evolution_coordinator import EvolutionCoordinator
+from speace_core.cellular_brain.runtime.coordinators.metabolism_coordinator import MetabolismCoordinator
+from speace_core.cellular_brain.runtime.subsystem_scheduler import SubsystemScheduler
+from speace_core.cellular_brain.runtime.subsystem_context import SubsystemContext, TickState
 
 
 class CellularBrainOrchestrator(BaseModel):
@@ -170,6 +175,12 @@ class CellularBrainOrchestrator(BaseModel):
     _episodic_memory = None
     _episodic_recall = None
 
+    # T66 — Runtime coordinators (strangler fig decomposition)
+    _memory_coordinator: MemoryCoordinator | None = None
+    _evolution_coordinator: EvolutionCoordinator | None = None
+    _metabolism_coordinator: MetabolismCoordinator | None = None
+    _subsystem_scheduler: SubsystemScheduler | None = None
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def model_post_init(self, __context: object) -> None:
@@ -243,6 +254,29 @@ class CellularBrainOrchestrator(BaseModel):
             self._semantic_memory_store = SemanticMemoryStore()
             self._cell_assembly_engine = CellAssemblyEngine(store=self._semantic_memory_store)
             self._semantic_recall_engine = SemanticRecallEngine(store=self._semantic_memory_store)
+
+        # T66 — Initialize runtime coordinators (strangler fig decomposition)
+        self._memory_coordinator = MemoryCoordinator()
+        self._evolution_coordinator = EvolutionCoordinator()
+        self._metabolism_coordinator = MetabolismCoordinator()
+        self._subsystem_scheduler = SubsystemScheduler()
+        self._subsystem_scheduler.assign("memory", self._memory_coordinator)
+        self._subsystem_scheduler.assign("evolution", self._evolution_coordinator)
+        self._subsystem_scheduler.assign("metabolism", self._metabolism_coordinator)
+
+    def _build_subsystem_context(self) -> SubsystemContext:
+        return SubsystemContext(
+            orchestrator_ref=lambda: self,
+            genome=self.genome,
+            tick_state=TickState(
+                current_tick=self.current_tick,
+                latest_metrics=self.latest_metrics,
+                last_community_result=self.last_community_result,
+                last_confidence_state=self.last_confidence_state,
+                last_routing_result=self.last_routing_result,
+                negative_feedback_count=self.negative_feedback_count,
+            ),
+        )
 
     async def run_ticks(self, n_ticks: int) -> None:
         for _ in range(n_ticks):
@@ -561,18 +595,24 @@ class CellularBrainOrchestrator(BaseModel):
 
     def run_semantic_memory_cycle(self) -> "SemanticMemoryMetrics | None":
         """Run one observation-detection-reinforcement cycle for semantic memory."""
+        if self._memory_coordinator is not None:
+            return self._memory_coordinator.run_semantic_memory_cycle(self._build_subsystem_context())
         if self.semantic_memory_enabled and self._cell_assembly_engine is not None:
             return self._cell_assembly_engine.run_semantic_memory_cycle(self)
         return None
 
     def recall_semantic_memory(self, query_signature: List[float]) -> "SemanticRecallResult | None":
         """Recall a semantic memory from a query activation signature."""
+        if self._memory_coordinator is not None:
+            return self._memory_coordinator.recall_semantic_memory(self._build_subsystem_context(), query_signature)
         if self.semantic_memory_enabled and self._semantic_recall_engine is not None:
             return self._semantic_recall_engine.recall(query_signature)
         return None
 
     def get_semantic_memory_metrics(self) -> "SemanticMemoryMetrics | None":
         """Return current semantic memory metrics."""
+        if self._memory_coordinator is not None:
+            return self._memory_coordinator.get_semantic_memory_metrics(self._build_subsystem_context())
         if self.semantic_memory_enabled and self._cell_assembly_engine is not None:
             return self._cell_assembly_engine._compute_metrics()
         return None
@@ -609,6 +649,8 @@ class CellularBrainOrchestrator(BaseModel):
 
     def run_associative_learning_cycle(self):
         """Manually run one associative learning cycle on active assemblies."""
+        if self._memory_coordinator is not None:
+            return self._memory_coordinator.run_associative_learning_cycle(self._build_subsystem_context())
         if (
             self.semantic_memory_enabled
             and self.associative_learning_enabled
@@ -621,6 +663,8 @@ class CellularBrainOrchestrator(BaseModel):
 
     def recall_associative_memory(self, cue_assembly_id: str):
         """Recall assemblies associated with a cue assembly."""
+        if self._memory_coordinator is not None:
+            return self._memory_coordinator.recall_associative_memory(self._build_subsystem_context(), cue_assembly_id)
         if self.associative_recall_enabled:
             engine = self.get_associative_recall_engine()
             return engine.recall_from_assembly(cue_assembly_id)
@@ -646,6 +690,10 @@ class CellularBrainOrchestrator(BaseModel):
         return self._episodic_recall
 
     def start_episode(self, trigger: str, initial_metrics=None, tick_id=0):
+        if self._memory_coordinator is not None:
+            return self._memory_coordinator.start_episode(
+                self._build_subsystem_context(), trigger, initial_metrics, tick_id
+            )
         if self.episodic_memory_enabled:
             return self.get_episodic_memory().start_episode(
                 trigger=trigger,
@@ -655,6 +703,10 @@ class CellularBrainOrchestrator(BaseModel):
         return None
 
     def record_episode_event(self, episode_id, event_type, source_module, metrics=None, metadata=None, tick_id=0):
+        if self._memory_coordinator is not None:
+            return self._memory_coordinator.record_episode_event(
+                self._build_subsystem_context(), episode_id, event_type, source_module, metrics, metadata, tick_id
+            )
         if self.episodic_memory_enabled and episode_id:
             return self.get_episodic_memory().record_event(
                 episode_id=episode_id,
@@ -667,6 +719,10 @@ class CellularBrainOrchestrator(BaseModel):
         return None
 
     def close_episode(self, episode_id, final_metrics=None, outcome="unknown"):
+        if self._memory_coordinator is not None:
+            return self._memory_coordinator.close_episode(
+                self._build_subsystem_context(), episode_id, final_metrics, outcome
+            )
         if self.episodic_memory_enabled and episode_id:
             return self.get_episodic_memory().close_episode(
                 episode_id=episode_id,
@@ -836,6 +892,8 @@ class CellularBrainOrchestrator(BaseModel):
         return self._edd_cvt_kernel
 
     async def run_edd_cvt_cycle(self) -> Optional[Any]:
+        if self._evolution_coordinator is not None:
+            return await self._evolution_coordinator.run_edd_cvt_cycle(self._build_subsystem_context())
         if not self.edd_cvt_kernel_enabled:
             return None
         kernel = self.get_edd_cvt_kernel()
@@ -850,6 +908,8 @@ class CellularBrainOrchestrator(BaseModel):
         return MultiCycleEvolutionRunner(orchestrator=self)
 
     async def run_multi_cycle_evolution(self, cycle_count: int = 5) -> Optional[Any]:
+        if self._evolution_coordinator is not None:
+            return await self._evolution_coordinator.run_multi_cycle_evolution(self._build_subsystem_context(), cycle_count)
         runner = self.get_multi_cycle_evolution_runner()
         runner.cycle_count = cycle_count
         result = await runner.run()
@@ -865,6 +925,8 @@ class CellularBrainOrchestrator(BaseModel):
         return self._evolutionary_memory_governor
 
     async def run_evolutionary_memory_governance_cycle(self) -> Optional[dict]:
+        if self._evolution_coordinator is not None:
+            return await self._evolution_coordinator.run_evolutionary_memory_governance_cycle(self._build_subsystem_context())
         if not self.evolutionary_memory_governance_enabled:
             return None
         governor = self.get_evolutionary_memory_governor()
@@ -879,6 +941,8 @@ class CellularBrainOrchestrator(BaseModel):
         return self._metabolic_governor
 
     async def run_metabolic_cycle(self) -> Optional[dict]:
+        if self._metabolism_coordinator is not None:
+            return await self._metabolism_coordinator.run_metabolic_cycle(self._build_subsystem_context())
         if not self.metabolic_governance_enabled:
             return None
         governor = self.get_metabolic_governor()
@@ -886,6 +950,8 @@ class CellularBrainOrchestrator(BaseModel):
         return result
 
     def get_metabolic_state(self) -> Optional[dict]:
+        if self._metabolism_coordinator is not None:
+            return self._metabolism_coordinator.get_metabolic_state(self._build_subsystem_context())
         if not self.metabolic_governance_enabled:
             return None
         governor = self.get_metabolic_governor()
@@ -893,6 +959,8 @@ class CellularBrainOrchestrator(BaseModel):
         return state.model_dump()
 
     async def run_metabolic_audit(self) -> Optional[list]:
+        if self._metabolism_coordinator is not None:
+            return await self._metabolism_coordinator.run_metabolic_audit(self._build_subsystem_context())
         if not self.metabolic_governance_enabled:
             return None
         from speace_core.cellular_brain.metabolism.metabolic_audit import MetabolicAudit
@@ -903,6 +971,8 @@ class CellularBrainOrchestrator(BaseModel):
 
     # T58B — Metabolic Resource Governance Real-Run Audit
     async def run_metabolic_real_run_audit(self) -> Optional[dict]:
+        if self._metabolism_coordinator is not None:
+            return await self._metabolism_coordinator.run_metabolic_real_run_audit(self._build_subsystem_context())
         if not self.metabolic_governance_enabled:
             return None
         from speace_core.cellular_brain.metabolism.metabolic_real_run_audit_runner import (

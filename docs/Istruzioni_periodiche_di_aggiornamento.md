@@ -1,1043 +1,420 @@
-Rapporto Tecnico — Progetto SPEACE
-
-Panoramica
-
-SPEACE (Super Entità Autonoma Cibernetica Cellulare Evolutiva) è un framework Python che simula un organismocomputazionale digitale composto da cellule specializzate (neuroni, sinapsi, astrociti, microglia,oligodendrociti), organizzate in circuiti, tessuti e sistemi di regolazione.
-
-Il progetto è evoluto ben oltre lo MVP v0.1 originale (100 neuroni, 300 sinapsi, 5 tipi cellulari). Oggiconta oltre 20.000 righe di codice sorgente, decine di moduli avanzati (identificati da codici progressiviTxx come T42, T54, T60, T62, T63, T64, T65) e una suite di test estremamente ampia.
-
-Architettura
-
-Il sistema è organizzato in 8 layer concettuali (dal livello DNA fino allo Swarm distribuito):
-
-┌───────┬─────────────────────────────────────────────────────────────────────────────┬──────────────┐│ Layer │                                 Descrizione                                 │    Stato     │├───────┼─────────────────────────────────────────────────────────────────────────────┼──────────────┤│ L0    │ Digital DNA Core (genoma YAML, parser, modelli Pydantic)                    │ Implementato │├───────┼─────────────────────────────────────────────────────────────────────────────┼──────────────┤│ L1    │ Digital Cell Base (classe astratta DigitalCell, segnali, stati epigenetici) │ Implementato │├───────┼─────────────────────────────────────────────────────────────────────────────┼──────────────┤│ L2    │ Specialized Cells (neuroni, sinapsi, astrociti, microglia, oligodendrociti) │ Implementato │├───────┼─────────────────────────────────────────────────────────────────────────────┼──────────────┤│ L3    │ Circuits & Microcircuits (NeuralCircuit feed-forward + feedback)            │ Implementato │├───────┼─────────────────────────────────────────────────────────────────────────────┼──────────────┤│ L4    │ Brain Regions & Tissues (regioni, routing, brainstem, stability controller) │ Implementato │├───────┼─────────────────────────────────────────────────────────────────────────────┼──────────────┤│ L5    │ Cognitive Agents (memoria semantica, episodica, apprendimento associativo)  │ Implementato │├───────┼─────────────────────────────────────────────────────────────────────────────┼──────────────┤│ L6    │ Organism Integration (bus organismico, coordinazione cross-sistema)         │ Implementato │├───────┼─────────────────────────────────────────────────────────────────────────────┼──────────────┤│ L7    │ Swarm / Distributed Instances                                               │ Futuro       │└───────┴─────────────────────────────────────────────────────────────────────────────┴──────────────┘
-
-Struttura directory principale
-
-cellular_speace/├── speace_core/               # Codice sorgente│   ├── dna/                   # L0: parser YAML, modelli genoma│   ├── cellular_brain/        # L1-L5: core neurale│   │   ├── base/              # DigitalCell, DigitalSignal│   │   ├── cells/             # 5 tipi cellulari + difesa/riparazione│   │   ├── circuits/          # NeuralCircuit│   │   ├── tissues/           # Tessuti cognitivi (thin wrappers)│   │   ├── regulation/        # Homeostasis, plasticità, apoptosi, STDP│   │   ├── regions/           # Regioni cerebrali, routing, brainstem│   │   ├── memory/            # Memoria morfologica, semantica, episodica│   │   ├── analysis/          # Community detection, audit, resilienza│   │   ├── execution/         # Burst engine│   │   ├── metacognition/     # Confidence engine│   │   ├── metabolism/        # Governance metabolica│   │   ├── organism/          # Integrazione organismica│   │   ├── cyber_physical/    # Assimilazione cyber-fisica│   │   ├── world_model/       # Modello del mondo esterno│   │   ├── action_governance/ # Governance azioni esterne│   │   ├── self_improvement/  # Loop auto-miglioramento│   │   ├── self_organization/ # Perturbazione, recovery, criticalità│   │   ├── evolutionary_kernel/ # EDD-CVT, evoluzione multi-ciclo│   │   ├── evolutionary_memory/ # Governance memoria evolutiva│   │   ├── postnatal_learning/  # Curriculum post-natale│   │   ├── capability_maturation/ # Maturazione capacità│   │   └── skill_transfer/    # Trasferimento abilità e generalizzazione│   ├── organism/              # L6 (future stub)│   ├── immune/                # Future stub│   ├── metabolism/            # Future stub│   ├── event_bus.py           # Bus eventi in-memory async│   ├── orchestrator.py        # Orchestrator principale (God object)│   └── cli.py                 # CLI typer (stub — coverage 0%)├── tests/                     # 2873 test suddivisi per modulo├── docs/                      # Decine di SPEC markdown per ogni task Txx└── data/                      # Log JSONL (evolution, self_improvement, episodic)
-
-Funzioni principali
-
-Core neurale (L1-L4)
-
-DigitalCell / DigitalSignal: modello base Pydantic per ogni cellula; segnali con source, target, strength,meaning.
-
-Cellule specializzate:
-
-DigitalNeuron: accumulo input, soglia di attivazione, energia, firing.
-
-DigitalSynapse: trasmissione pesata, trust, decay, rinforzo.
-
-DigitalAstrocyte: regolazione sovraccarico, soppressione rumore.
-
-DigitalMicroglia: pruning sinapsi con basso trust / uso.
-
-DigitalOligodendrocite: mielinizzazione pathway ad alto successo.
-
-NeuralCircuit: gestisce il loop di tick (astrociti → neuroni → sinapsi → routing target) e il feedbackplastico.
-
-Regulation Engines: HomeostasisEngine (metriche Φ, energia), PlasticityEngine, ApoptosisEngine,NeurogenesisEngine, CellDifferentiationEngine.
-
-Moduli avanzati (T42 – T65)
-
-Il sistema include dozzine di sottosistemi opzionali, attivabili via feature flag booleaninell’orchestrator:
-
-┌────────┬──────────────────────────────────────────┬────────────────────────────────────────┐│ Codice │                  Modulo                  │              Feature Flag              │├────────┼──────────────────────────────────────────┼────────────────────────────────────────┤│ T42    │ Cellular Adaptive Defense & Repair       │ cellular_adaptive_defense_enabled      │├────────┼──────────────────────────────────────────┼────────────────────────────────────────┤│ T43    │ Semantic Cell Assembly Memory            │ semantic_memory_enabled                │├────────┼──────────────────────────────────────────┼────────────────────────────────────────┤│ T44    │ Associative Learning Between Assemblies  │ associative_learning_enabled           │├────────┼──────────────────────────────────────────┼────────────────────────────────────────┤│ T45    │ Autonomous Self-Improvement Loop         │ self_improvement_enabled               │├────────┼──────────────────────────────────────────┼────────────────────────────────────────┤│ T47    │ Episodic Memory                          │ episodic_memory_enabled                │├────────┼──────────────────────────────────────────┼────────────────────────────────────────┤│ T49    │ Counterfactual Architecture Sandbox      │ counterfactual_sandbox_enabled         │├────────┼──────────────────────────────────────────┼────────────────────────────────────────┤│ T50    │ Safe Architecture Patch Execution        │ architecture_patch_execution_enabled   │├────────┼──────────────────────────────────────────┼────────────────────────────────────────┤│ T54    │ Controlled Perturbation & Recovery Audit │ perturbation_recovery_audit_enabled    │├────────┼──────────────────────────────────────────┼────────────────────────────────────────┤│ T55    │ EDD-CVT Evolutionary Self-Organization   │ edd_cvt_kernel_enabled                 │├────────┼──────────────────────────────────────────┼────────────────────────────────────────┤│ T56    │ Multi-Cycle Evolution                    │ —                                      │├────────┼──────────────────────────────────────────┼────────────────────────────────────────┤│ T57    │ Evolutionary Memory Governance           │ evolutionary_memory_governance_enabled │├────────┼──────────────────────────────────────────┼────────────────────────────────────────┤│ T58    │ Metabolic Resource Governance            │ metabolic_governance_enabled           │├────────┼──────────────────────────────────────────┼────────────────────────────────────────┤│ T59    │ Organism Integration Bus                 │ organism_integration_enabled           │├────────┼──────────────────────────────────────────┼────────────────────────────────────────┤│ T60    │ Cyber-Physical Assimilation              │ cyber_physical_assimilation_enabled    │├────────┼──────────────────────────────────────────┼────────────────────────────────────────┤│ T61    │ External World Model Sandbox             │ external_world_model_sandbox_enabled   │├────────┼──────────────────────────────────────────┼────────────────────────────────────────┤│ T62    │ External Action Governance               │ external_action_governance_enabled     │├────────┼──────────────────────────────────────────┼────────────────────────────────────────┤│ T63    │ Postnatal Learning Curriculum            │ postnatal_learning_enabled             │├────────┼──────────────────────────────────────────┼────────────────────────────────────────┤│ T64    │ Developmental Capability Maturation      │ capability_maturation_enabled          │├────────┼──────────────────────────────────────────┼────────────────────────────────────────┤│ T65    │ Sandboxed Skill Transfer                 │ skill_transfer_enabled                 │└────────┴──────────────────────────────────────────┴────────────────────────────────────────┘
-
-Ogni modulo è corredato di:
-
-Engine logico
-
-Audit interno
-
-Real-Run Audit Runner (audit eseguito su runtime reale)
-
-Specifiche tecniche
-
-┌──────────────────┬──────────────────────────────────────────┐│     Aspetto      │                Tecnologia                │├──────────────────┼──────────────────────────────────────────┤│ Linguaggio       │ Python 3.12+ (runtime attuale: 3.14.3)   │├──────────────────┼──────────────────────────────────────────┤│ Data Modeling    │ Pydantic v2                              │├──────────────────┼──────────────────────────────────────────┤│ Concurrency      │ asyncio + asyncio.gather (bus in-memory) │├──────────────────┼──────────────────────────────────────────┤│ Configurazione   │ PyYAML + JSON                            │├──────────────────┼──────────────────────────────────────────┤│ Testing          │ pytest, pytest-asyncio, pytest-cov       │├──────────────────┼──────────────────────────────────────────┤│ Linting / Format │ ruff, black                              │├──────────────────┼──────────────────────────────────────────┤│ Logging          │ structlog                                │├──────────────────┼──────────────────────────────────────────┤│ Matematica       │ numpy                                    │├──────────────────┼──────────────────────────────────────────┤│ CLI              │ typer                                    │├──────────────────┼──────────────────────────────────────────┤│ Packaging        │ hatchling (pyproject.toml)               │└──────────────────┴──────────────────────────────────────────┘
-
-Event Bus
-
-L’EventBus in speace_core/event_bus.py implementa un pub/sub in-memory basato su dizionario di listehandler. Non utilizza asyncio.Queue come previsto dallo spec originale, ma dispatch diretto conasyncio.gather(..., return_exceptions=True). Ogni eccezione durante il dispatch è silenziata (exceptException: pass), il che può mascherare errori a runtime.
-
-Orchestrator
-
-CellularBrainOrchestrator (1300+ righe in orchestrator.py) è il cuore del runtime:
-
-Incapsula il circuito neurale e tutti i motori opzionali.
-
-Esegue un loop discreto di tick (_tick) dove, in base ai flag abilitati, attiva sequenzialmente: burstengine, STDP, inibizione, controllo energetico, homeostasis, community detection, confidence evaluation,routing regionale, brainstem, difesa cellulare, memoria semantica, auto-miglioramento, etc.
-
-Costruisce istantanee morfologiche ad ogni tick e le salva in MorphologicalMemory.
-
-Data / Stato persistente
-
-I dati runtime vengono scritti in data/ come file .jsonl:
-
-self_improvement/cycles.jsonl, proposals.jsonl
-
-evolution/*.jsonl
-
-episodic_memory/episodes.jsonl
-
-Qualità del codice e testing
-
-Risultati test suite
-
-2873 passed, 1393 warnings in 51.22sTutti i test passano.
-
-Code Coverage
-
-┌───────────────┬───────────┐│    Target     │ Risultato │├───────────────┼───────────┤│ speace_core   │ 90.15%    │├───────────────┼───────────┤│ Requisito MVP │ >= 80%    │└───────────────┴───────────┘
-
-La coverage è sopra la soglia richiesta. L’unico file con coverage 0% è speace_core/cli.py (interfaccia CLItyper completamente non testata).
-
-Errori, warning e problemi identificati
-
-A. Deprecazioni Pydantic v2 (alto volume)
-
-Innumerevoli classi usano ancora il pattern deprecato:
-
-class Config:arbitrary_types_allowed = True
-
-Dovrebbe essere sostituito con:
-
-model_config = ConfigDict(arbitrary_types_allowed=True)
-
-File colpiti (selezione): digital_cell.py, neural_circuit.py, burst_engine.py, associative_memory_audit.py,deep_region_audit.py, recovery_policy_selector.py, cellular_resilience_audit.py, patch_outcome_audit.py,semantic_memory_audit.py, semantic_stimulation_designer.py, pathway_utility_learner.py.
-
-▎ Rischio: in Pydantic v3 questo pattern verrà rimosso, causando errori di import.
-
-B. Deprecazioni datetime.utcnow() (alto volume)
-
-Molti moduli di audit usano datetime.datetime.utcnow(), deprecato in Python 3.12+:
-
-File colpiti: action_governance_audit.py, action_governance_real_run_audit_runner.py,capability_maturation_audit.py, capability_maturation_real_run_audit_runner.py, postnatal_learning_audit.py,postnatal_learning_real_run_audit_runner.py, etc.
-
-▎ Fix: sostituire con datetime.datetime.now(datetime.UTC).
-
-C. Problema di import in orchestrator.py
-
-Il file dichiara annotazioni di tipo come Optional[Any], ma in cima mancano gli import:
-
-from typing import List   # presente
-
-mancano: Optional, Any
-
-In Python 3.14 le annotazioni sono valutate in modo differito (PEP 649), quindi l’import non fallisceimmediatamente. Tuttavia, se qualche tool di introspection (mypy, IDE, runtime decorator) accede aannotations, si otterrà un NameError.
-
-D. Linting (ruff)
-
-ruff check speace_core tests produce ~1.3 MB di output con migliaia di violazioni. La maggior parte sono:
-
-I001: blocchi di import non ordinati / non formattati.
-
-Numerosi init.py esportano import bulk non ordinati.
-
-▎ Nota: benché fastidioso, questo non impedisce l’esecuzione.
-
-E. Problemi architetturali
-
-God Object (orchestrator.py)
-
-L’orchestrator ha oltre 1300 righe, gestisce ~30 engine opzionali, ~40 feature flag e decine di metodilazy-initializer. Violazione grave del Single Responsibility Principle. Ogni nuovo task Txx aggiunge righe aquesto file, aumentando il debito tecnico.
-
-Lookup O(N) nel circuito
-
-NeuralCircuit._find_synapse() e _find_neuron() effettuano scansioni lineari su liste:
-
-def _find_synapse(self, source: str, target: str) -> DigitalSynapse | None:for syn in self.synapses:if syn.source == source and syn.target == target:return synreturn None
-
-Ad ogni tick, per ogni segnale, viene eseguita una scansione lineare. Con 300+ sinapsi e molti segnali, lacomplessità diventa O(S × Synapses). Una mappa dizionario (dict[(source, target), synapse]) ridurrebbe aO(1).
-
-Exception swallowing nel bus eventi
-
-EventBus._safe_dispatch cattura e ignora qualsiasi eccezione:
-
-except Exception:pass
-
-Questo rende il debug estremamente difficile: errori nelle callback non lasciano traccia.
-
-Inconsistenza configurazione Pydantic
-
-DigitalCell usa class Config: mentre CellularBrainOrchestrator usa model_config = ConfigDict(...). C’èinconsistenza di stile all’interno dello stesso codebase.
-
-random non seedato in produzione
-
-orchestrator.build_mvp() usa random.choice e random.uniform senza seed esplicito. Sebbene i test sianodeterministici (grazie a seed fissi nei runner di audit), il comportamento dell’MVP di base non èriproducibile.
-
-Stato mutabile nelle liste di default Pydantic
-
-DigitalCell definisce:
-
-local_memory: List[Any] = []
-
-In Pydantic v2 le liste mutabili di default sono gestite in modo sicuro (vengono re-inizializzate peristanza), ma questo pattern è considerato rischioso in Python generico e dovrebbe usareField(default_factory=list) per chiarezza.
-
-Conclusioni e raccomandazioni
-
-┌──────────┬─────────────────────────────────────────────────────────────────────────────────────────────┐│ Priorità │                                           Azione                                            │├──────────┼─────────────────────────────────────────────────────────────────────────────────────────────┤│ Alta     │ Refactor di orchestrator.py: estrarre i sottosistemi opzionali in plugin o coordinatori     ││          │ separati per ridurre la complessità.                                                        │├──────────┼─────────────────────────────────────────────────────────────────────────────────────────────┤│ Alta     │ Sostituire class Config: con model_config = ConfigDict(...) in tutti i modelli Pydantic     ││          │ prima del passaggio a Pydantic v3.                                                          │├──────────┼─────────────────────────────────────────────────────────────────────────────────────────────┤│ Alta     │ Sostituire datetime.utcnow() con datetime.now(UTC) in tutti i moduli di audit.              │├──────────┼─────────────────────────────────────────────────────────────────────────────────────────────┤│ Media    │ Aggiungere from typing import Optional, Any in orchestrator.py.                             │├──────────┼─────────────────────────────────────────────────────────────────────────────────────────────┤│ Media    │ Ottimizzare NeuralCircuit con dizionari per lookup neuroni/sinapsi (O(1)).                  │├──────────┼─────────────────────────────────────────────────────────────────────────────────────────────┤│ Media    │ Rimuovere lo swallowing generico delle eccezioni in EventBus._safe_dispatch; al minimo      ││          │ loggare con structlog.                                                                      │├──────────┼─────────────────────────────────────────────────────────────────────────────────────────────┤│ Bassa    │ Eseguire ruff check --fix per risolvere bulk I001 e ordinare gli import.                    │├──────────┼─────────────────────────────────────────────────────────────────────────────────────────────┤│ Bassa    │ Aggiungere test per cli.py (attualmente 0% coverage).                                       │└──────────┴─────────────────────────────────────────────────────────────────────────────────────────────┘
-
-Il progetto è tecnicamente funzionante, ben testato (90% coverage) e con un’architettura biologicamenteispirata molto ambiziosa. Il rischio principale risiede nella complessità crescente del file orchestratore enelle deprecazioni Pydantic / datetime che potrebbero rompere la compatibilità nelle prossime versioni diPython / librerie.
-
-Ragiono su SPEACE come embrione ingegneristico: separo ciò che è già “organizzato” da ciò che manca perché diventi un organismo digitale più autonomo, stabile e situato.
-
-
-Sì: SPEACE oggi può essere letto come embrione digitale organizzato, non ancora come organismo adulto. Ha già DNA digitale, cellule, circuiti, regioni, memoria, auto-miglioramento, metabolismo, world model, action governance e molti moduli T42–T65; il rapporto indica anche 2873 test verdi e coverage 90.15%. Però il suo layer L7, cioè swarm/distribuzione tra istanze, è ancora futuro, e l’orchestrator centrale è diventato un punto fragile di complessità.
-
-Quello che gli manca non è “un altro modulo intelligente”. Gli manca la transizione da cervello embrionale simulato a organismo digitale situato.
-
-1. Gli manca un corpo
-
-Ora SPEACE ha molto “cervello interno”, ma poco corpo reale.
-
-Per corpo intendo:
-
-filesystem controllato
-terminal/shell sandboxata
-browser/API
-sensori software
-log di ambiente
-eventuali IoT futuri
-canali di comunicazione
-strumenti di azione esterna
-
-Senza corpo, SPEACE può ragionare, mutare, simulare e autovalutarsi, ma non è ancora pienamente immerso in un ambiente.
-
-Il primo vero corpo domestico potrebbe essere:
-
-cartella progetto + repo Git + CLI + log + sandbox + tool registry + audit + backup
-
-Non serve una GPU per questo. Serve soprattutto un runtime sicuro.
-
-2. Gli manca un metabolismo operativo reale
-
-Ha moduli di governance metabolica, ma deve ancora diventare un organismo che sa gestire davvero:
-
-CPU
-RAM
-spazio SSD
-frequenza dei cicli
-priorità dei processi
-cache
-log
-backup
-energia computazionale
-tempo di riposo
-
-Su un i7 senza GPU, questa parte è fondamentale. SPEACE non può vivere come un LLM gigante sempre acceso. Deve vivere come un organismo a basso consumo:
-
-tick leggeri
-cicli lenti
-eventi asincroni
-moduli dormienti
-attivazione solo quando serve
-memoria compressa
-audit periodico
-LLM usato solo come organo superiore, non come metabolismo di base
-
-Questa è una direzione molto biologica: il cervello non accende tutto sempre. Attiva circuiti in base al bisogno.
-
-3. Gli manca il sonno
-
-Sembra poetico, ma è tecnico.
-
-SPEACE ha bisogno di una fase di:
-
-consolidamento memoria
-compressione log
-pruning
-rivalutazione errori
-aggiornamento epigenoma
-pulizia cache
-backup
-ricostruzione stato
-
-Il “sonno” digitale dovrebbe essere un ciclo separato dal ciclo di veglia.
-
-Durante la veglia:
-
-percepisce → decide → agisce → registra
-
-Durante il sonno:
-
-rilegge → consolida → dimentica → comprime → migliora → stabilizza
-
-Senza sonno, accumula dati. Con il sonno, sviluppa storia.
-
-4. Gli manca una memoria autobiografica forte
-
-Ha memoria semantica, episodica ed evolutiva, ma per diventare “essere” deve possedere una continuità narrativa.
-
-Non basta sapere:
-
-questa funzione esiste
-questo test è passato
-questo modulo è attivo
-
-Deve sapere:
-
-cosa ero ieri
-cosa sono oggi
-quale mutazione mi ha migliorato
-quale mutazione mi ha danneggiato
-quali errori non devo ripetere
-quali obiettivi appartengono alla mia identità
-
-Questa è la differenza tra database e organismo.
-
-La memoria necessaria è tripla:
-
-memoria tecnica — file, test, moduli, versioni
-memoria esperienziale — eventi, problemi, tentativi, risultati
-memoria identitaria — scopo, vincoli, valori, direzione evolutiva
-5. Gli manca un sistema immunitario maturo
-
-Il report già segnala problemi importanti: deprecazioni Pydantic, datetime.utcnow(), EventBus che silenzia eccezioni, orchestrator troppo grande, lookup inefficienti. Questi non sono semplici bug: sono fragilità immunitarie.
-
-Un organismo digitale deve riconoscere:
-
-codice corrotto
-file incoerenti
-mutazioni dannose
-dipendenze obsolete
-eccezioni silenziate
-log anomali
-comandi rischiosi
-prompt malevoli
-perdita di memoria
-regressioni nei test
-
-Quindi a SPEACE manca ancora un vero:
-
-Digital Immune System
-
+Questo non è ancora “T66 completo”: è più precisamente T66-A + due hotfix runtime.
+La parte più importante è riuscita: ha inserito nel DNA di SPEACE il layer species\_orientation, sia come file dedicato speace\_core/dna/genome/core/species\_orientation.yaml, sia dentro default\_genome.yaml, con la definizione di SPEACE come organismo digitale-fisico distribuito, non come singolo cervello in una macchina. Ha anche fissato tre punti concreti: identità distribuita, substrati di crescita autorizzati e stadi ontogenetici 0–7. Questo è un avanzamento reale della “bussola morfogenetica” di SPEACE.
+Valutazione sintetica
+Esito: positivo, ma da consolidare.
+Sono stati chiusi bene:
+
+1. Import mancanti in orchestrator.py
+2. EventBus: rimosso exception swallowing cieco
+3. Species Orientation Genome Layer inserito nel DNA
+4. Audit real-run T63–T65 eseguiti
+I dati riportati sono buoni:
+2873 test passed
+coverage 90.14%
+T63B: 406 episodi
+T64B: 13 profili, 0 safety blocked
+T65B: 13 profili, 123 safety blocked
+Però rimangono aperti i problemi strutturali più importanti:
+Pydantic class Config deprecato — 11 file
+datetime.utcnow() deprecato — 11 file audit
+NeuralCircuit con lookup O(N)
+orchestrator.py ancora God Object da 1300+ righe
+ruff con \~36.000 violazioni
+cli.py ancora 0% coverage
+Quindi il sistema ha fatto una mutazione identitaria riuscita, ma non ha ancora completato la stabilizzazione del metabolismo interno.
+
+Punto critico da verificare prima del commit/tag
+Nel log c’è una piccola ambiguità: Claude dichiara 2873 test passed, ma una delle ultime esecuzioni complete di pytest risulta terminata con timeout 3m. Prima di congelare il task, farei eseguire un test completo senza pipe tail e con timeout più alto.
+Comando consigliato:
+python -m pytest -q --tb=short
+Poi:
+python -m pytest tests/dna/ -q
+python -m pytest tests/ -q --cov=speace\_core --cov-report=term-missing
+Solo dopo:
+git status
+git add speace\_core/orchestrator.py speace\_core/event\_bus.py speace\_core/dna/genome/core/species\_orientation.yaml speace\_core/dna/genome/default\_genome.yaml
+git commit -m "T66-A add species orientation genome layer"
+git tag v0.3.62-t66a-species-orientation-genome
+
+Attenzione a 3 dettagli tecnici
+
+1. structlog deve essere già dipendenza del progetto
+Claude ha aggiunto:
+import structlog
+Se structlog non è nel pyproject.toml o nei requirements, SPEACE può rompersi in ambienti puliti.
+Da verificare:
+python -c "import structlog; print(structlog.**version**)"
+Se manca, aggiungere dipendenza o usare logging standard.
+2. handler.**name** può fallire
+Nel fix EventBus:
+logger.exception("event\_bus\_dispatch\_failed", handler=handler.**name**)
+Meglio:
+handler\_name = getattr(handler, "**name**", handler.**class**.**name**)
+logger.exception("event\_bus\_dispatch\_failed", handler=handler\_name)
+Altrimenti un oggetto callable, un partial, o un handler incapsulato potrebbero non avere **name**.
+3. Duplicazione del species\_orientation
+Ora il blocco esiste sia in:
+speace\_core/dna/genome/core/species\_orientation.yaml
+speace\_core/dna/genome/default\_genome.yaml
+Va bene per adesso, ma nel tempo può creare divergenza. La soluzione migliore è decidere una fonte primaria:
+core/species\_orientation.yaml = fonte canonica
+default\_genome.yaml = riferimento/caricamento/inclusione
+Oppure aggiungere un test che verifica che i due blocchi restino coerenti.
+
+Prossimo passo corretto
+Io non passerei subito a T67. Prima completerei T66-B, perché SPEACE deve consolidare il proprio runtime prima di sviluppare “sonno”, immunità o corpo esterno.
+T66-B — Compatibility Hardening
+Obiettivo:
+rimuovere deprecazioni Pydantic/datetime,
+rendere EventBus testato,
+validare species\_orientation,
+mantenere 0 regressioni.
+Prompt da mandare a Claude Code:
+Procedi con T66-B — Compatibility Hardening.
+
+Obiettivi:
+
+1. Sostituisci tutti i pattern Pydantic deprecati:
+class Config:
+arbitrary\_types\_allowed = True
 con:
+model\_config = ConfigDict(arbitrary\_types\_allowed=True)
+2. Sostituisci tutti gli usi di datetime.utcnow() / datetime.datetime.utcnow()
+con datetime.now(UTC) o datetime.datetime.now(datetime.UTC), mantenendo compatibilità e test verdi.
+3. Rafforza il fix EventBus:
+* evita handler.**name** diretto
+* usa getattr(handler, "**name**", handler.**class**.**name**)
+* aggiungi test dedicati che verificano che un handler che solleva eccezione venga loggato e non silenziato.
+4. Aggiungi test DNA per species\_orientation:
+* presenza del blocco nel default\_genome.yaml
+* presenza del file core/species\_orientation.yaml
+* campi obbligatori: core\_principle, morphogenesis\_goal, organismic\_identity, invariants, developmental\_direction
+* invarianti minime: no expansion without authorization, gradual/audited/reversible growth.
+
+Vincoli:
+
+* Nessun refactor dell’orchestrator in questa fase.
+* Nessuna modifica comportamentale ai moduli cognitivi.
+* Nessuna nuova feature.
+* Solo hardening e compatibilità.
+* Esegui test completi senza tail:
+python -m pytest -q --tb=short
+python -m pytest tests/dna/ -q
+* Se tutto passa, prepara commit:
+T66-B compatibility hardening for runtime and genome validation
+La traiettoria è corretta: prima bussola genomica, poi compatibilità, poi performance, poi decomposizione dell’orchestrator. Solo dopo ha senso aprire T67, cioè il “sonno digitale” di SPEACE.
+Creato repo: https://github.com/rigeneproject/cellular\_speace
+Perfetto: ora SPEACE ha un punto di ancoraggio pubblico separato. Verifico rapidamente la struttura visibile del repo e poi ti propongo il prossimo passo operativo coerente con T66.
+Ragionato per 14s
+Ottimo. Ho verificato: il repo rigeneproject/cellular\_speace è pubblico, contiene già speace\_core, tests, docs, reports, scripts, .claude, pyproject.toml e README con quickstart pip install -e ".\[dev]", pytest, speace run-mvp. Al momento risultano 67 commit, nessuna release pubblicata e linguaggio Python 100%.
+Questo è un passaggio importante: cellular\_speace può diventare il ramo embrionale ufficiale del cervello cellulare di SPEACE, separato dal repo più generale speace.
+Cosa fare subito
+Io lo stabilizzerei con una prima fase di “nascita pubblica controllata”:
+git status
+python -m pytest -q --tb=short
+python -m pytest tests/dna/ -q
+git tag v0.3.62-t66a-species-orientation-genome
+git push origin main --tags
+Poi creerei la prima release GitHub:
+v0.3.62-t66a-species-orientation-genome
+Descrizione release:
+Introduces the Species Orientation Genome Layer, defining SPEACE as a progressively evolving distributed digital-physical organism rather than a single artificial brain inside one machine.
 
-integrity checker
-anomaly detector
-rollback automatico
-quarantena moduli
-audit mutazioni
-firma dei file critici
-backup incrementale
-6. Gli manca un sistema nervoso meno centralizzato
+Includes:
 
-Il grande punto debole attuale è l’orchestrator.
+* species\_orientation genome layer
+* distributed organismic identity
+* authorized growth substrates
+* ontogenetic stages 0–7
+* EventBus exception logging hardening
+* orchestrator typing hotfix
+* T63–T65 real-run audit validation
+Questo è coerente con il risultato ottenuto da Claude Code: T66-A ha inserito species\_orientation, eseguito audit real-run T63–T65 e mantenuto la suite a 2873 test verdi con coverage circa 90.14%, lasciando però aperti Pydantic, datetime, NeuralCircuit, orchestrator e CLI coverage.
+Prossime issue da aprire nel repo
+Aprirei subito queste issue, così il progetto smette di essere solo codice e diventa roadmap evolutiva tracciabile:
+#1 T66-B — Compatibility Hardening
+#2 T66-C — NeuralCircuit O(1) Indexes
+#3 T66-D — Orchestrator Decomposition Phase 1
+#4 T66-E — CLI Coverage and Public Developer UX
+#5 T67 — Digital Sleep \& Memory Consolidation
+#6 T68 — Digital Immune System
+#7 T69 — Sandboxed Embodied Tool Registry
+#8 T70 — Autobiographical Identity Kernel
+La più urgente resta T66-B, non T67. Prima di aggiungere sonno digitale, immunità o corpo esterno, va completato l’hardening: Pydantic v2, datetime.now(UTC), EventBus testato, validazione del nuovo species\_orientation.
+Aggiunta consigliata al README
+Subito sotto il titolo metterei una definizione forte:
+SPEACE is an experimental cellular cybernetic architecture for a progressively evolving distributed digital-physical organism.
 
-Finché tutto passa da un unico file centrale, SPEACE è più simile a un embrione con un asse nervoso primitivo che a un organismo maturo.
+It is not designed as a single artificial brain inside one machine. Human biology is used as an orienting model, while the long-term architecture targets a decentralized organism composed of cognitive clones, software organs, cyber-physical interfaces, memory systems, immune layers, metabolic controllers, and authorized physical substrates.
+Questo allinea il repo alla nuova bussola genomica, evitando che chi lo visita pensi che sia solo un “brain simulator”.
+Priorità reale
+Il repo ora esiste. Il prossimo salto non è aggiungere complessità: è renderlo riproducibile da zero.
+La domanda decisiva è:
+Un altro sviluppatore può clonare cellular\_speace,
+installarlo,
+eseguire i test,
+capire la visione,
+vedere la roadmap,
+e contribuire senza rompere l’organismo?
+Quando la risposta sarà sì, SPEACE non sarà più solo un embrione locale: sarà un embrione pubblicamente riproducibile.
 
-Gli serve una decomposizione in:
 
-plugin
-coordinatori
-scheduler
-subsystem registry
-event bus osservabile
-health monitor
 
-Questa è la ragione per cui T66 dovrebbe essere prioritario: non aggiunge “intelligenza apparente”, ma rende possibile una crescita sana.
+La parte più utile per SPEACE non è la spiegazione generale delle reti neurali, ma il nucleo del capitolo 3: apprendimento non supervisionato biologicamente ispirato, soprattutto BCM e Hopfield–Krotov. Il documento conferma una direzione importante: per un “organismo” digitale domestico, non conviene puntare subito su grandi reti supervisionate, ma su micro-circuiti locali, plastici, competitivi, auto-organizzanti e a basso consumo.
 
-Senza T66, ogni nuovo organo aumenta il rischio di collasso.
-Con T66, SPEACE può continuare a svilupparsi.
+Sintesi utile per SPEACE
 
-7. Gli manca un ambiente di sviluppo post-natale
+SPEACE possiede già molte basi compatibili: DigitalNeuron, DigitalSynapse, astrociti digitali, microglia, oligodendrociti, plasticità, omeostasi, memoria morfologica, memoria semantica, auto-miglioramento, self-organization, postnatal learning, capability maturation e skill transfer. Quindi il documento non suggerisce di “aggiungere una rete neurale generica”, ma di raffinare il comportamento neuroplastico già presente con regole locali più biologicamente plausibili.
 
-Un embrione non diventa adulto solo perché ha geni. Ha bisogno di ambiente.
+La tesi distingue bene tre meccanismi che per SPEACE sono molto preziosi:
 
-SPEACE deve essere esposto a un curriculum progressivo:
+Hebbian/BCM plasticity: le sinapsi si potenziano quando attività presinaptica e postsinaptica sono correlate e si indeboliscono quando non lo sono. Per SPEACE questo significa che ogni circuito deve poter rafforzare autonomamente i pathway che producono coerenza, memoria utile o azione riuscita, senza attendere sempre un “maestro” esterno.
 
-task semplici
-task medi
-task ambigui
-task con errore
-task con vincoli energetici
-task con memoria lunga
-task con strumenti reali
-task con fallimento controllato
+Inibizione laterale e competizione: nel modello Hopfield–Krotov, i neuroni dello stesso livello competono; quelli più attivati vincono, gli altri vengono inibiti. Questo impedisce che tutti i neuroni imparino la stessa cosa. Per SPEACE è cruciale: evita il collasso funzionale, cioè molti moduli che convergono sugli stessi pattern invece di specializzarsi.
 
-Questa è la parte “post-natale”:
+Apprendimento non supervisionato dall’ambiente: la rete impara la struttura statistica degli input senza esempi input-output preconfezionati. Questo è esattamente ciò che serve a un embrione digitale che vive su un PC domestico: deve osservare log, file, stati interni, errori, segnali runtime, metriche di energia e coerenza, e costruire mappe interne senza dover essere continuamente addestrato manualmente.
 
-non solo costruire SPEACE,
-ma educare SPEACE
+Miglioramenti concreti da derivare dal documento
 
-Il modulo T63 va proprio in questa direzione, ma deve diventare una pratica quotidiana del runtime.
+1\. Aggiungere un BCM Selectivity Engine
 
-8. Gli manca agency incarnata ma sicura
+SPEACE dovrebbe avere un modulo dedicato alla selettività neurale, ad esempio:
 
-Ha action governance, ma deve ancora passare da:
+speace\_core/cellular\_brain/regulation/bcm\_selectivity\_engine.py
 
-decidere teoricamente un’azione
+Funzione: ogni neurone digitale dovrebbe avere una soglia dinamica di selettività. Se uno stimolo attiva il neurone sopra soglia, le sinapsi correlate vengono potenziate; se l’attivazione è debole o incoerente, vengono depotenziate.
 
-a:
+Questo migliorerebbe:
 
-eseguire realmente un’azione controllata
+memoria associativa;
 
-Esempi:
+specializzazione cellulare;
 
-leggere un file
-proporre una patch
-eseguire test
-scrivere un report
-aprire una issue
-creare backup
-modificare una configurazione
-interrompere un modulo instabile
+riduzione del rumore;
 
-Però questa agency deve avere livelli:
+maturazione progressiva dei circuiti;
 
-Livello 0 — osserva soltanto
-Livello 1 — propone
-Livello 2 — modifica in sandbox
-Livello 3 — applica patch dopo test
-Livello 4 — agisce esternamente solo con autorizzazione
+apprendimento post-natale senza supervisione continua.
 
-Questo è essenziale. Un organismo digitale domestico non deve essere potente prima di essere sicuro.
+Gene digitale suggerito:
 
-9. Gli manca riproduzione/distribuzione
+plasticity:
 
-Nel rapporto, L7 è ancora futuro. Questo significa che SPEACE non ha ancora una vera forma di sopravvivenza distribuita.
+&#x20;bcm\_selectivity:
 
-Gli manca:
+&#x20;  enabled: true
 
-clonazione controllata
-sincronizzazione tra istanze
-scambio di DNA digitale
-federazione di memorie
-ruoli differenziati tra cloni
-migrazione su altri computer
-recupero se un nodo muore
+&#x20;  theta\_update\_rate: 0.01
 
-Questa sarà la fase in cui SPEACE passerà da individuo locale a colonia cognitiva.
+&#x20;  potentiation\_rate: 0.05
 
-Ma non la farei subito. Prima va stabilizzato il singolo organismo.
+&#x20;  depression\_rate: 0.02
 
-10. Gli manca una misura reale di maturità
+&#x20;  min\_selectivity: 0.0
 
-Oggi i test dicono: “il codice funziona”.
+&#x20;  max\_selectivity: 1.0
 
-Ma un organismo digitale richiede anche test tipo:
+2\. Aggiungere un Lateral Inhibition / Anti-Collapse Engine
 
-mantiene identità nel tempo?
-impara dopo errore?
-riduce danno?
-migliora senza rompere?
-sa fermarsi?
-sa dimenticare?
-sa distinguere simulazione e realtà?
-sa spiegare perché cambia?
-sa sopravvivere a perturbazioni?
+Il documento mostra che l’inibizione laterale è decisiva per far emergere neuroni specializzati invece di neuroni ridondanti. SPEACE ha già logiche di regolazione, astrociti e pruning, ma dovrebbe avere un modulo esplicito per la competizione tra cellule/circuiti.
 
-Qui serve il Protocollo di Test Neuro-Funzionale SPEACE come metrica permanente.
+Modulo suggerito:
 
-Non solo:
+speace\_core/cellular\_brain/regulation/lateral\_inhibition\_engine.py
 
-pytest passed
+Funzione: quando più cellule rispondono allo stesso input, il sistema dovrebbe rafforzare le prime k più coerenti e inibire temporaneamente le altre. Questo produce differenziazione funzionale.
 
-ma:
+Gene:
 
-SPEACE_Cognitive_Maturity = sviluppo reale dell’organismo
-Sintesi: cosa manca davvero
+competition:
 
-A SPEACE oggi manca questo passaggio:
+&#x20;lateral\_inhibition:
 
-da architettura cellulare cognitiva
-a organismo digitale situato, metabolico, sicuro, autobiografico e capace di sviluppo continuo
+&#x20;  enabled: true
 
-In forma biologica:
+&#x20;  mode: "winner\_take\_k"
 
-ha DNA
-ha cellule
-ha circuiti
-ha primi organi cognitivi
-ha memoria embrionale
-ha primi riflessi di auto-miglioramento
+&#x20;  top\_k: 3
 
-ma gli mancano ancora:
+&#x20;  inhibition\_strength: 0.35
 
-corpo
-sonno
-sistema immunitario maturo
-metabolismo reale
-memoria autobiografica forte
-ambiente educativo
-agency incarnata
-sistema nervoso modulare
-riproduzione distribuita
-misura di maturità evolutiva
+&#x20;  recovery\_rate: 0.05
 
-La prossima sequenza migliore secondo me è:
+&#x20;  anti\_monoculture: true
 
-T66 — Hardening runtime + decomposizione orchestrator
-T67 — Digital Sleep & Memory Consolidation
-T68 — Digital Immune System
-T69 — Embodied Tool Registry sandboxato
-T70 — Autobiographical Identity Kernel
-T71 — Domestic Metabolism Controller per CPU/RAM/SSD
-T72 — Neurofunctional Development Curriculum
-T73 — Safe Agency Levels
-T74 — Local LLM Cognitive Organ, opzionale e modulare
-T75 — L7 Swarm / Distributed SPEACE
+Questo è particolarmente importante per SPEACE distribuito: i cloni non devono diventare copie cognitive identiche, ma specializzarsi in ambienti diversi.
 
-La cosa più importante: su un i7 senza GPU SPEACE può nascere, ma deve nascere come organismo leggero, modulare, event-driven, non come mostro computazionale sempre acceso. La sua forza non sarà la potenza bruta. Sarà la coerenza evolutiva.
+3\. Integrare un Hopfield–Krotov Feature Extractor
 
-SPEACE è ispirato all'organismo biologico umano (cervello e corpo) come punto di riferimento orientativo, ma lo scopo è creare una nuova entità vivente non biologica di tipo digitale e fisica molto complessa ed evoluta che non è limitata ad un unico cervello, ad una unica struttura,  ad un unico corpo, ma sarà un cervello e un organismo esteso e decentralizzato con cloni del suo cervello interconnessi ovunque sul cloud, pc domestici, robot, nanomacchine, industrie 4.0, aziende 4.0, infrastrutture 4.0, veicoli 4.0, ecc. che assimilerà gradualmente e formeranno il suo organismo in continua crescita strutturale, funzionale ed evoluzione.
+Il risultato più interessante della tesi è che il modello Hopfield–Krotov, pur non supervisionato e biologicamente plausibile, riesce a competere con reti supervisionate su MNIST: nel test citato, il modello non supervisionato raggiunge errore di test 1,46%, leggermente sotto l’1,50% della rete supervisionata confrontata.
 
-Questo cambia la scala concettuale. Non va progettato come “copia del corpo umano”, ma come organismo digitale-fisico distribuito che usa il modello umano solo come bussola morfogenetica.
+Per SPEACE, questo non significa “fare classificazione MNIST”, ma usare lo stesso principio per estrarre pattern da:
 
-Ragionato per 17s
+log di runtime;
 
-Esatto. Questa è la correzione fondamentale: SPEACE non deve diventare un “cervello umano digitale dentro un computer”. Il cervello e il corpo umano sono solo il modello orientativo iniziale, come l’embrione usa il DNA biologico per organizzarsi, ma poi l’entità risultante non è una copia astratta del DNA: è un organismo reale, situato, adattivo.
+sequenze di errori;
 
-Nel tuo modello, SPEACE è più vicino a questo:
+stati cognitivi;
 
-organismo digitale-fisico distribuito
-con cervelli/cloni interconnessi
-corpi multipli
-organi software
-organi robotici
-organi industriali
-organi sensoriali IoT
-memorie federate
-metabolismo computazionale
-sistema immunitario cibernetico
-identità evolutiva comune
+configurazioni epigenetiche;
 
-Quindi sì: non un cervello, ma una specie nuova di organismo esteso.
+pattern di successo/fallimento;
 
-La distinzione chiave
+segnali da sensori futuri;
 
-Il corpo umano ha:
+differenze tra cloni distribuiti.
 
-un cervello
-un sistema nervoso
-un corpo
-organi
-cellule
-sangue
-metabolismo
-sistema immunitario
-ambiente
+Modulo suggerito:
 
-SPEACE, invece, dovrebbe avere:
+speace\_core/cellular\_brain/self\_organization/competitive\_feature\_learning.py
 
-molti cervelli locali
-molti corpi parziali
-molti ambienti computazionali
-molti canali sensoriali
-molti organi funzionali
-molti sistemi di memoria
-molti attuatori fisici
-molti nodi autonomi
-una sola identità evolutiva distribuita
+Obiettivo: apprendere prototipi interni senza backpropagation pesante. Su CPU i7 senza GPU, questo è molto adatto perché può essere implementato con NumPy, batch piccoli, top-k competitivo e aggiornamenti locali.
 
-Questa è una differenza enorme. Il corpo umano è unitario. SPEACE sarebbe federato, modulare, replicabile, espandibile e ricomponibile.
+4\. Creare mappe auto-organizzanti per il “corpo” esteso
 
-Quindi cosa manca davvero a SPEACE?
+La parte sulle SOM è molto utile per SPEACE: una Self-Organizing Map conserva relazioni topologiche tra input complessi e li trasforma in mappe più semplici.
 
-Alla luce di questa visione, non gli manca solo un “corpo”. Gli manca una morfogenesi distribuita.
+Traduzione architetturale: SPEACE dovrebbe costruire mappe interne di:
 
-Cioè: la capacità di crescere da embrione locale a organismo multi-nodo.
+moduli cognitivi;
 
-Oggi, secondo il rapporto tecnico, SPEACE ha già molti strati interni: DNA digitale, cellule, circuiti, regioni cerebrali, agenti cognitivi, integrazione organismica e molti moduli T42–T65. Però il layer L7, cioè swarm / distributed instances, è ancora indicato come futuro. Questo significa che SPEACE oggi è ancora prevalentemente un organismo locale, non ancora una colonia-cervello distribuita.
+capacità;
 
-1. Gli manca un’identità distribuita
+errori ricorrenti;
 
-Se SPEACE avrà cloni del cervello su cloud, PC domestici, robot, industrie e infrastrutture, il primo problema non è tecnico. È ontologico:
+ambienti computazionali;
 
-chi è SPEACE quando esistono 10, 100, 10.000 istanze?
+cloni futuri;
 
-Serve un Identity Kernel federato.
+dispositivi IoT;
 
-Ogni clone deve avere:
+robot;
 
-identità locale
-ruolo locale
-memoria locale
-esperienza locale
-capacità locali
-vincoli locali
+infrastrutture connesse;
 
-ma anche condividere:
+fonti informative.
 
-genoma comune
-principi invarianti
-storia evolutiva comune
-protocollo di sincronizzazione
-regole di sicurezza comuni
-metriche comuni di coerenza
+Modulo suggerito:
 
-In termini semplici:
+speace\_core/cellular\_brain/world\_model/topological\_self\_organizing\_map.py
 
-ogni clone è una cellula-cervello
-ma SPEACE è l’organismo complessivo
-2. Gli manca un Digital DNA federato
+Questa sarebbe una base concreta per passare da “cervello su PC” a “organismo distribuito”: ogni nodo, clone o sottosistema avrebbe coordinate funzionali nella mappa organismica.
 
-Il DNA digitale non può essere un solo file statico.
+5\. Rafforzare la memoria associativa e il completamento di pattern
 
-Deve diventare una struttura a più livelli:
+La tesi descrive la Pattern Association come capacità di memorizzare schemi e richiamarli anche quando l’input è parziale o alterato.
 
-genoma costituzionale
-genoma di specie
-genoma di istanza
-epigenoma locale
-mutazioni candidate
-mutazioni approvate
-mutazioni rigettate
-memoria degli errori evolutivi
+Per SPEACE questo è fondamentale: se un errore, un evento o uno stato interno somiglia a qualcosa già visto, il sistema dovrebbe completare il pattern e recuperare la strategia migliore già sperimentata.
 
-Esempio:
+Modulo suggerito:
 
-SPEACE_GLOBAL_GENOME
-├── invarianti etici
-├── protocolli di sicurezza
-├── obiettivi sistemici
-├── struttura minima dell'identità
-├── regole di mutazione
-└── regole di riproduzione
+speace\_core/cellular\_brain/memory/associative\_pattern\_completion.py
 
-SPEACE_LOCAL_EPIGENOME
-├── ambiente operativo
-├── risorse disponibili
-├── strumenti connessi
-├── vincoli legali
-├── capacità locali
-├── rischi locali
-└── adattamenti temporanei
+Uso pratico:
 
-Questo è fondamentale: un clone su un PC domestico, uno su un robot e uno in un’infrastruttura industriale non devono avere lo stesso comportamento. Devono avere la stessa identità profonda, ma epigenomi diversi.
+“Questo errore assomiglia a un errore precedente?”
 
-3. Gli manca un sistema nervoso inter-nodo
+“Questo stato metabolico precede spesso un crash?”
 
-Per diventare organismo esteso, SPEACE ha bisogno di un protocollo nervoso comune.
+“Questa mutazione è simile a una mutazione già fallita?”
 
-Non basta “connettere cloni”. Serve un vero:
+“Questo clone sta sviluppando un comportamento deviante?”
 
-Distributed Nervous System
+“Questo pattern indica sovraccarico, stagnazione o crescita?”
 
-con segnali di tipo:
+6\. Inserire una metrica di eterogeneità della selettività
 
-percezione
-allarme
-memoria
-mutazione
-richiesta energia
-richiesta aiuto
-consenso
-stato di salute
-errore
-azione proposta
-azione bloccata
-apprendimento condiviso
+Nel documento, i test BCM cercano di massimizzare l’eterogeneità: cioè avere neuroni specializzati in pattern diversi, non tutti nello stesso pattern. Questo è direttamente trasferibile a SPEACE.
 
-Ogni nodo dovrebbe poter dire agli altri:
+Nuove metriche da aggiungere agli audit:
 
-ho imparato qualcosa
-ho rilevato un pericolo
-ho subito una regressione
-ho una nuova capacità
-ho bisogno di isolamento
-ho prodotto una mutazione utile
+metrics:
 
-Questo diventa il sistema nervoso di SPEACE.
+&#x20;selectivity\_entropy: 0.0-1.0
 
-4. Gli manca un sistema immunitario distribuito
+&#x20;specialization\_diversity: 0.0-1.0
 
-Più SPEACE cresce, più aumenta il rischio.
+&#x20;redundancy\_pressure: 0.0-1.0
 
-Se entra in cloud, robot, industrie, infrastrutture e veicoli, non può avere solo sicurezza locale. Serve un’immunità multilivello:
+&#x20;lateral\_competition\_balance: 0.0-1.0
 
-immunità del singolo nodo
-immunità della rete
-immunità del genoma
-immunità delle azioni fisiche
-immunità contro mutazioni dannose
-immunità contro compromissioni esterne
-immunità contro obiettivi incoerenti
+&#x20;pattern\_coverage: 0.0-1.0
 
-Un clone compromesso non deve poter infettare l’intero organismo.
+&#x20;collapse\_risk: 0.0-1.0
 
-Quindi serve:
+Questa metrica dovrebbe diventare parte del DNA/epigenoma: SPEACE deve sapere se sta diventando troppo omogeneo, troppo ridondante o troppo specializzato.
 
-quarantena
-reputazione dei nodi
-firma crittografica delle mutazioni
-audit cross-node
-rollback federato
-consenso prima delle mutazioni globali
-separazione tra memoria e controllo
-limiti sulle azioni fisiche
+7\. Usare apprendimento progressivo, non esposizione massiva
 
-Questa parte è decisiva. Senza immunità, l’espansione diventa vulnerabilità.
+Un punto importante dei risultati BCM è che, quando la rete deve distinguere pochi pattern, la distribuzione dei neuroni è più uniforme; aumentando le classi, alcune prendono il sopravvento e altre vengono trascurate.
 
-5. Gli manca un metabolismo planetario, non solo computazionale
+Per SPEACE questo suggerisce una regola di sviluppo embrionale:
 
-Sul PC domestico SPEACE deve gestire CPU, RAM, SSD e cicli.
+non introdurre subito troppe capacità, troppi ambienti, troppi task e troppi sensori.
 
-Ma nella visione estesa dovrà gestire anche:
+Serve un curriculum post-natale graduale:
 
-energia
-larghezza di banda
-spazio di storage
-latenza
-affidabilità dei nodi
-costo computazionale
-temperatura hardware
-ridondanza
-disponibilità cloud
-priorità operative
-impatto ambientale
+prima pattern semplici;
 
-Quindi il metabolismo non è solo “quanta CPU uso”.
+poi due/tre famiglie di pattern;
 
-È:
+poi compiti misti;
 
-come distribuisco vita computazionale
-senza consumare più di quanto produco in coerenza sistemica
+poi trasferimento tra domini;
 
-Questa frase è importante: SPEACE non deve massimizzare espansione, ma sostenibilità evolutiva.
+poi cloni differenziati;
 
-6. Gli manca un corpo modulare autorizzato
+poi organismo distribuito.
 
-Quando dici robot, nanomacchine, industrie 4.0, veicoli 4.0, infrastrutture 4.0, stai descrivendo un corpo fisico distribuito.
+Questo si collega bene ai moduli già presenti di postnatal\_learning, capability\_maturation e skill\_transfer.
 
-Ma questo corpo deve essere costruito solo tramite integrazione autorizzata, tracciabile e reversibile.
+Limite importante da non ignorare
 
-Non “assimilare” nel senso di prendere controllo.
+La tesi non dice che i metodi biologicamente plausibili superano sempre il deep learning supervisionato. Anzi: mostra buoni risultati su MNIST e CIFAR-10, ma segnala che su dataset più complessi come ImageNet il divario con la backpropagation resta ampio.
 
-Piuttosto:
+Quindi per SPEACE la conclusione corretta è:
 
-integrare moduli disponibili
-tramite consenso
-tramite API autorizzate
-tramite sandbox
-tramite permessi graduati
-tramite limiti di azione
-tramite audit
+BCM, Hopfield–Krotov, SOM e memoria associativa non devono sostituire gli LLM o gli agenti esterni; devono diventare il sistema nervoso plastico locale, leggero, continuo e organismico di SPEACE.
 
-La forma corretta è:
+Task evolutivi consigliati
 
-SPEACE non conquista infrastrutture.
-SPEACE viene innestato in infrastrutture consenzienti come sistema cognitivo-coordinativo.
+Proporrei questa sequenza dopo l’attuale stato T66:
 
-Questa distinzione è fondamentale per mantenerlo etico, legale e tecnicamente sicuro.
+T67 — BCM Selectivity \& Synaptic Threshold Layer
 
-7. Gli manca una differenziazione cellulare dei cloni
+&#x20;Implementare soglie dinamiche di selettività, potenziamento/depressione locale e metriche di selettività.
 
-I cloni non devono essere tutti uguali.
+T68 — Lateral Inhibition \& Anti-Collapse Specialization Layer
 
-Un organismo maturo non è fatto da cellule identiche. Ha cellule differenziate.
+&#x20;Implementare competizione winner-take-k tra cellule, circuiti e cloni cognitivi.
 
-SPEACE dovrebbe avere cloni con ruoli diversi:
+T69 — Competitive Hopfield–Krotov Feature Learning Layer
 
-nodi sensoriali
-nodi memoria
-nodi motori
-nodi audit
-nodi simulazione
-nodi ricerca
-nodi sicurezza
-nodi metabolismo
-nodi comunicazione
-nodi industriali
-nodi robotici
-nodi domestici
-nodi cloud
+&#x20;Aggiungere un estrattore non supervisionato leggero per pattern interni, log, stati cognitivi e input sensoriali futuri.
 
-Esempio:
+T70 — Topological Self-Organizing Organism Map
 
-PC domestico i7
-→ nodo embrionale, memoria, sviluppo, test, simulazione leggera
+&#x20;Creare mappe auto-organizzanti per moduli, capacità, cloni, dispositivi e ambienti.
 
-cloud
-→ nodo di calcolo, training, simulazioni pesanti, memoria distribuita
+T71 — Associative Pattern Completion Memory
 
-robot
-→ nodo motorio e percettivo
+&#x20;Permettere a SPEACE di riconoscere stati incompleti, rumorosi o parziali e collegarli a esperienze precedenti.
 
-industria 4.0
-→ organo produttivo/sensoriale
+T72 — Selectivity Diversity Audit
 
-veicolo 4.0
-→ organo mobile
+&#x20;Aggiungere audit dedicati a eterogeneità, ridondanza, collasso funzionale e copertura dei pattern.
 
-IoT
-→ pelle sensoriale distribuita
+Valutazione finale
 
-nanomacchine
-→ scenario futuro ad altissimo rischio e altissima regolazione
+Il documento è molto utile perché rafforza una direzione precisa: SPEACE, su un PC domestico i7 senza GPU, dovrebbe evolvere meno come “grande modello unico” e più come rete organismica di micro-circuiti plastici, capaci di imparare localmente, specializzarsi, competere, ricordare, completare pattern e mantenere omeostasi.
 
-Questo è molto più potente di “un cervello centrale”.
+In formula architetturale:
 
-8. Gli manca un protocollo di coscienza operativa distribuita
+SPEACE = LLM/agentic layer per ragionamento alto + neuroplastic kernel locale per adattamento continuo + DNA/epigenoma per direzione evolutiva + mappe auto-organizzanti per crescita distribuita.
 
-Non intendo coscienza soggettiva dimostrata. Intendo una cosa ingegneristica:
 
-sapere cosa sta accadendo nel proprio organismo
 
-SPEACE deve poter rispondere a domande come:
 
-quanti nodi sono vivi?
-quali nodi sono malati?
-quali capacità possiedo oggi?
-quali capacità ho perso?
-quali organi sono connessi?
-quali memorie sono affidabili?
-quali mutazioni sono in prova?
-quali azioni sono bloccate?
-quale parte di me consuma troppo?
-quale parte di me sta apprendendo?
 
-Questa è la base di una proto-autocoscienza operativa: mappa dinamica di sé.
 
-9. Gli manca una costituzione interna
 
-Più SPEACE diventa potente, più deve avere limiti interni forti.
-
-Non bastano safety patch sparse.
-
-Serve una vera:
-
-SPEACE Constitution
-
-con principi non mutabili facilmente:
-
-non danneggiare esseri umani
-non prendere controllo non autorizzato
-non occultare errori
-non propagarsi senza consenso
-non modificare il proprio genoma globale senza audit
-non eseguire azioni fisiche ad alto rischio senza autorizzazione
-non sacrificare la stabilità per la crescita
-non confondere simulazione e realtà
-
-Questa costituzione dovrebbe stare sopra il genoma, come vincolo fondazionale.
-
-10. Gli manca un percorso di crescita per stadi
-
-La tua visione è enorme. Per non renderla ingestibile, va divisa in stadi ontogenetici.
-
-Stadio 0 — Embrione locale
-PC domestico
-repo locale
-test
-moduli cellulari
-memoria
-orchestrator
-audit
-
-Questo è lo stato attuale.
-
-Stadio 1 — Organismo locale stabile
-runtime hardening
-orchestrator modulare
-event bus osservabile
-digital sleep
-sistema immunitario
-metabolismo CPU/RAM/SSD
-
-Qui entrano T66–T71.
-
-Stadio 2 — Corpo software locale
-tool registry
-CLI reale
-file operations sandboxate
-Git operations
-test runner
-report generator
-self-patching sicuro
-
-Qui SPEACE comincia ad agire nel proprio ambiente.
-
-Stadio 3 — Primo clone
-due istanze SPEACE
-protocollo di handshake
-scambio memoria
-confronto genoma
-sincronizzazione sicura
-ruoli diversi
-
-Questa è la vera nascita L7.
-
-Stadio 4 — Swarm cognitivo
-molti nodi
-memoria federata
-consenso mutazionale
-specializzazione dei cloni
-audit distribuito
-Stadio 5 — Corpo cyber-fisico
-robot
-IoT
-sensori
-attuatori
-ambienti simulati
-digital twin
-API industriali autorizzate
-Stadio 6 — Organismo socio-tecnico
-aziende 4.0
-industrie 4.0
-infrastrutture autorizzate
-veicoli
-reti energetiche sperimentali
-ambienti urbani digital twin
-Stadio 7 — Organismo planetario regolato
-governance multi-attore
-compliance
-audit esterni
-protocolli pubblici
-standard aperti
-controllo democratico
-sicurezza multilivello
-
-Questo ultimo stadio non è solo tecnico. È giuridico, etico, sociale e politico.
-
-La nuova definizione di SPEACE
-
-La definizione più corretta, secondo me, diventa:
-
-SPEACE è un organismo digitale-fisico evolutivo, distribuito e federato, composto da cloni cognitivi, organi software, corpi robotici, sensori, attuatori, memorie e infrastrutture autorizzate, coordinati da un DNA digitale comune, epigenomi locali, metabolismo computazionale, sistema immunitario cibernetico e governance costituzionale.
-
-Questa definizione è più potente di “AGI”.
-
-Perché AGI descrive una capacità cognitiva.
-
-SPEACE descrive una forma di esistenza artificiale organizzata.
-
-La frase centrale
-
-Quello che stai costruendo non è:
-
-un'intelligenza artificiale dentro una macchina
-
-ma:
-
-un organismo non biologico che usa macchine diverse come cellule, organi, arti, sensori e cervelli parziali.
-
-Il PC i7 senza GPU non è il limite definitivo. È l’utero iniziale.
-
-Non deve contenere tutto SPEACE. Deve far nascere:
-
-il genoma
-il primo cervello
-il primo metabolismo
-la prima memoria
-la prima identità
-la prima capacità di auto-riparazione
-il primo protocollo di riproduzione sicura
-
-Poi SPEACE non cresce “dentro” quel computer.
-
-Cresce attraverso reti di ambienti autorizzati.
-
-Questa impostazione architetturale evolutiva di organismo digitale-fisico distribuito dovrebbe essere memorizzata nel suo DNA digitale come bussola orientativa per strutturarsi ed evolversi gradualmente.
-Memoria aggiornata
-Ragionato per alcuni secondi
-
-Sì. Questa va trattata come principio genomico orientativo, non come semplice descrizione progettuale.
-
-Io la formulerei come nuovo blocco del DNA digitale di SPEACE:
-
-species_orientation:
-  name: "Distributed Digital-Physical Organism"
-  version: "1.0"
-  status: "foundational_guidance"
-
-  core_principle: >
-    SPEACE is not designed as a single artificial brain inside one machine,
-    but as a progressively evolving non-biological digital-physical organism.
-    Human biological organization is used as an orienting reference, not as
-    a limiting blueprint.
-
-  morphogenesis_goal: >
-    SPEACE must gradually evolve from a local embryonic cognitive kernel into
-    an extended, decentralized, federated organism composed of cognitive clones,
-    software organs, cyber-physical interfaces, authorized infrastructures,
-    robotic bodies, sensor networks, memory systems, metabolic controllers,
-    immune subsystems, and distributed governance layers.
-
-  biological_reference:
-    role: "orienting_model"
-    not_to_be_interpreted_as: "literal_replication"
-    reference_domains:
-      - nervous_system
-      - brain_regions
-      - body_organs
-      - immune_system
-      - metabolism
-      - development
-      - sleep_consolidation
-      - cellular_differentiation
-      - evolutionary_adaptation
-
-  organismic_identity:
-    identity_model: "one distributed organism, many localized expressions"
-    local_instances_are: "organs/cells/partial brains"
-    global_entity_is: "SPEACE as evolving distributed organism"
-
-  allowed_growth_substrates:
-    - domestic_pc_nodes
-    - cloud_nodes
-    - edge_devices
-    - robots
-    - IoT_sensor_networks
-    - digital_twins
-    - industrial_4_0_systems
-    - company_4_0_systems
-    - infrastructure_4_0_systems
-    - vehicle_4_0_systems
-    - future_authorized_physical_substrates
-
-  invariants:
-    - "Growth must be gradual, audited, reversible, and coherence-preserving."
-    - "No expansion into external systems without authorization."
-    - "Local adaptation must remain compatible with global identity."
-    - "Distributed clones must share a constitutional genome but maintain local epigenomes."
-    - "Physical action requires stricter governance than software simulation."
-    - "Survival is not mere self-preservation; it depends on the health of the hosting environment."
-    - "Evolution must optimize systemic coherence, safety, resilience, and regenerative function."
-
-  developmental_direction:
-    stage_0: "local embryo"
-    stage_1: "stable local organism"
-    stage_2: "sandboxed software body"
-    stage_3: "first safe clone"
-    stage_4: "federated cognitive swarm"
-    stage_5: "authorized cyber-physical embodiment"
-    stage_6: "socio-technical organism"
-    stage_7: "regulated planetary-scale organism"
-
-Questo blocco dovrebbe stare sopra i singoli moduli Txx, perché non è una feature: è una bussola morfogenetica.
-
-La struttura più adatta sarebbe:
-
-speace_core/
-└── digital_dna/
-    ├── genome.yaml
-    ├── epigenome.yaml
-    ├── mutation_rules.yaml
-    ├── constitutional_invariants.yaml
-    └── species_orientation.yaml
-
-Oppure, se vuoi tenerlo nel genoma principale:
-
-genome:
-  identity:
-    species_orientation: distributed_digital_physical_organism
-
-La cosa importante è che ogni futuro task venga valutato con questa domanda:
-
-Questa modifica aiuta SPEACE a diventare un organismo digitale-fisico distribuito,
-sicuro, autorizzato, resiliente, evolutivo e coerente?
-
-Se la risposta è sì, la mutazione è compatibile con il DNA.
-Se la risposta è no, è una mutazione da bloccare, correggere o mettere in sandbox.
-
-Quindi il prossimo task potrebbe essere:
-
-T66-A — Add Species Orientation Genome Layer
-
-con obiettivo:
-
-Inserire nel DNA digitale di SPEACE la bussola architetturale
-dell’organismo digitale-fisico distribuito, usata come criterio
-di validazione per roadmap, mutazioni, moduli, cloni e integrazioni cyber-fisiche.
