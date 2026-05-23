@@ -78,6 +78,7 @@ main {
 
 .panel.critical { border-color: var(--accent-red); }
 .panel.warning { border-color: var(--accent-yellow); }
+.panel.info { border-color: var(--accent-cyan); }
 
 .panel h2 {
   font-size: 0.9rem;
@@ -101,6 +102,7 @@ main {
 .badge.medium { color: var(--accent-yellow); border: 1px solid var(--accent-yellow); }
 .badge.high { color: var(--accent-red); border: 1px solid var(--accent-red); }
 .badge.critical { color: #fff; background: var(--accent-red); border: 1px solid var(--accent-red); }
+.badge.info { color: var(--accent-cyan); border: 1px solid var(--accent-cyan); }
 
 .sensor-grid {
   display: grid;
@@ -177,6 +179,7 @@ main {
 .anomaly-severity.high { color: var(--accent-red); }
 .anomaly-severity.medium { color: var(--accent-yellow); }
 .anomaly-severity.warning { color: var(--accent-yellow); }
+.anomaly-severity.info { color: var(--accent-cyan); }
 
 .node-list, .narrative-list {
   list-style: none;
@@ -200,6 +203,57 @@ main {
   border-radius: 4px;
   font-size: 0.75rem;
   display: none;
+}
+
+.history-controls {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+.history-controls select {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0.25rem 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+.sparkline-container {
+  width: 100%;
+  height: 80px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.5rem;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  overflow-x: auto;
+}
+
+.sparkline {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  width: 100%;
+  height: 100%;
+}
+
+.sparkline-bar {
+  flex: 1;
+  min-width: 3px;
+  border-radius: 1px;
+  transition: height 0.3s ease;
+}
+
+.sparkline-empty {
+  width: 100%;
+  text-align: center;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  padding-top: 1.5rem;
 }
 
 @media (max-width: 720px) {

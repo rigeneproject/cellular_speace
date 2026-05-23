@@ -75,6 +75,7 @@ class SharedGenome(BaseModel):
         default_factory=dict
     )
     brain_regions: Dict[str, Any] = Field(default_factory=dict)
+    monitoring_dashboard: Dict[str, Any] = Field(default_factory=dict)
 
     def get_genes_for_role(self, role: str) -> List[str]:
         rules = self.expression_rules.get(role)

@@ -135,6 +135,33 @@
       <ul class="narrative-list" id="i-narrative"></ul>
     </section>
 
+    <!-- T106 — Personality Drift -->
+    <section class="panel" id="panel-personality">
+      <h2>Personality Drift</h2>
+      <div class="score-grid" style="margin-bottom:0.75rem;">
+        <div class="score-card">
+          <div class="label">Drive</div>
+          <div class="value" id="pd-drive">0.00</div>
+        </div>
+        <div class="score-card">
+          <div class="label">Self-model</div>
+          <div class="value" id="pd-self">0.00</div>
+        </div>
+        <div class="score-card">
+          <div class="label">Narrative</div>
+          <div class="value" id="pd-narrative">0.00</div>
+        </div>
+        <div class="score-card">
+          <div class="label">Decisional</div>
+          <div class="value" id="pd-decisional">0.00</div>
+        </div>
+      </div>
+      <div class="info-row">
+        <span class="info-key">Overall Drift</span>
+        <span class="info-val" id="pd-overall">0.00</span>
+      </div>
+    </section>
+
     <!-- Autonomous Drives -->
     <section class="panel" id="panel-drives">
       <h2>Autonomous Drives</h2>
@@ -163,6 +190,42 @@
       <ul class="anomaly-list" id="a-list"></ul>
     </section>
 
+    <!-- T105 — Longitudinal Memory -->
+    <section class="panel panel-grid-2" id="panel-longitudinal">
+      <h2>Longitudinal Memory</h2>
+      <div class="history-controls">
+        <select id="lm-metric">
+          <option value="coherence_phi">Coherence Phi</option>
+          <option value="chaos_score">Chaos</option>
+          <option value="rigidity_score">Rigidity</option>
+          <option value="drift">Drift</option>
+          <option value="prediction_error">Prediction Error</option>
+          <option value="branching_ratio">Branching Ratio</option>
+          <option value="health_score">Health Score</option>
+          <option value="safety_risk">Safety Risk</option>
+          <option value="drive_instability">Drive Instability</option>
+          <option value="identity_divergence">Identity Divergence</option>
+          <option value="cpu">CPU</option>
+          <option value="memory_bytes">Memory</option>
+        </select>
+        <select id="lm-hours">
+          <option value="1">1h</option>
+          <option value="6">6h</option>
+          <option value="24" selected>24h</option>
+          <option value="168">7d</option>
+        </select>
+      </div>
+      <div class="sparkline-container" id="lm-sparkline"></div>
+      <div class="info-row">
+        <span class="info-key">Trend</span>
+        <span class="info-val" id="lm-trend">—</span>
+      </div>
+      <div class="info-row">
+        <span class="info-key">Data Points</span>
+        <span class="info-val" id="lm-points">0</span>
+      </div>
+    </section>
+
     <!-- T102 — Alert Panel -->
     <section class="panel panel-grid-2" id="panel-alerts">
       <h2>Alert Telemetry <span class="badge" id="al-badge">normal</span></h2>
@@ -186,6 +249,31 @@
       </div>
       <h3 style="font-size:0.7rem; color:var(--text-secondary); margin:0.5rem 0 0.25rem;">Event Timeline</h3>
       <ul class="anomaly-list" id="al-timeline"></ul>
+    </section>
+
+    <!-- T104 — Regulation Proposals -->
+    <section class="panel panel-grid-2" id="panel-regulation">
+      <h2>Regulation Proposals <span class="badge" id="rp-badge">0</span></h2>
+      <div class="info-row">
+        <span class="info-key">Pending</span>
+        <span class="info-val" id="rp-pending">0</span>
+      </div>
+      <div class="info-row">
+        <span class="info-key">Confidence (latest)</span>
+        <span class="info-val" id="rp-confidence">—</span>
+      </div>
+      <h3 style="font-size:0.7rem; color:var(--text-secondary); margin:0.5rem 0 0.25rem;">Pending Proposals</h3>
+      <ul class="anomaly-list" id="rp-list"></ul>
+    </section>
+
+    <!-- T107 — Dialogue -->
+    <section class="panel panel-grid-2" id="panel-dialogue">
+      <h2>Dialogue</h2>
+      <div id="dl-messages" style="height:140px; overflow-y:auto; background:var(--bg-card); border:1px solid var(--border); border-radius:4px; padding:0.5rem; font-size:0.75rem; margin-bottom:0.5rem;"></div>
+      <div style="display:flex; gap:0.5rem;">
+        <input type="text" id="dl-input" placeholder="Message SPEACE..." style="flex:1; background:var(--bg-card); color:var(--text-primary); border:1px solid var(--border); border-radius:3px; padding:0.35rem 0.5rem; font-family:var(--font-mono); font-size:0.75rem;">
+        <button id="dl-send" style="background:var(--bg-card); color:var(--accent-cyan); border:1px solid var(--border); border-radius:3px; padding:0.35rem 0.6rem; font-family:var(--font-mono); font-size:0.7rem; cursor:pointer;">Send</button>
+      </div>
     </section>
   </main>
 

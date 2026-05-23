@@ -161,6 +161,107 @@ class TestAlertEngineHealthScore:
         score = engine.health_score(base)
         assert score == pytest.approx(0.5, abs=0.01)
 
+    def test_health_penalizes_safety_risk(self, engine):
+        base = {
+            "cognition": {"self_model": {"coherence_phi": 1.0}},
+            "dynamics": {"chaos_score": 0.0, "rigidity_score": 0.0, "drift": 0.0},
+            "embodiment": {"prediction_error": 0.0},
+            "safety": {"risk_level": "critical"},
+        }
+        score = engine.health_score(base)
+        assert score == pytest.approx(0.0, abs=0.01)
+
+    def test_health_penalizes_identity_divergence(self, engine):
+        base = {
+            "cognition": {"self_model": {"coherence_phi": 1.0}},
+            "dynamics": {"chaos_score": 0.0, "rigidity_score": 0.0, "drift": 0.0},
+            "embodiment": {"prediction_error": 0.0},
+            "identity": {"divergence_detected": True},
+        }
+        score = engine.health_score(base)
+        assert score == pytest.approx(0.7, abs=0.01)
+
+    def test_health_penalizes_drive_instability(self, engine):
+        base = {
+            "cognition": {"self_model": {"coherence_phi": 1.0}},
+            "dynamics": {"chaos_score": 0.0, "rigidity_score": 0.0, "drift": 0.0},
+            "embodiment": {"prediction_error": 0.0},
+            "drives": {"drives": [{"urgency": 0.5}]},
+        }
+        score = engine.health_score(base)
+        assert score == pytest.approx(0.5, abs=0.01)
+
+
+class TestAlertEngineNewMetrics:
+    def test_safety_risk_warning(self, engine):
+        state = {
+            "cognition": {"self_model": {"coherence_phi": 0.5}},
+            "dynamics": {"chaos_score": 0.1, "rigidity_score": 0.1, "drift": 0.01, "criticality": {"branching_ratio": 1.0}},
+            "embodiment": {"prediction_error": 1.0},
+            "safety": {"risk_level": "medium"},
+        }
+        alerts = engine.evaluate(state)
+        assert any(a["alert_type"] == "safety_risk_warning" for a in alerts)
+
+    def test_safety_risk_critical(self, engine):
+        state = {
+            "cognition": {"self_model": {"coherence_phi": 0.5}},
+            "dynamics": {"chaos_score": 0.1, "rigidity_score": 0.1, "drift": 0.01, "criticality": {"branching_ratio": 1.0}},
+            "embodiment": {"prediction_error": 1.0},
+            "safety": {"risk_level": "critical"},
+        }
+        alerts = engine.evaluate(state)
+        assert any(a["alert_type"] == "safety_risk_critical" and a["severity"] == "critical" for a in alerts)
+
+    def test_identity_divergence_warning(self, engine):
+        state = {
+            "cognition": {"self_model": {"coherence_phi": 0.5}},
+            "dynamics": {"chaos_score": 0.1, "rigidity_score": 0.1, "drift": 0.01, "criticality": {"branching_ratio": 1.0}},
+            "embodiment": {"prediction_error": 1.0},
+            "identity": {"divergence_detected": True},
+        }
+        alerts = engine.evaluate(state)
+        assert any(a["alert_type"] == "identity_divergence_warning" for a in alerts)
+
+    def test_drive_instability_warning(self, engine):
+        state = {
+            "cognition": {"self_model": {"coherence_phi": 0.5}},
+            "dynamics": {"chaos_score": 0.1, "rigidity_score": 0.1, "drift": 0.01, "criticality": {"branching_ratio": 1.0}},
+            "embodiment": {"prediction_error": 1.0},
+            "drives": {"drives": [{"urgency": 0.6}]},
+        }
+        alerts = engine.evaluate(state)
+        assert any(a["alert_type"] == "drive_instability_warning" for a in alerts)
+
+    def test_drive_instability_critical(self, engine):
+        state = {
+            "cognition": {"self_model": {"coherence_phi": 0.5}},
+            "dynamics": {"chaos_score": 0.1, "rigidity_score": 0.1, "drift": 0.01, "criticality": {"branching_ratio": 1.0}},
+            "embodiment": {"prediction_error": 1.0},
+            "drives": {"drives": [{"urgency": 0.9}]},
+        }
+        alerts = engine.evaluate(state)
+        assert any(a["alert_type"] == "drive_instability_critical" and a["severity"] == "critical" for a in alerts)
+
+    def test_new_alert_source_state(self, engine):
+        state = {
+            "cognition": {"self_model": {"coherence_phi": 0.5}},
+            "dynamics": {"chaos_score": 0.1, "rigidity_score": 0.1, "drift": 0.01, "criticality": {"branching_ratio": 1.0}},
+            "embodiment": {"prediction_error": 1.0},
+            "safety": {"risk_level": "critical"},
+            "identity": {"divergence_detected": True},
+            "drives": {"drives": [{"urgency": 0.9}]},
+        }
+        alerts = engine.evaluate(state)
+        assert all("source_state" in a for a in alerts)
+        for a in alerts:
+            if a["alert_type"].startswith("safety"):
+                assert a["source_state"]["safety_risk"] == "critical"
+            if a["alert_type"].startswith("identity"):
+                assert a["source_state"]["divergence_detected"] is True
+            if a["alert_type"].startswith("drive"):
+                assert a["source_state"]["drive_instability"] == 0.9
+
 
 class TestAlertEnginePersistence:
     def test_persist_and_read(self, tmp_path):

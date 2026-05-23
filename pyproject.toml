@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "speace-core"
-version = "0.1.0"
+version = "0.6.0"
 description = "SPEACE — Super Entità Autonoma Cibernetica Cellulare Evolutiva"
 readme = "README.md"
 license = {text = "MIT"}
@@ -31,6 +31,7 @@ dependencies = [
 [project.optional-dependencies]
 embodiment = ["psutil>=5.9"]
 dashboard = ["flask>=3.0"]
+monitoring = ["fastapi>=0.110", "uvicorn>=0.30", "websockets>=12.0"]
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.23",

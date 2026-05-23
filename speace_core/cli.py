@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import pathlib
 from typing import Optional
 
@@ -9,7 +10,7 @@ from speace_core.orchestrator import CellularBrainOrchestrator
 
 app = typer.Typer(name="speace", help="SPEACE Cellular Brain CLI")
 
-SPEACE_VERSION = "0.1.0"
+SPEACE_VERSION = "0.6.0"
 
 
 def _default_genome_path() -> pathlib.Path:
@@ -129,6 +130,86 @@ def dashboard() -> None:
         raise typer.Exit(1) from exc
     typer.echo("Starting SPEACE dashboard at http://127.0.0.1:8080")
     run_server(host="127.0.0.1", port=8080)
+
+
+@app.command()
+def monitor(
+    genome_path: Optional[pathlib.Path] = typer.Option(
+        None, "--genome", "-g", help="Path to genome YAML"
+    ),
+) -> None:
+    """Launch the SPEACE Local Organism Monitor (T101)."""
+    try:
+        import uvicorn
+    except ImportError as exc:
+        typer.echo("Error: uvicorn is not installed.")
+        typer.echo('Install with: pip install "speace-core[monitoring]"')
+        raise typer.Exit(1) from exc
+
+    host = "127.0.0.1"
+    port = 8787
+
+    if genome_path is None:
+        genome_path = (
+            pathlib.Path(__file__).resolve().parent
+            / "dna"
+            / "genome"
+            / "monitoring_dashboard.yaml"
+        )
+    if genome_path.exists():
+        try:
+            genome = load_genome(genome_path)
+            md = getattr(genome, "monitoring_dashboard", {}) or {}
+            host = md.get("host", host)
+            port = md.get("port", port)
+        except Exception:
+            pass
+
+    typer.echo(f"Starting SPEACE monitor at http://{host}:{port}")
+    uvicorn.run(
+        "speace_core.monitoring.dashboard_api:app",
+        host=host,
+        port=port,
+        log_level="info",
+    )
+
+
+@app.command()
+def report(
+    lookback: int = typer.Option(24, "--lookback", "-l", help="Hours to look back"),
+    output_dir: pathlib.Path = typer.Option(
+        "reports/observer", "--output", "-o", help="Output directory"
+    ),
+    format: str = typer.Option(
+        "both", "--format", "-f", help="Output format: json, md, or both"
+    ),
+) -> None:
+    """Generate a T103 observer report from organismic state and history."""
+    from speace_core.monitoring.observer_report_generator import ObserverReportGenerator
+
+    generator = ObserverReportGenerator()
+    rep = generator.generate(lookback_hours=lookback)
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    ts = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d_%H%M%S")
+
+    if format in ("json", "both"):
+        json_path = output_dir / f"observer_report_{ts}.json"
+        json_path.write_text(rep.model_dump_json(indent=2), encoding="utf-8")
+        typer.echo(f"JSON report written to: {json_path}")
+
+    if format in ("md", "both"):
+        md_path = output_dir / f"observer_report_{ts}.md"
+        md_path.write_text(rep.to_markdown(), encoding="utf-8")
+        typer.echo(f"Markdown report written to: {md_path}")
+
+    typer.echo(f"Verdict: {rep.verdict}")
+    typer.echo(f"Health Score: {rep.alert_summary.health_score_current:.4f}")
+    typer.echo(f"Alerts (critical/warning): {rep.alert_summary.critical_count}/{rep.alert_summary.warning_count}")
+    if rep.recommendations:
+        typer.echo("Recommendations:")
+        for rec in rep.recommendations:
+            typer.echo(f"  - [{rec.category}] {rec.message}")
 
 
 if __name__ == "__main__":

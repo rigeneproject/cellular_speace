@@ -59,9 +59,10 @@
   function setPanelStatus(panelId, status) {
     const panel = document.getElementById(panelId);
     if (!panel) return;
-    panel.classList.remove('critical', 'warning');
+    panel.classList.remove('critical', 'warning', 'info');
     if (status === 'critical') panel.classList.add('critical');
     else if (status === 'high' || status === 'warning') panel.classList.add('warning');
+    else if (status === 'info') panel.classList.add('info');
   }
 
   // ------------------------------------------------------------------ //
@@ -185,6 +186,15 @@
     renderList('i-nodes', i.distributed_nodes || [], n => `<li>${n.node_id || '?'} (trust ${fmtNum(n.trust_score, 2)})</li>`);
     renderList('i-narrative', i.narrative_sync || [], it => `<li>${it.title || it.event || JSON.stringify(it).slice(0, 60)}</li>`);
 
+    // T106 — Personality Drift
+    const pd = s.personality_drift || {};
+    document.getElementById('pd-drive').textContent = fmtNum(pd.drive_divergence, 3);
+    document.getElementById('pd-self').textContent = fmtNum(pd.self_model_divergence, 3);
+    document.getElementById('pd-narrative').textContent = fmtNum(pd.narrative_divergence, 3);
+    document.getElementById('pd-decisional').textContent = fmtNum(pd.decisional_divergence, 3);
+    document.getElementById('pd-overall').textContent = fmtNum(pd.overall_drift, 3);
+    setPanelStatus('panel-personality', (pd.overall_drift || 0) > 0.5 ? 'critical' : (pd.overall_drift || 0) > 0.2 ? 'warning' : 'normal');
+
     // Drives
     const dr = s.drives || {};
     document.getElementById('dr-tendency').textContent = dr.action_tendency || 'idle';
@@ -216,19 +226,45 @@
     // T102 — Alert Telemetry
     const al = s.alert_engine || {};
     const alAlerts = Array.isArray(al.alerts) ? al.alerts : [];
+    const alRecent = Array.isArray(al.recent_alerts) ? al.recent_alerts : alAlerts;
     document.getElementById('al-health').textContent = fmtNum(al.health_score, 3);
     document.getElementById('al-count').textContent = alAlerts.length;
     const alCrit = alAlerts.filter(a => a.severity === 'critical').length;
     const alWarn = alAlerts.filter(a => a.severity === 'warning').length;
+    const alInfo = alAlerts.filter(a => a.severity === 'info').length;
     document.getElementById('al-critical').textContent = alCrit;
     document.getElementById('al-warning').textContent = alWarn;
-    const alMaxSev = alCrit > 0 ? 'critical' : alWarn > 0 ? 'warning' : 'normal';
+    const alMaxSev = alCrit > 0 ? 'critical' : alWarn > 0 ? 'warning' : alInfo > 0 ? 'info' : 'normal';
     setBadge('al-badge', alMaxSev);
-    renderList('al-timeline', alAlerts, a => {
+    renderList('al-timeline', alRecent, a => {
       const t = a.timestamp ? new Date(a.timestamp * 1000).toISOString().split('T')[1].replace('Z', '').slice(0, 8) : '—';
       return `<li><span class="anomaly-type">${a.alert_type || 'unknown'}</span><span class="anomaly-severity ${a.severity || 'warning'}">${(a.severity || 'warning').toUpperCase()}</span><span class="meta">${t}</span></li>`;
     });
     setPanelStatus('panel-alerts', alMaxSev);
+
+    // T104 — Regulation Proposals
+    const rp = s.regulation_proposals || {};
+    const rpPending = rp.pending_count || 0;
+    document.getElementById('rp-pending').textContent = rpPending;
+    setBadge('rp-badge', rpPending > 0 ? 'warning' : 'info');
+    const rpLatest = Array.isArray(rp.latest) ? rp.latest : [];
+    const rpConf = rpLatest.length > 0 && rpLatest[0].confidence ? rpLatest[0].confidence.confidence : null;
+    document.getElementById('rp-confidence').textContent = rpConf !== null ? rpConf.toFixed(2) : '—';
+    renderList('rp-list', rpLatest, p => {
+      const conf = p.confidence ? p.confidence.confidence : 0.5;
+      const sev = p.alert && p.alert.severity ? p.alert.severity : 'warning';
+      return `<li><span class="anomaly-type">${p.proposed_action || 'unknown'} (conf ${conf.toFixed(2)})</span><span class="anomaly-severity ${sev}">${sev.toUpperCase()}</span></li>`;
+    });
+    setPanelStatus('panel-regulation', rpPending > 0 ? 'warning' : 'normal');
+
+    // T106 — Personality Drift
+    const pd = s.personality_drift || {};
+    document.getElementById('pd-drive').textContent = fmtNum(pd.drive_divergence, 3);
+    document.getElementById('pd-self').textContent = fmtNum(pd.self_model_divergence, 3);
+    document.getElementById('pd-narrative').textContent = fmtNum(pd.narrative_divergence, 3);
+    document.getElementById('pd-decisional').textContent = fmtNum(pd.decisional_divergence, 3);
+    document.getElementById('pd-overall').textContent = fmtNum(pd.overall_drift, 3);
+    setPanelStatus('panel-personality', (pd.overall_drift || 0) > 0.5 ? 'critical' : (pd.overall_drift || 0) > 0.2 ? 'warning' : 'normal');
 
     // Header meta from health (if loaded separately)
     if (s.timestamp) {
@@ -236,6 +272,104 @@
       // optionally update something
     }
   }
+
+  // ------------------------------------------------------------------ //
+  // T105 — Longitudinal Memory sparkline
+  // ------------------------------------------------------------------ //
+
+  function renderSparkline(values) {
+    const c = document.getElementById('lm-sparkline');
+    if (!c || values.length === 0) {
+      if (c) c.innerHTML = '<div class="sparkline-empty">no data</div>';
+      return;
+    }
+    const max = Math.max(...values, 0.01);
+    const min = Math.min(...values, 0);
+    const range = max - min || 1;
+    const bars = values.map(v => {
+      const h = ((v - min) / range) * 100;
+      const col = v > max * 0.8 ? 'red' : v > max * 0.5 ? 'yellow' : 'green';
+      return `<div class="sparkline-bar" style="height:${h.toFixed(1)}%; background:var(--accent-${col})"></div>`;
+    }).join('');
+    c.innerHTML = `<div class="sparkline">${bars}</div>`;
+  }
+
+  async function loadHistory() {
+    const metric = document.getElementById('lm-metric').value;
+    const hours = document.getElementById('lm-hours').value;
+    try {
+      const r = await fetch(`${API_URL.replace('/api/state', `/api/history/${metric}?hours=${hours}&limit=100`)}`);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const data = await r.json();
+      const points = data.data || [];
+      const values = points.map(p => p.value);
+      renderSparkline(values);
+      document.getElementById('lm-points').textContent = points.length;
+
+      // trend
+      const tr = await fetch(`${API_URL.replace('/api/state', `/api/history/trend/${metric}?hours=${hours}`)}`);
+      if (tr.ok) {
+        const td = await tr.json();
+        const dir = td.direction || 'stable';
+        const delta = td.delta !== undefined ? (td.delta > 0 ? '+' : '') + td.delta.toFixed(4) : '—';
+        document.getElementById('lm-trend').textContent = `${dir} (${delta})`;
+      }
+    } catch (e) {
+      document.getElementById('lm-sparkline').innerHTML = '';
+      document.getElementById('lm-points').textContent = '0';
+      document.getElementById('lm-trend').textContent = '—';
+    }
+  }
+
+  document.getElementById('lm-metric').addEventListener('change', loadHistory);
+  document.getElementById('lm-hours').addEventListener('change', loadHistory);
+
+  // ------------------------------------------------------------------ //
+  // T107 — Dialogue chat
+  // ------------------------------------------------------------------ //
+
+  function appendMessage(speaker, text) {
+    const c = document.getElementById('dl-messages');
+    if (!c) return;
+    const div = document.createElement('div');
+    div.style.marginBottom = '0.35rem';
+    const color = speaker === 'user' ? 'var(--accent-cyan)' : 'var(--accent-green)';
+    const align = speaker === 'user' ? 'right' : 'left';
+    div.style.textAlign = align;
+    div.innerHTML = `<span style="color:${color}; font-weight:bold;">${speaker === 'user' ? 'YOU' : 'SPEACE'}:</span> ${escapeHtml(text)}`;
+    c.appendChild(div);
+    c.scrollTop = c.scrollHeight;
+  }
+
+  function escapeHtml(t) {
+    return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  async function sendDialogue() {
+    const input = document.getElementById('dl-input');
+    if (!input) return;
+    const msg = input.value.trim();
+    if (!msg) return;
+    appendMessage('user', msg);
+    input.value = '';
+    try {
+      const r = await fetch(`${API_URL.replace('/api/state', '/api/dialogue/message')}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({message: msg}),
+      });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const data = await r.json();
+      if (data.message) appendMessage('speace', data.message);
+    } catch (e) {
+      appendMessage('speace', 'Error: ' + e.message);
+    }
+  }
+
+  const dlSend = document.getElementById('dl-send');
+  const dlInput = document.getElementById('dl-input');
+  if (dlSend) dlSend.addEventListener('click', sendDialogue);
+  if (dlInput) dlInput.addEventListener('keydown', ev => { if (ev.key === 'Enter') sendDialogue(); });
 
   // ------------------------------------------------------------------ //
   // Transport

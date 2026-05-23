@@ -35,6 +35,17 @@ class TestHttpEndpoints:
         assert "embodiment" in data
         assert "anomaly_panel" in data
 
+    def test_state_includes_alert_engine(self, client):
+        r = client.get("/api/state")
+        assert r.status_code == 200
+        data = r.json()
+        assert "alert_engine" in data
+        assert "alerts" in data["alert_engine"]
+        assert "recent_alerts" in data["alert_engine"]
+        assert "health_score" in data["alert_engine"]
+        assert isinstance(data["alert_engine"]["alerts"], list)
+        assert 0.0 <= data["alert_engine"]["health_score"] <= 1.0
+
     def test_body(self, client):
         r = client.get("/api/body")
         assert r.status_code == 200
@@ -120,3 +131,11 @@ class TestWebSocket:
             assert isinstance(data, dict)
             assert "body" in data
             assert "timestamp" in data
+
+    def test_ws_includes_alert_engine(self, client):
+        with client.websocket_connect("/ws/state") as ws:
+            data = ws.receive_json()
+            assert "alert_engine" in data
+            assert "alerts" in data["alert_engine"]
+            assert "health_score" in data["alert_engine"]
+            assert isinstance(data["alert_engine"]["alerts"], list)

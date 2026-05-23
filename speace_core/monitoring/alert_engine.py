@@ -43,6 +43,11 @@ class AlertEngine:
             "coherence_phi_critical": 0.1,
             "branching_deviation_warning": 0.2,
             "branching_deviation_critical": 0.4,
+            "safety_risk_warning": 1,
+            "safety_risk_critical": 2,
+            "identity_divergence_warning": 1.0,
+            "drive_instability_warning": 0.5,
+            "drive_instability_critical": 0.8,
         }
 
     # ------------------------------------------------------------------ #
@@ -96,6 +101,9 @@ class AlertEngine:
         cognition = state.get("cognition", {})
         dynamics = state.get("dynamics", {})
         embodiment = state.get("embodiment", {})
+        safety = state.get("safety", {})
+        identity = state.get("identity", {})
+        drives = state.get("drives", {})
 
         phi = cognition.get("self_model", {}).get("coherence_phi", 0.0)
         chaos = dynamics.get("chaos_score", 0.0)
@@ -105,6 +113,18 @@ class AlertEngine:
         branching = dynamics.get("criticality", {}).get("branching_ratio", 0.0)
 
         t = self.thresholds
+
+        # Safety risk (mapped from string to numeric)
+        risk_map = {"low": 0, "medium": 1, "high": 2, "critical": 3}
+        safety_risk = risk_map.get(safety.get("risk_level", "low"), 0)
+
+        # Identity divergence
+        divergence_detected = identity.get("divergence_detected", False)
+        divergence_score = 1.0 if divergence_detected else 0.0
+
+        # Drive instability (max urgency across drives)
+        drives_list = drives.get("drives", [])
+        drive_instability = max((d.get("urgency", 0.0) for d in drives_list), default=0.0)
 
         # Chaos
         if chaos >= t["chaos_critical"]:
@@ -144,6 +164,22 @@ class AlertEngine:
             elif dev >= t["branching_deviation_warning"]:
                 alerts.append(self._alert("branching_warning", "warning", f"branching_ratio={fmt(branching)}", ts, state))
 
+        # Safety risk
+        if safety_risk >= t["safety_risk_critical"]:
+            alerts.append(self._alert("safety_risk_critical", "critical", f"safety_risk={safety_risk}", ts, state))
+        elif safety_risk >= t["safety_risk_warning"]:
+            alerts.append(self._alert("safety_risk_warning", "warning", f"safety_risk={safety_risk}", ts, state))
+
+        # Identity divergence
+        if divergence_score >= t["identity_divergence_warning"]:
+            alerts.append(self._alert("identity_divergence_warning", "warning", f"divergence_detected={divergence_detected}", ts, state))
+
+        # Drive instability
+        if drive_instability >= t["drive_instability_critical"]:
+            alerts.append(self._alert("drive_instability_critical", "critical", f"drive_instability={fmt(drive_instability)}", ts, state))
+        elif drive_instability >= t["drive_instability_warning"]:
+            alerts.append(self._alert("drive_instability_warning", "warning", f"drive_instability={fmt(drive_instability)}", ts, state))
+
         # Persist
         for a in alerts:
             self._persist(a)
@@ -173,6 +209,20 @@ class AlertEngine:
         score *= max(0.0, 1.0 - rigidity)
         score *= max(0.0, 1.0 - min(drift, 1.0))
         score *= max(0.0, 1.0 - min(pred_err / 100.0, 1.0))
+
+        # Safety risk penalty
+        risk_map = {"low": 0, "medium": 1, "high": 2, "critical": 3}
+        safety_risk = risk_map.get(state.get("safety", {}).get("risk_level", "low"), 0)
+        score *= max(0.0, 1.0 - safety_risk / 3.0)
+
+        # Identity divergence penalty
+        if state.get("identity", {}).get("divergence_detected", False):
+            score *= 0.7
+
+        # Drive instability penalty
+        drives_list = state.get("drives", {}).get("drives", [])
+        drive_instability = max((d.get("urgency", 0.0) for d in drives_list), default=0.0)
+        score *= max(0.0, 1.0 - min(drive_instability, 1.0))
 
         # Clamp
         return max(0.0, min(1.0, score))
@@ -205,6 +255,11 @@ class AlertEngine:
                 "rigidity_score": state.get("dynamics", {}).get("rigidity_score", 0.0),
                 "drift": state.get("dynamics", {}).get("drift", 0.0),
                 "prediction_error": state.get("embodiment", {}).get("prediction_error", 0.0),
+                "safety_risk": state.get("safety", {}).get("risk_level", "low"),
+                "divergence_detected": state.get("identity", {}).get("divergence_detected", False),
+                "drive_instability": max(
+                    (d.get("urgency", 0.0) for d in state.get("drives", {}).get("drives", [])), default=0.0
+                ),
             },
         }
         return alert

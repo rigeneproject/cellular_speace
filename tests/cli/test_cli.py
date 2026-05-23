@@ -8,14 +8,14 @@ runner = CliRunner()
 def test_cli_version():
     result = runner.invoke(app, ["version"])
     assert result.exit_code == 0
-    assert "0.1.0" in result.output
+    assert "0.6.0" in result.output
 
 
 def test_cli_status():
     result = runner.invoke(app, ["status"])
     assert result.exit_code == 0
     assert "Status: ready" in result.output
-    assert "Version: 0.1.0" in result.output
+    assert "Version: 0.6.0" in result.output
 
 
 def test_cli_audit():

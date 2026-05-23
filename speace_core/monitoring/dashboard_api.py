@@ -3,15 +3,21 @@
 Serves read-only HTTP endpoints and WebSocket live updates.
 """
 
+import json
 import time
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from speace_core.cli import SPEACE_VERSION
 from speace_core.monitoring.alert_engine import AlertEngine
 from speace_core.monitoring.anomaly_panel import AnomalyPanel
+from speace_core.monitoring.human_approval_gate import HumanApprovalGate
+from speace_core.monitoring.longitudinal_memory import LongitudinalMemory
 from speace_core.monitoring.metrics_bus import MetricsBus
 from speace_core.monitoring.organism_state_collector import OrganismStateCollector
+from speace_core.cellular_brain.language.dialogue_manager import DialogueManager
+from speace_core.monitoring.multi_node_aggregator import MultiNodeAggregator
+from speace_core.monitoring.regulation_proposal_builder import RegulationProposalBuilder
 from speace_core.monitoring.safety_status import SafetyStatus
 from speace_core.monitoring.websocket_server import create_websocket_router
 
@@ -22,15 +28,10 @@ try:
     from fastapi.staticfiles import StaticFiles
 
     _HAS_FASTAPI = True
-except Exception as exc:  # pragma: no cover
+except Exception:  # pragma: no cover
     _HAS_FASTAPI = False
     FastAPI = Any  # type: ignore[misc,assignment]
     StaticFiles = Any  # type: ignore[misc,assignment]
-    raise SystemExit(
-        "FastAPI / Uvicorn are not installed.\n"
-        "Install with: pip install \"speace-core[monitoring]\"\n"
-        "or:          pip install fastapi uvicorn websockets"
-    ) from exc
 
 # --------------------------------------------------------------------------- #
 # Bootstrap
@@ -42,6 +43,11 @@ _collector = OrganismStateCollector(data_root=str(_data_root))
 _safety = SafetyStatus(data_root=str(_data_root))
 _anomaly = AnomalyPanel()
 _alert_engine = AlertEngine()
+_longitudinal_memory = LongitudinalMemory(health_score_func=_alert_engine.health_score)
+_regulation_builder = RegulationProposalBuilder()
+_approval_gate = HumanApprovalGate(builder=_regulation_builder)
+_multi_node_aggregator = MultiNodeAggregator()
+_dialogue_manager = DialogueManager()
 
 # Load genome thresholds if available
 _genome_path = Path(__file__).resolve().parent.parent / "dna" / "genome" / "monitoring_dashboard.yaml"
@@ -74,10 +80,25 @@ def _post_process(state: Dict[str, Any]) -> Dict[str, Any]:
         alerts = _alert_engine.evaluate(state)
         state["alert_engine"] = {
             "alerts": alerts,
+            "recent_alerts": _alert_engine.recent_alerts(limit=20),
             "health_score": _alert_engine.health_score(state),
         }
+        # T104: build regulation proposals from critical/warning alerts
+        try:
+            proposals = _regulation_builder.build_from_alerts(alerts, state)
+            state["regulation_proposals"] = {
+                "pending_count": len([p for p in proposals if p.get("status") == "pending"]),
+                "latest": proposals[:5],
+            }
+        except Exception:
+            state["regulation_proposals"] = {"pending_count": 0, "latest": []}
     except Exception:
-        state["alert_engine"] = {"alerts": [], "health_score": 0.0}
+        state["alert_engine"] = {"alerts": [], "recent_alerts": [], "health_score": 0.0}
+        state["regulation_proposals"] = {"pending_count": 0, "latest": []}
+    try:
+        _longitudinal_memory.record(state)
+    except Exception:
+        pass
     return state
 
 
@@ -87,6 +108,16 @@ _static_dir = Path(__file__).resolve().parent.parent.parent / "web" / "dashboard
 if not _static_dir.exists():
     # Fallback for editable installs where cwd might differ
     _static_dir = Path("web") / "dashboard"
+
+# --------------------------------------------------------------------------- #
+# Guard
+# --------------------------------------------------------------------------- #
+if not _HAS_FASTAPI:
+    raise ImportError(
+        "FastAPI / Uvicorn are not installed.\n"
+        "Install with: pip install \"speace-core[monitoring]\"\n"
+        "or:          pip install fastapi uvicorn websockets"
+    )
 
 # --------------------------------------------------------------------------- #
 # Lifecycle
@@ -128,6 +159,16 @@ async def api_state() -> Dict[str, Any]:
     if not state:
         state = _collector.collect_all()
         state["timestamp"] = time.time()
+    if "alert_engine" not in state:
+        try:
+            alerts = _alert_engine.evaluate(state)
+            state["alert_engine"] = {
+                "alerts": alerts,
+                "recent_alerts": _alert_engine.recent_alerts(limit=20),
+                "health_score": _alert_engine.health_score(state),
+            }
+        except Exception:
+            state["alert_engine"] = {"alerts": [], "recent_alerts": [], "health_score": 0.0}
     anomalies = _anomaly.analyze(state)
     return {
         **state,
@@ -199,6 +240,135 @@ async def api_health_score() -> Dict[str, Any]:
         "health_score": _alert_engine.health_score(state),
         "timestamp": time.time(),
     }
+
+
+# --------------------------------------------------------------------------- #
+# T103 — Observer Report
+# --------------------------------------------------------------------------- #
+
+@app.get("/api/report")
+async def api_report(lookback: int = 24) -> Dict[str, Any]:
+    from speace_core.monitoring.observer_report_generator import ObserverReportGenerator
+
+    generator = ObserverReportGenerator()
+    report = generator.generate(lookback_hours=lookback)
+    return report.model_dump(mode="json")
+
+
+# --------------------------------------------------------------------------- #
+# T105 — Longitudinal Memory
+# --------------------------------------------------------------------------- #
+
+@app.get("/api/history/snapshot")
+async def api_history_snapshot(hours: int = 24, limit: int = 100) -> Dict[str, Any]:
+    now = time.time()
+    cutoff = now - (hours * 3600)
+    snapshots: List[Dict[str, Any]] = []
+    path = _longitudinal_memory.history_path
+    if path.exists():
+        try:
+            with path.open("r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        entry = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    if entry.get("timestamp", 0) >= cutoff:
+                        snapshots.append(entry)
+        except OSError:
+            pass
+    if limit:
+        snapshots = snapshots[-limit:]
+    return {"hours": hours, "snapshots": snapshots}
+
+
+@app.get("/api/history/{metric}")
+async def api_history(metric: str, hours: int = 24, limit: int = 100) -> Dict[str, Any]:
+    data = _longitudinal_memory.get_history(metric, hours=hours, limit=limit)
+    return {"metric": metric, "hours": hours, "data": data}
+
+
+@app.get("/api/history/trend/{metric}")
+async def api_history_trend(metric: str, hours: int = 24) -> Dict[str, Any]:
+    trend = _longitudinal_memory.get_trend(metric, hours=hours)
+    return {"metric": metric, "hours": hours, **trend}
+
+
+# --------------------------------------------------------------------------- #
+# T104 — Regulation Proposals
+# --------------------------------------------------------------------------- #
+
+@app.get("/api/regulation/proposals")
+async def api_regulation_proposals(status: str = "pending", limit: int = 100) -> Dict[str, Any]:
+    proposals = _approval_gate.list_pending(limit=limit) if status == "pending" else _approval_gate.list_all(limit=limit)
+    return {"status": status, "count": len(proposals), "proposals": proposals}
+
+
+@app.post("/api/regulation/approve/{proposal_id}")
+async def api_regulation_approve(proposal_id: str, body: Dict[str, Any]) -> Dict[str, Any]:
+    reviewer = body.get("reviewer", "anonymous")
+    health = _alert_engine.health_score(_metrics_bus.latest() or {})
+    result = _approval_gate.approve(proposal_id, reviewer=reviewer, current_health=health)
+    return result
+
+
+@app.post("/api/regulation/reject/{proposal_id}")
+async def api_regulation_reject(proposal_id: str, body: Dict[str, Any]) -> Dict[str, Any]:
+    reviewer = body.get("reviewer", "anonymous")
+    result = _approval_gate.reject(proposal_id, reviewer=reviewer)
+    return result
+
+
+# --------------------------------------------------------------------------- #
+# T106 — Multi-node Monitoring
+# --------------------------------------------------------------------------- #
+
+@app.get("/api/nodes")
+async def api_nodes() -> Dict[str, Any]:
+    agg = _multi_node_aggregator.aggregate()
+    return agg
+
+
+@app.get("/api/nodes/{node_id}/state")
+async def api_node_state(node_id: str) -> Dict[str, Any]:
+    return _multi_node_aggregator._states.get(node_id, {"error": "node_not_found"})
+
+
+@app.get("/api/distributed/divergence")
+async def api_distributed_divergence() -> Dict[str, Any]:
+    drift = _multi_node_aggregator._compute_personality_drift()
+    return {
+        "personality_drift": drift,
+        "node_count": len(_multi_node_aggregator._states),
+    }
+
+
+# --------------------------------------------------------------------------- #
+# T107 — Dialogue
+# --------------------------------------------------------------------------- #
+
+@app.post("/api/dialogue/message")
+async def api_dialogue_message(body: Dict[str, Any]) -> Dict[str, Any]:
+    msg = body.get("message", "")
+    if not msg:
+        return {"error": "empty_message"}
+    response = _dialogue_manager.receive(msg)
+    return response
+
+
+@app.get("/api/dialogue/history")
+async def api_dialogue_history(limit: int = 20) -> Dict[str, Any]:
+    turns = _dialogue_manager.history(limit=limit)
+    return {"turns": turns, "state": _dialogue_manager.state}
+
+
+@app.post("/api/dialogue/speak")
+async def api_dialogue_speak() -> Dict[str, Any]:
+    result = _dialogue_manager.speak_last_response()
+    return result
 
 
 # --------------------------------------------------------------------------- #
