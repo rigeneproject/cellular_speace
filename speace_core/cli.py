@@ -10,7 +10,7 @@ from speace_core.orchestrator import CellularBrainOrchestrator
 
 app = typer.Typer(name="speace", help="SPEACE Cellular Brain CLI")
 
-SPEACE_VERSION = "0.7.0"
+SPEACE_VERSION = "0.8.0"
 
 
 def _default_genome_path() -> pathlib.Path:

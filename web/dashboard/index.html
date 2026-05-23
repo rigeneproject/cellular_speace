@@ -275,6 +275,18 @@
         <button id="dl-send" style="background:var(--bg-card); color:var(--accent-cyan); border:1px solid var(--border); border-radius:3px; padding:0.35rem 0.6rem; font-family:var(--font-mono); font-size:0.7rem; cursor:pointer;">Send</button>
       </div>
     </section>
+
+    <!-- T108 — Experiential Continuity -->
+    <section class="panel panel-grid-2" id="panel-experience">
+      <h2>Experiential Continuity</h2>
+      <div class="info-row"><span class="info-key">Known Humans</span><span class="info-val" id="ex-humans">0</span></div>
+      <div class="info-row"><span class="info-key">Last Human</span><span class="info-val" id="ex-last-human">—</span></div>
+      <div class="info-row"><span class="info-key">Last Topic</span><span class="info-val" id="ex-last-topic">—</span></div>
+      <div class="info-row"><span class="info-key">Session Staleness</span><span class="info-val" id="ex-stale">—</span></div>
+      <div class="info-row"><span class="info-key">Resume Narrative</span><span class="info-val" id="ex-resume" style="font-size:0.7rem; white-space:normal; line-height:1.3;">—</span></div>
+      <h3 style="font-size:0.7rem; color:var(--text-secondary); margin:0.5rem 0 0.25rem;">Recent Narrative</h3>
+      <ul class="narrative-list" id="ex-timeline"></ul>
+    </section>
   </main>
 
   <div class="error-banner" id="error-banner"></div>

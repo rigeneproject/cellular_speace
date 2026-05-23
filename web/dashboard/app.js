@@ -266,6 +266,8 @@
     document.getElementById('pd-overall').textContent = fmtNum(pd.overall_drift, 3);
     setPanelStatus('panel-personality', (pd.overall_drift || 0) > 0.5 ? 'critical' : (pd.overall_drift || 0) > 0.2 ? 'warning' : 'normal');
 
+    // T108 — Experiential Continuity (filled via separate fetch below)
+
     // Header meta from health (if loaded separately)
     if (s.timestamp) {
       const ts = new Date(s.timestamp * 1000).toISOString().split('T')[1].replace('Z', '');
@@ -323,6 +325,44 @@
 
   document.getElementById('lm-metric').addEventListener('change', loadHistory);
   document.getElementById('lm-hours').addEventListener('change', loadHistory);
+
+  // ------------------------------------------------------------------ //
+  // T108 — Experiential Continuity
+  // ------------------------------------------------------------------ //
+
+  async function loadExperience() {
+    try {
+      const r = await fetch(`${API_URL.replace('/api/state', '/api/experience/state')}`);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const data = await r.json();
+      const humans = Array.isArray(data.relational_humans) ? data.relational_humans : [];
+      document.getElementById('ex-humans').textContent = data.relational_human_count || humans.length;
+      const lastHuman = humans.length > 0 ? humans[0].name || humans[0].human_id : '—';
+      document.getElementById('ex-last-human').textContent = lastHuman;
+      const cont = data.session_continuity || {};
+      document.getElementById('ex-last-topic').textContent = cont.last_topic || '—';
+      const staleDays = cont._stale_days;
+      if (staleDays !== undefined) {
+        document.getElementById('ex-stale').textContent = staleDays < 1 ? 'fresh' : `${Math.floor(staleDays)} days`;
+      } else {
+        document.getElementById('ex-stale').textContent = '—';
+      }
+      document.getElementById('ex-resume').textContent = data.resume_narrative || '—';
+    } catch (e) {
+      /* ignore */
+    }
+    try {
+      const t = await fetch(`${API_URL.replace('/api/state', '/api/experience/timeline?hours=168&limit=20')}`);
+      if (!t.ok) throw new Error('HTTP ' + t.status);
+      const td = await t.json();
+      renderList('ex-timeline', td.events || [], ev => {
+        const ts = ev.timestamp ? new Date(ev.timestamp * 1000).toISOString().split('T')[1].replace('Z', '').slice(0, 8) : '—';
+        return `<li><span class="anomaly-type">${ev.event_type || 'event'}</span><span class="meta">${ts}</span> ${escapeHtml(ev.description || '').slice(0, 60)}</li>`;
+      });
+    } catch (e) {
+      /* ignore */
+    }
+  }
 
   // ------------------------------------------------------------------ //
   // T107 — Dialogue chat
@@ -423,5 +463,9 @@
   // Boot
   // ------------------------------------------------------------------ //
 
-  fetchState().then(() => connectWS());
+  fetchState().then(() => {
+    connectWS();
+    loadExperience();
+    setInterval(loadExperience, POLL_INTERVAL * 5); // slower poll for experience
+  });
 })();

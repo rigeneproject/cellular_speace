@@ -20,6 +20,11 @@ from speace_core.monitoring.multi_node_aggregator import MultiNodeAggregator
 from speace_core.monitoring.regulation_proposal_builder import RegulationProposalBuilder
 from speace_core.monitoring.safety_status import SafetyStatus
 from speace_core.monitoring.websocket_server import create_websocket_router
+from speace_core.cellular_brain.experience.relational_memory import RelationalMemory
+from speace_core.cellular_brain.experience.temporal_narrative_engine import TemporalNarrativeEngine
+from speace_core.cellular_brain.experience.session_continuity_manager import SessionContinuityManager
+from speace_core.cellular_brain.experience.adaptive_preference_model import AdaptivePreferenceModel
+from speace_core.cellular_brain.experience.experiential_snapshot_store import ExperientialSnapshotStore
 
 from contextlib import asynccontextmanager
 
@@ -48,6 +53,13 @@ _regulation_builder = RegulationProposalBuilder()
 _approval_gate = HumanApprovalGate(builder=_regulation_builder)
 _multi_node_aggregator = MultiNodeAggregator()
 _dialogue_manager = DialogueManager()
+
+# T108 — Persistent Experiential Continuity
+_relational_memory = RelationalMemory()
+_narrative_engine = TemporalNarrativeEngine()
+_session_continuity = SessionContinuityManager()
+_preference_model = AdaptivePreferenceModel()
+_experiential_snapshot_store = ExperientialSnapshotStore()
 
 # Load genome thresholds if available
 _genome_path = Path(__file__).resolve().parent.parent / "dna" / "genome" / "monitoring_dashboard.yaml"
@@ -369,6 +381,49 @@ async def api_dialogue_history(limit: int = 20) -> Dict[str, Any]:
 async def api_dialogue_speak() -> Dict[str, Any]:
     result = _dialogue_manager.speak_last_response()
     return result
+
+
+# --------------------------------------------------------------------------- #
+# T108 — Persistent Experiential Continuity
+# --------------------------------------------------------------------------- #
+
+@app.get("/api/experience/state")
+async def api_experience_state() -> Dict[str, Any]:
+    humans = _relational_memory.list_humans()
+    latest_snapshot = _experiential_snapshot_store.latest()
+    continuity = _session_continuity.load()
+    preferences = _preference_model.summary()
+    return {
+        "relational_humans": humans,
+        "relational_human_count": len(humans),
+        "latest_snapshot": latest_snapshot,
+        "session_continuity": continuity,
+        "preferences": preferences,
+        "resume_narrative": _session_continuity.build_resume_narrative(),
+    }
+
+
+@app.get("/api/experience/timeline")
+async def api_experience_timeline(hours: float = 168, limit: int = 50) -> Dict[str, Any]:
+    events = _narrative_engine.recent(hours=hours, limit=limit)
+    summary = _narrative_engine.get_narrative_summary(hours=hours)
+    return {
+        "events": events,
+        "summary": summary,
+        "hours": hours,
+        "count": len(events),
+    }
+
+
+@app.post("/api/experience/snapshot")
+async def api_experience_snapshot(body: Dict[str, Any]) -> Dict[str, Any]:
+    state = body.get("state", {})
+    human_id = body.get("human_id")
+    narrative_position = body.get("narrative_position")
+    snapshot = _experiential_snapshot_store.save(
+        state=state, human_id=human_id, narrative_position=narrative_position
+    )
+    return {"snapshot": snapshot}
 
 
 # --------------------------------------------------------------------------- #
