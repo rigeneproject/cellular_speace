@@ -10,7 +10,7 @@ from speace_core.orchestrator import CellularBrainOrchestrator
 
 app = typer.Typer(name="speace", help="SPEACE Cellular Brain CLI")
 
-SPEACE_VERSION = "0.8.0"
+SPEACE_VERSION = "0.9.0"
 
 
 def _default_genome_path() -> pathlib.Path:
@@ -172,6 +172,76 @@ def monitor(
         port=port,
         log_level="info",
     )
+
+
+@app.command()
+def run(
+    genome_path: Optional[pathlib.Path] = typer.Option(
+        None, "--genome", "-g", help="Path to genome YAML"
+    ),
+    tick_interval: float = typer.Option(1.0, "--tick-interval", "-t", help="Seconds between ticks"),
+    duration: Optional[float] = typer.Option(
+        None, "--duration", "-d", help="Optional runtime duration in seconds (for testing)"
+    ),
+) -> None:
+    """Launch SPEACE controlled continuous runtime + monitor (T109)."""
+    try:
+        import uvicorn
+    except ImportError as exc:
+        typer.echo("Error: uvicorn is not installed.")
+        typer.echo('Install with: pip install "speace-core[monitoring]"')
+        raise typer.Exit(1) from exc
+
+    # Resolve genome
+    if genome_path is None:
+        genome_path = pathlib.Path(__file__).resolve().parent / "dna" / "genome" / "default_genome.yaml"
+    genome = load_genome(genome_path)
+
+    # Build orchestrator and runtime engine
+    from speace_core.orchestrator import CellularBrainOrchestrator
+    from speace_core.runtime.continuous_runtime_engine import ContinuousRuntimeEngine
+    import speace_core.monitoring.dashboard_api as dashboard_module
+
+    orchestrator = CellularBrainOrchestrator.build_mvp(genome)
+    runtime = ContinuousRuntimeEngine(
+        orchestrator=orchestrator,
+        tick_interval=tick_interval,
+    )
+    dashboard_module._runtime_engine = runtime  # type: ignore[attr-defined]
+
+    async def _start_runtime() -> None:
+        result = await runtime.start()
+        typer.echo(f"Runtime started: {result['state']} | recovery: {result['recovery']['status']}")
+        typer.echo(result.get("resume_narrative", ""))
+        if duration is not None:
+            typer.echo(f"Running for {duration} seconds...")
+            await asyncio.sleep(duration)
+            typer.echo("Duration reached. Halting runtime...")
+            await runtime.halt()
+            await runtime.stop()
+            typer.echo("Runtime stopped.")
+
+    # Launch runtime in background and then uvicorn
+    async def _main() -> None:
+        runtime_task = asyncio.create_task(_start_runtime())
+        host = "127.0.0.1"
+        port = 8787
+        config = uvicorn.Config(
+            "speace_core.monitoring.dashboard_api:app",
+            host=host,
+            port=port,
+            log_level="info",
+        )
+        server = uvicorn.Server(config)
+        server_task = asyncio.create_task(server.serve())
+        await asyncio.wait([runtime_task, server_task], return_when=asyncio.FIRST_COMPLETED)
+        server.should_exit = True
+        await server_task
+
+    try:
+        asyncio.run(_main())
+    except KeyboardInterrupt:
+        typer.echo("Interrupted by user.")
 
 
 @app.command()

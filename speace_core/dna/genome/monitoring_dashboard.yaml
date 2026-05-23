@@ -76,3 +76,28 @@ monitoring_dashboard:
     narrative_divergence_critical: 0.7
     decisional_divergence_warning: 0.3
     decisional_divergence_critical: 0.6
+  continuous_runtime:
+    enabled: true
+    tick_interval: 1.0
+    circadian:
+      awake_duration_seconds: 300
+      sleep_duration_seconds: 60
+    checkpoint_interval_seconds: 300
+    runtime_health:
+      max_tick_jitter_ms: 2000
+      max_tick_latency_ms: 5000
+      max_memory_rss_mb: 2048
+      max_consecutive_exceptions: 3
+    emergency_halt:
+      brainstem_emergency_ticks: 5
+      health_score_threshold: 0.1
+      memory_rss_critical_mb: 4096
+    degradation:
+      enable_auto_slowdown: true
+      enable_auto_conservation: true
+    governance:
+      allow_auto_modification: false
+      allow_shell_execution: false
+      allow_internet_access: false
+      allow_actuator_commands: false
+      allow_replication: false

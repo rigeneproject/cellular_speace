@@ -25,6 +25,9 @@ from speace_core.cellular_brain.experience.temporal_narrative_engine import Temp
 from speace_core.cellular_brain.experience.session_continuity_manager import SessionContinuityManager
 from speace_core.cellular_brain.experience.adaptive_preference_model import AdaptivePreferenceModel
 from speace_core.cellular_brain.experience.experiential_snapshot_store import ExperientialSnapshotStore
+from speace_core.dna.parser import load_genome
+from speace_core.orchestrator import CellularBrainOrchestrator
+from speace_core.runtime.continuous_runtime_engine import ContinuousRuntimeEngine
 
 from contextlib import asynccontextmanager
 
@@ -60,6 +63,9 @@ _narrative_engine = TemporalNarrativeEngine()
 _session_continuity = SessionContinuityManager()
 _preference_model = AdaptivePreferenceModel()
 _experiential_snapshot_store = ExperientialSnapshotStore()
+
+# T109 — Controlled Continuous Runtime (optional, lazy-init)
+_runtime_engine: Any = None
 
 # Load genome thresholds if available
 _genome_path = Path(__file__).resolve().parent.parent / "dna" / "genome" / "monitoring_dashboard.yaml"
@@ -140,6 +146,11 @@ if not _HAS_FASTAPI:
 async def _lifespan(_app: FastAPI):
     _metrics_bus.start()
     yield
+    if _runtime_engine is not None:
+        try:
+            await _runtime_engine.stop()
+        except Exception:
+            pass
     _metrics_bus.stop()
 
 
@@ -424,6 +435,92 @@ async def api_experience_snapshot(body: Dict[str, Any]) -> Dict[str, Any]:
         state=state, human_id=human_id, narrative_position=narrative_position
     )
     return {"snapshot": snapshot}
+
+
+# --------------------------------------------------------------------------- #
+# T109 — Controlled Continuous Runtime
+# --------------------------------------------------------------------------- #
+
+
+def _build_runtime_from_genome(genome_path: Optional[str] = None) -> ContinuousRuntimeEngine:
+    if genome_path:
+        genome = load_genome(Path(genome_path))
+    else:
+        default = Path(__file__).resolve().parent.parent / "dna" / "genome" / "default_genome.yaml"
+        genome = load_genome(default)
+    orchestrator = CellularBrainOrchestrator.build_mvp(genome)
+    # Load runtime config from monitoring_dashboard genome if present
+    runtime_cfg: Dict[str, Any] = {}
+    md_path = Path(__file__).resolve().parent.parent / "dna" / "genome" / "monitoring_dashboard.yaml"
+    if md_path.exists():
+        try:
+            import yaml
+            md_cfg = yaml.safe_load(md_path.read_text(encoding="utf-8"))
+            runtime_cfg = md_cfg.get("monitoring_dashboard", {}).get("continuous_runtime", {})
+        except Exception:
+            pass
+    return ContinuousRuntimeEngine(
+        orchestrator=orchestrator,
+        tick_interval=runtime_cfg.get("tick_interval", 1.0),
+        checkpoint_interval_seconds=runtime_cfg.get("checkpoint_interval_seconds", 300.0),
+        awake_duration=runtime_cfg.get("circadian", {}).get("awake_duration_seconds", 300.0),
+        sleep_duration=runtime_cfg.get("circadian", {}).get("sleep_duration_seconds", 60.0),
+        runtime_health_config=runtime_cfg.get("runtime_health", {}),
+        emergency_halt_config=runtime_cfg.get("emergency_halt", {}),
+        degradation_config=runtime_cfg.get("degradation", {}),
+    )
+
+
+@app.post("/api/runtime/start")
+async def api_runtime_start(body: Dict[str, Any]) -> Dict[str, Any]:
+    global _runtime_engine
+    if _runtime_engine is not None:
+        return {"error": "runtime_already_running", "state": _runtime_engine.snapshot()}
+    genome_path = body.get("genome_path")
+    _runtime_engine = _build_runtime_from_genome(genome_path)
+    result = await _runtime_engine.start()
+    return {"status": "started", **result}
+
+
+@app.post("/api/runtime/control")
+async def api_runtime_control(body: Dict[str, Any]) -> Dict[str, Any]:
+    global _runtime_engine
+    if _runtime_engine is None:
+        return {"error": "runtime_not_running"}
+    action = body.get("action", "")
+    if action == "pause":
+        await _runtime_engine.pause()
+    elif action == "resume":
+        await _runtime_engine.resume()
+    elif action == "halt":
+        await _runtime_engine.halt()
+    elif action == "checkpoint":
+        cp = await _runtime_engine.force_checkpoint()
+        return {"status": "checkpoint_forced", "checkpoint": cp}
+    else:
+        return {"error": "unknown_action", "allowed": ["pause", "resume", "halt", "checkpoint"]}
+    return {"status": "ok", "state": _runtime_engine.snapshot()}
+
+
+@app.get("/api/runtime/state")
+async def api_runtime_state() -> Dict[str, Any]:
+    if _runtime_engine is None:
+        return {"status": "not_running"}
+    return _runtime_engine.snapshot()
+
+
+@app.get("/api/runtime/health")
+async def api_runtime_health() -> Dict[str, Any]:
+    if _runtime_engine is None:
+        return {"status": "not_running"}
+    return _runtime_engine.health_monitor.snapshot()
+
+
+@app.get("/api/runtime/checkpoints")
+async def api_runtime_checkpoints(limit: int = 10) -> Dict[str, Any]:
+    if _runtime_engine is None:
+        return {"checkpoints": []}
+    return {"checkpoints": _runtime_engine.checkpoint_manager.list_checkpoints(limit=limit)}
 
 
 # --------------------------------------------------------------------------- #

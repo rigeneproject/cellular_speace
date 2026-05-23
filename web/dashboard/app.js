@@ -460,6 +460,85 @@
   }
 
   // ------------------------------------------------------------------ //
+  // T109 — Organism Runtime
+  // ------------------------------------------------------------------ //
+
+  async function loadRuntime() {
+    try {
+      const r = await fetch(`${API_URL.replace('/api/state', '/api/runtime/state')}`);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const data = await r.json();
+      const status = data.status || 'ok';
+      const state = data.state || 'not running';
+      document.getElementById('rt-state').textContent = state;
+      setBadge('rt-badge', state === 'running' ? 'info' : state === 'sleeping' ? 'warning' : state === 'halted' ? 'critical' : 'normal');
+
+      const circ = data.circadian || {};
+      document.getElementById('rt-phase').textContent = circ.phase || '—';
+
+      document.getElementById('rt-tick').textContent = data.tick_count || 0;
+      const up = data.uptime_seconds || 0;
+      document.getElementById('rt-uptime').textContent = up < 60 ? `${Math.floor(up)}s` : `${Math.floor(up / 60)}m ${Math.floor(up % 60)}s`;
+
+      const life = data.lifecycle || {};
+      document.getElementById('rt-lifecycle').textContent = life.current_state || '—';
+      document.getElementById('rt-brainstem').textContent = data.brainstem || '—';
+
+      const halt = data.halt || {};
+      document.getElementById('rt-halt').textContent = halt.is_halted ? (halt.halt_reason || 'yes') : 'no';
+    } catch (e) {
+      document.getElementById('rt-state').textContent = 'not running';
+      setBadge('rt-badge', 'normal');
+    }
+    try {
+      const h = await fetch(`${API_URL.replace('/api/state', '/api/runtime/health')}`);
+      if (!h.ok) throw new Error('HTTP ' + h.status);
+      const hd = await h.json();
+      if (hd.status === 'not_running') {
+        document.getElementById('rt-health').textContent = '—';
+        document.getElementById('rt-jitter').textContent = '—';
+        document.getElementById('rt-latency').textContent = '—';
+      } else {
+        document.getElementById('rt-health').textContent = (hd.health_score !== undefined ? hd.health_score.toFixed(2) : '—');
+        document.getElementById('rt-jitter').textContent = (hd.tick_jitter_ms !== undefined ? hd.tick_jitter_ms.toFixed(0) + ' ms' : '—');
+        document.getElementById('rt-latency').textContent = (hd.tick_latency_ms !== undefined ? hd.tick_latency_ms.toFixed(0) + ' ms' : '—');
+      }
+    } catch (e) {
+      document.getElementById('rt-health').textContent = '—';
+    }
+    try {
+      const cp = await fetch(`${API_URL.replace('/api/state', '/api/runtime/checkpoints?limit=5')}`);
+      if (!cp.ok) throw new Error('HTTP ' + cp.status);
+      const cpd = await cp.json();
+      renderList('rt-checkpoints', cpd.checkpoints || [], c => {
+        const ts = c.timestamp ? new Date(c.timestamp * 1000).toISOString().split('T')[1].replace('Z', '').slice(0, 8) : '—';
+        return `<li><span class="anomaly-type">checkpoint</span><span class="meta">${ts}</span> tick ${c.orchestrator?.current_tick || '?'}</li>`;
+      });
+    } catch (e) {
+      /* ignore */
+    }
+  }
+
+  async function sendRuntimeControl(action) {
+    try {
+      const r = await fetch(`${API_URL.replace('/api/state', '/api/runtime/control')}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({action}),
+      });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      await loadRuntime();
+    } catch (e) {
+      /* ignore */
+    }
+  }
+
+  document.getElementById('rt-btn-pause').addEventListener('click', () => sendRuntimeControl('pause'));
+  document.getElementById('rt-btn-resume').addEventListener('click', () => sendRuntimeControl('resume'));
+  document.getElementById('rt-btn-halt').addEventListener('click', () => sendRuntimeControl('halt'));
+  document.getElementById('rt-btn-cp').addEventListener('click', () => sendRuntimeControl('checkpoint'));
+
+  // ------------------------------------------------------------------ //
   // Boot
   // ------------------------------------------------------------------ //
 
@@ -467,5 +546,7 @@
     connectWS();
     loadExperience();
     setInterval(loadExperience, POLL_INTERVAL * 5); // slower poll for experience
+    loadRuntime();
+    setInterval(loadRuntime, POLL_INTERVAL * 2); // moderate poll for runtime
   });
 })();

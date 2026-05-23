@@ -287,6 +287,29 @@
       <h3 style="font-size:0.7rem; color:var(--text-secondary); margin:0.5rem 0 0.25rem;">Recent Narrative</h3>
       <ul class="narrative-list" id="ex-timeline"></ul>
     </section>
+
+    <!-- T109 — Organism Runtime -->
+    <section class="panel panel-grid-2" id="panel-runtime">
+      <h2>Organism Runtime <span class="badge" id="rt-badge">off</span></h2>
+      <div class="info-row"><span class="info-key">State</span><span class="info-val" id="rt-state">not running</span></div>
+      <div class="info-row"><span class="info-key">Phase</span><span class="info-val" id="rt-phase">—</span></div>
+      <div class="info-row"><span class="info-key">Tick</span><span class="info-val" id="rt-tick">0</span></div>
+      <div class="info-row"><span class="info-key">Uptime</span><span class="info-val" id="rt-uptime">0s</span></div>
+      <div class="info-row"><span class="info-key">Runtime Health</span><span class="info-val" id="rt-health">—</span></div>
+      <div class="info-row"><span class="info-key">Jitter</span><span class="info-val" id="rt-jitter">—</span></div>
+      <div class="info-row"><span class="info-key">Latency</span><span class="info-val" id="rt-latency">—</span></div>
+      <div class="info-row"><span class="info-key">Lifecycle</span><span class="info-val" id="rt-lifecycle">—</span></div>
+      <div class="info-row"><span class="info-key">Brainstem</span><span class="info-val" id="rt-brainstem">—</span></div>
+      <div class="info-row"><span class="info-key">Halt</span><span class="info-val" id="rt-halt">—</span></div>
+      <div style="display:flex; gap:0.5rem; margin-top:0.5rem; flex-wrap:wrap;">
+        <button id="rt-btn-pause" style="background:var(--bg-card); color:var(--accent-yellow); border:1px solid var(--border); border-radius:3px; padding:0.35rem 0.6rem; font-family:var(--font-mono); font-size:0.7rem; cursor:pointer;">Pause</button>
+        <button id="rt-btn-resume" style="background:var(--bg-card); color:var(--accent-green); border:1px solid var(--border); border-radius:3px; padding:0.35rem 0.6rem; font-family:var(--font-mono); font-size:0.7rem; cursor:pointer;">Resume</button>
+        <button id="rt-btn-halt" style="background:var(--bg-card); color:var(--accent-red); border:1px solid var(--border); border-radius:3px; padding:0.35rem 0.6rem; font-family:var(--font-mono); font-size:0.7rem; cursor:pointer;">Halt</button>
+        <button id="rt-btn-cp" style="background:var(--bg-card); color:var(--accent-cyan); border:1px solid var(--border); border-radius:3px; padding:0.35rem 0.6rem; font-family:var(--font-mono); font-size:0.7rem; cursor:pointer;">Checkpoint</button>
+      </div>
+      <h3 style="font-size:0.7rem; color:var(--text-secondary); margin:0.5rem 0 0.25rem;">Recent Checkpoints</h3>
+      <ul class="narrative-list" id="rt-checkpoints"></ul>
+    </section>
   </main>
 
   <div class="error-banner" id="error-banner"></div>
