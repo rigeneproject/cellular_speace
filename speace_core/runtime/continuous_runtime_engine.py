@@ -108,7 +108,7 @@ class ContinuousRuntimeEngine:
         self.orchestrator.energy_field_enabled = True
         self.orchestrator.predictive_coding_enabled = True
         self.orchestrator.active_inference_enabled = True
-        self.orchestrator.global_homeostatic_drive_enabled = True
+        self.orchestrator.homeostatic_drive_enabled = True
         self.orchestrator.criticality_monitor_enabled = True
 
         self._state = "running"

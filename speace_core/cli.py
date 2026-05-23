@@ -245,6 +245,44 @@ def run(
 
 
 @app.command()
+def seed(
+    repo: Optional[str] = typer.Option(
+        None, "--repo", help="GitHub repo URL"
+    ),
+    branch: str = typer.Option("main", "--branch", help="Git branch"),
+    target_dir: Optional[pathlib.Path] = typer.Option(
+        None, "--target", help="Installation directory"
+    ),
+    pairing_token: Optional[str] = typer.Option(
+        None, "--pairing-token", help="Token to pair with existing node"
+    ),
+    yes: bool = typer.Option(
+        False, "--yes", "-y", help="Skip confirmation prompts"
+    ),
+) -> None:
+    """Bootstrap a new SPEACE node (authorized installation only — T115)."""
+    from speace_core.bootstrap import SeedEngine
+
+    engine = SeedEngine(
+        repo=repo,
+        branch=branch,
+        target_dir=target_dir,
+        pairing_token=pairing_token,
+    )
+    result = engine.bootstrap(skip_confirm=yes)
+    if result["status"] == "success":
+        typer.echo(f"Bootstrap complete. Node ID: {result['node_id']}")
+        typer.echo(f"Clone path: {result['clone_path']}")
+        typer.echo("Run 'speace monitor' to start in safe mode.")
+    elif result["status"] == "aborted":
+        typer.echo("Bootstrap aborted by user.")
+    else:
+        typer.echo(f"Bootstrap failed: {result.get('reason', 'unknown')}")
+        for err in result.get("errors", []):
+            typer.echo(f"  Error: {err}")
+
+
+@app.command()
 def report(
     lookback: int = typer.Option(24, "--lookback", "-l", help="Hours to look back"),
     output_dir: pathlib.Path = typer.Option(
