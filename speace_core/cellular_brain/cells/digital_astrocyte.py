@@ -12,6 +12,7 @@ class DigitalAstrocyte(DigitalCell):
     local_energy: float = 1.0
     noise_level: float = 0.0
     coherence_phi: float = 0.0
+    signal_strength: float = 0.0
 
     async def receive(self, signal: DigitalSignal) -> None:
         if signal.meaning == "noise_report":
@@ -26,11 +27,11 @@ class DigitalAstrocyte(DigitalCell):
         avg_activation = sum(n.activation for n in neurons) / len(neurons)
         if avg_activation > 0.85:
             for n in neurons:
-                n.threshold += 0.05
+                n.threshold = min(1.0, n.threshold + 0.05)
         if self.noise_level > 0.6:
             self.suppress_noise(neurons)
         self.noise_level *= 0.9
 
     def suppress_noise(self, neurons: List["DigitalNeuron"]) -> None:
         for n in neurons:
-            n.activation *= 0.8
+            n.activation = max(0.0, n.activation * 0.8)

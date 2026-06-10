@@ -141,6 +141,20 @@ class ContinuousRuntimeEngine:
             narrative_engine=self.narrative_engine,
             **(emergency_halt_config or {}),
         )
+        self.organism_observer_enabled = False
+        self.organism_observer: Any = None
+        self._organism_observer_flush_interval = 300  # flush ogni 5 minuti
+        self._last_observer_flush: float = 0.0
+
+        # Topology History (Fase B — serie temporale della geometria)
+        self.topology_history_enabled = False
+        self.topology_history: Any = None
+        self.topology_events: Any = None
+        self.morphological_memory: Any = None
+        self.topology_correlator: Any = None
+        self._topology_sample_interval_ticks = 60  # ogni 60 ticks (~60 secondi)
+        self._last_topology_tick: int = 0
+
         self.recovery = RecoveryOrchestrator(
             checkpoint_manager=self.checkpoint_manager,
             narrative_engine=self.narrative_engine,
@@ -188,6 +202,162 @@ class ContinuousRuntimeEngine:
         self._last_checkpoint_at: float = 0.0
         self._tick_count_since_start: int = 0
         self._started_at: float = 0.0
+
+        # T-SRL — continuous substepping layer (opt-in)
+        self._substrate_coordinator: Any = None
+        self._stability_guard: Any = None
+        self._substep_loop: Any = None
+        self._last_substrate_free_energy: float = 0.0
+        self._last_substrate_state: Any = None
+        self._last_guard_report: Any = None
+
+        # Self-improvement runtime hook (opt-in). When attached, the
+        # runtime invokes it once per outer tick to feed substrate
+        # metrics into the SelfImprovementLoop and consolidate the
+        # result in the EvolutionaryMemoryGovernor. See
+        # ``speace_core.runtime.self_improvement_runtime_hook``.
+        self._self_improvement_hook: Any = None
+        # T-Phase 8F — MM-APR Hard Veto Router (opt-in). When
+        # attached, the runtime surfaces the router's summary in
+        # ``snapshot()`` and the router's audit_dir is writable. The
+        # router itself is invoked by the SelfImprovementLoop (when
+        # the loop has ``mmapr_router`` set), not by the runtime
+        # directly, so this attribute is purely informational and
+        # used by the snapshot view.
+        self._mmapr_veto_router: Any = None
+
+    # ------------------------------------------------------------------ #
+    # T-SRL / T-CDS — Continuous substrate attachment
+    # ------------------------------------------------------------------ #
+
+    def attach_continuous_substrate(
+        self,
+        substrate_coordinator: Any,
+        stability_guard: Any = None,
+    ) -> None:
+        """Attach a :class:`ContinuousSubstrateCoordinator` to this runtime.
+
+        The substrate advances at sub-second resolution on every outer
+        tick. The optional stability guard is invoked once per outer
+        tick and can request an emergency halt.
+        """
+        from speace_core.runtime.substep_runtime_loop import SubstepRuntimeLoop
+
+        self._substrate_coordinator = substrate_coordinator
+        self._stability_guard = stability_guard
+        self._substep_loop = SubstepRuntimeLoop(
+            substrate_coordinator=substrate_coordinator,
+            stability_guard=stability_guard,
+        )
+        _logger.info(
+            "Continuous substrate attached: substep_dt=%s",
+            getattr(substrate_coordinator, "_substep_dt", "?"),
+        )
+
+    def tick_substrate(
+        self,
+        tick_interval: Optional[float] = None,
+        activations: Optional[Dict[str, float]] = None,
+        prediction_error: Optional[float] = None,
+        external_action_likelihoods: Optional[Dict[str, float]] = None,
+        last_drive_metrics: Optional[Dict[str, float]] = None,
+    ) -> Optional[Any]:
+        """Run a single substepped advance of the continuous substrate.
+
+        Returns the :class:`SubstepResult` (or ``None`` if no substrate
+        is attached). Catches and logs all internal errors so the
+        outer loop never crashes because of the substrate.
+        """
+        if self._substep_loop is None:
+            return None
+        interval = (
+            float(tick_interval)
+            if tick_interval is not None
+            else float(self.tick_interval)
+        )
+        try:
+            result = self._substep_loop.advance(
+                tick_interval=interval,
+                activations=activations,
+                prediction_error=prediction_error,
+                external_action_likelihoods=external_action_likelihoods,
+                last_drive_metrics=last_drive_metrics,
+            )
+        except Exception as exc:  # pragma: no cover
+            _logger.exception("Substrate tick failed: %s", exc)
+            return None
+
+        self._last_substrate_state = getattr(result, "substrate_state", None)
+        self._last_guard_report = getattr(result, "guard_report", None)
+        if self._last_substrate_state is not None:
+            self._last_substrate_free_energy = float(
+                getattr(self._last_substrate_state, "total_free_energy", 0.0)
+            )
+        if getattr(result, "halt_requested", False):
+            _logger.warning(
+                "Substrate stability guard requested emergency halt"
+            )
+            # Best-effort: schedule an async halt. We can't await here.
+            try:
+                self._state = "halting"
+            except Exception:
+                pass
+        return result
+
+    # ------------------------------------------------------------------ #
+    # Self-improvement runtime hook (opt-in)
+    # ------------------------------------------------------------------ #
+
+    def attach_self_improvement_hook(self, hook: Any) -> None:
+        """Attach a :class:`SelfImprovementRuntimeHook` to this runtime.
+
+        The hook is invoked once per outer tick (right after the
+        orchestrator's own ``_tick()``) and receives the latest
+        substrate state. It is **opt-in**: until this method is called,
+        the runtime never imports or references the self-improvement
+        stack, preserving the runtime's existing behaviour bit-for-bit.
+        """
+        if hook is None:
+            raise ValueError("self-improvement hook cannot be None")
+        self._self_improvement_hook = hook
+        _logger.info(
+            "Self-improvement runtime hook attached (cycle_interval_ticks=%s)",
+            getattr(hook, "cycle_interval_ticks", "?"),
+        )
+
+    def attach_mmapr_veto_router(self, router: Any) -> None:
+        """Attach a :class:`HardVetoRouter` (MM-APR) to this runtime.
+
+        The router is **informational** at the runtime layer: it does
+        not introduce a new tick because the actual veto decision is
+        made by the :class:`SelfImprovementLoop` via its
+        ``mmapr_router`` attribute (see Phase 8C). What the runtime
+        does is:
+
+        1. Expose ``router.summary()`` in ``snapshot()`` so the
+           supervision dashboard can read it.
+        2. Validate that the router has a working ``audit_dir`` if
+           one is configured (i.e. the directory is writable).
+
+        This is **opt-in**: without this method, the runtime's
+        snapshot view never references MM-APR.
+        """
+        if router is None:
+            raise ValueError("MM-APR veto router cannot be None")
+        self._mmapr_veto_router = router
+        # Sanity-check the audit directory if configured
+        audit_dir = getattr(router, "audit_dir", None)
+        if audit_dir is not None:
+            try:
+                pathlib.Path(audit_dir).mkdir(parents=True, exist_ok=True)
+            except Exception as exc:  # pragma: no cover - defensive
+                _logger.warning(
+                    "MM-APR audit_dir %s is not writable: %s", audit_dir, exc
+                )
+        _logger.info(
+            "MM-APR veto router attached (audit_dir=%s)",
+            str(audit_dir) if audit_dir is not None else "<disabled>",
+        )
 
     # ------------------------------------------------------------------ #
     # Lifecycle control
@@ -508,6 +678,80 @@ class ContinuousRuntimeEngine:
             )
         except Exception:
             logging.getLogger(__name__).warning("Checkpoint save failed during halt", exc_info=True)
+        # Organism Observer — flush finale
+        if self.organism_observer_enabled and self.organism_observer is not None:
+            try:
+                self.organism_observer.flush()
+            except Exception:
+                logging.getLogger(__name__).warning("Organism observer flush failed", exc_info=True)
+
+        # Topology History — flush finale e summary
+        if self.topology_history_enabled and self.topology_history is not None:
+            try:
+                saved = self.topology_history.save()
+                if saved > 0:
+                    summary = self.topology_history.summary()
+                    _logger.info(
+                        "Topology history saved: %d snapshots | "
+                        "latest: nodes=%s edges=%s Q=%s sigma=%s",
+                        summary["total_snapshots"],
+                        summary.get("latest", {}).get("node_count"),
+                        summary.get("latest", {}).get("edge_count"),
+                        summary.get("latest", {}).get("modularity_q"),
+                        summary.get("latest", {}).get("small_world_sigma"),
+                    )
+                if self.topology_events is not None:
+                    report = self.topology_events.report()
+                    if report.n_events > 0:
+                        _logger.info(
+                            "Topology events: %d total | "
+                            "mean_d_ilf=%+.4f mean_vel=%.4f "
+                            "pos_corr=%d neg_corr=%d",
+                            report.n_events,
+                            report.mean_d_ilf,
+                            report.mean_change_velocity,
+                            report.n_positive_correlation,
+                            report.n_negative_correlation,
+                        )
+                if self.morphological_memory is not None:
+                    try:
+                        saved = self.morphological_memory.save()
+                        if saved > 0:
+                            _logger.info(
+                                "Morphological Memory salvata: %d morfologie | "
+                                "best_fitness=%.4f best_ilf=%.4f",
+                                self.morphological_memory.count,
+                                self.morphological_memory.best().fitness_score if self.morphological_memory.best() else 0,
+                                self.morphological_memory.best().ilf_value if self.morphological_memory.best() else 0,
+                            )
+                    except Exception:
+                        logging.getLogger(__name__).warning(
+                            "Morphological memory flush failed", exc_info=True
+                        )
+                if self.topology_correlator is not None:
+                    try:
+                        saved = self.topology_correlator.save()
+                        if saved > 0:
+                            report = self.topology_correlator.report(min_samples=5)
+                            _logger.info(
+                                "Topology correlator salvato: %d campioni | "
+                                "%d coppie significative | %d insight",
+                                report.n_samples,
+                                sum(1 for p in report.pairs if p.is_significant),
+                                len(report.insights),
+                            )
+                            if report.insights:
+                                for ins in report.insights[:3]:
+                                    _logger.info("  Insight: %s", ins)
+                    except Exception:
+                        logging.getLogger(__name__).warning(
+                            "Topology correlator flush failed", exc_info=True
+                        )
+            except Exception:
+                logging.getLogger(__name__).warning(
+                    "Topology history flush failed", exc_info=True
+                )
+
         # T147 — stop embodied sensory stream
         try:
             if (
@@ -601,6 +845,22 @@ class ContinuousRuntimeEngine:
                 except Exception:
                     self.health_monitor.record_exception()
 
+                # Self-improvement runtime hook: feed substrate metrics
+                # into the SelfImprovementLoop and consolidate the
+                # result in the EvolutionaryMemoryGovernor. Runs only
+                # if a hook has been attached (opt-in).
+                try:
+                    if self._self_improvement_hook is not None:
+                        await self._self_improvement_hook.tick(
+                            tick=self._tick_count_since_start,
+                            orchestrator=self.orchestrator,
+                            substrate_state=self._last_substrate_state,
+                        )
+                except Exception:
+                    logging.getLogger(__name__).warning(
+                        "Self-improvement hook tick failed", exc_info=True
+                    )
+
                 # Cross-process dashboard visibility: write lightweight snapshot every 5 ticks
                 try:
                     if self._tick_count_since_start % 5 == 0:
@@ -638,6 +898,80 @@ class ContinuousRuntimeEngine:
                     )
                 except Exception:
                     logging.getLogger(__name__).warning("Runtime observation failed", exc_info=True)
+
+                # Organism Observer — OFG collection (Fase A)
+                if self.organism_observer_enabled and self.organism_observer is not None:
+                    try:
+                        bus = getattr(self.orchestrator, "_organism_bus", None)
+                        if bus is not None:
+                            now = time.time()
+                            if now - self._last_observer_flush > self._organism_observer_flush_interval:
+                                flushed = self.organism_observer.flush()
+                                if flushed:
+                                    self._last_observer_flush = now
+                    except Exception:
+                        logging.getLogger(__name__).warning("Organism observer failed", exc_info=True)
+
+                # Topology History — snapshot periodico della geometria (Fase B)
+                if self.topology_history_enabled and self.topology_history is not None:
+                    try:
+                        if self._tick_count_since_start - self._last_topology_tick >= self._topology_sample_interval_ticks:
+                            snapshot = self.topology_history.sample(tick=self._tick_count_since_start)
+                            self._last_topology_tick = self._tick_count_since_start
+
+                            # Record correlato con ILF
+                            if self.topology_events is not None:
+                                ilf_provider = None
+                                if hasattr(self.orchestrator, "get_field_state"):
+                                    ilf_provider = lambda: getattr(
+                                        getattr(self.orchestrator, "get_field_state")(), "ilf_value", 0.5
+                                    )
+                                self.topology_events.record_event(
+                                    ilf_provider=ilf_provider,
+                                    context_label=f"tick_{self._tick_count_since_start}",
+                                )
+
+                            # Salva su disco ogni 10 snapshot
+                            if self.topology_history.count % 10 == 0:
+                                self.topology_history.save()
+
+                            # Morphological Memory — salva morfologie vincenti
+                            if self.morphological_memory is not None:
+                                ilf_val = 0.5
+                                if hasattr(self.orchestrator, "get_field_state"):
+                                    try:
+                                        fs = self.orchestrator.get_field_state()
+                                        ilf_val = getattr(fs, "ilf_value", 0.5)
+                                    except Exception:
+                                        pass
+                                self.morphological_memory.record(
+                                    snapshot=snapshot,
+                                    ilf_value=ilf_val,
+                                    context_label=f"tick_{self._tick_count_since_start}",
+                                )
+
+                            # TopologyPerformanceCorrelator — correlazione delta ↔ performance
+                            if self.topology_correlator is not None:
+                                try:
+                                    snaps = self.topology_history.snapshots()
+                                    if len(snaps) >= 2:
+                                        from speace_core.organism_observer.topology_diff import TopologyDiff
+                                        delta = TopologyDiff.compute(snaps[-2], snaps[-1])
+                                        perf = {
+                                            "health_score": self.health_monitor.health_score(),
+                                            "tick_latency_ms": self.health_monitor._tick_latency_ms,
+                                            "memory_rss_mb": self.health_monitor._peak_memory_rss_mb,
+                                            "ilf_value": ilf_val,
+                                        }
+                                        self.topology_correlator.record(delta, perf)
+                                except Exception:
+                                    logging.getLogger(__name__).warning(
+                                        "Topology correlator sampling failed", exc_info=True
+                                    )
+                    except Exception:
+                        logging.getLogger(__name__).warning(
+                            "Topology history sampling failed", exc_info=True
+                        )
 
                 # T147 — Embodied sensory narrative logging
                 try:
@@ -873,4 +1207,14 @@ class ContinuousRuntimeEngine:
             "nursery": self.nursery_orchestrator.snapshot(),
             "linguistic_bridge": self.linguistic_bridge.snapshot(),
             "game_ai_pipeline": self.game_ai_coordinator.snapshot(),
+            "self_improvement": (
+                self._self_improvement_hook.summary()
+                if self._self_improvement_hook is not None
+                else {}
+            ),
+            "mmapr_veto_router": (
+                self._mmapr_veto_router.summary()
+                if self._mmapr_veto_router is not None
+                else {}
+            ),
         }

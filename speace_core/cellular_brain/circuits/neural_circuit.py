@@ -143,3 +143,7 @@ class NeuralCircuit(BaseModel):
     @property
     def output_activations(self) -> List[float]:
         return [n.activation for n in self.output_neurons]
+
+    @property
+    def all_neurons(self) -> List[DigitalNeuron]:
+        return self.input_neurons + self.hidden_neurons + self.output_neurons

@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from speace_core.cellular_brain.evolutionary_kernel.digital_dna_expression_manager import (
     DigitalDNAExpressionManager,
@@ -21,7 +21,9 @@ from speace_core.cellular_brain.evolutionary_kernel.perturbation_field import (
     PerturbationPulse,
 )
 from speace_core.cellular_brain.memory.morphology_events import MorphologyEvent, MorphologyEventType
-from speace_core.orchestrator import CellularBrainOrchestrator
+
+if TYPE_CHECKING:
+    from speace_core.orchestrator import CellularBrainOrchestrator
 
 
 class EDDCVTEvolutionaryKernel:
@@ -36,7 +38,7 @@ class EDDCVTEvolutionaryKernel:
 
     def __init__(
         self,
-        orchestrator: CellularBrainOrchestrator,
+        orchestrator: "CellularBrainOrchestrator",
         enabled: bool = False,
         cycle_interval_ticks: int = 50,
         max_variants_per_cycle: int = 3,
@@ -105,7 +107,7 @@ class EDDCVTEvolutionaryKernel:
         self._metrics.current_phase = EvolutionPhase.FEEDBACK
 
         # 3. Feedback
-        entropy_before, entropy_after = self._feedback(tick, selected)
+        entropy_before, entropy_after = await self._feedback(tick, selected)
         state.entropy_before = entropy_before
         state.entropy_after = entropy_after
         state.fitness_score = selected.fitness_score
@@ -171,7 +173,7 @@ class EDDCVTEvolutionaryKernel:
     # Phase 3 — Feedback
     # ------------------------------------------------------------------ #
 
-    def _feedback(self, tick: int, selected: DigitalDNAVariant) -> tuple[float, float]:
+    async def _feedback(self, tick: int, selected: DigitalDNAVariant) -> tuple[float, float]:
         circuit = self.orch.circuit
         activations = [n.activation for n in circuit.all_neurons]
         weights = [s.weight for s in circuit.synapses]
@@ -188,11 +190,29 @@ class EDDCVTEvolutionaryKernel:
             energy_cost=1.0 - mean_energy,
         )
 
-        # Run a few ticks to observe effect
-        # Note: synchronous run_ticks since we're inside a sync method
-        # The caller (run_cycle) is async and will handle this
         entropy_before = snapshot_before.total_entropy
-        entropy_after = entropy_before
+
+        # Run a few ticks to observe the effect of perturbation
+        for _ in range(3):
+            await self.orch.tick()
+
+        # Capture post-perturbation state
+        activations_after = [n.activation for n in circuit.all_neurons]
+        energies_after = [n.energy for n in circuit.all_neurons]
+        mean_energy_after = sum(energies_after) / len(energies_after) if energies_after else 0.0
+        weights_after = [s.weight for s in circuit.synapses]
+
+        snapshot_after = self.monitor.capture(
+            tick=tick + 3,
+            activations=activations_after,
+            weights=weights_after,
+            energies=energies_after,
+            mean_energy=mean_energy_after,
+            environmental_pressure=selected.perturbation_strength,
+            energy_cost=1.0 - mean_energy_after,
+        )
+
+        entropy_after = snapshot_after.total_entropy
         selected.entropy_before = entropy_before
         selected.entropy_after = entropy_after
         return entropy_before, entropy_after

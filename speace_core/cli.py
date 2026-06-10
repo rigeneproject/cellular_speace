@@ -34,8 +34,8 @@ def status(
         genome_path = _default_genome_path()
     genome = load_genome(genome_path)
     identity = getattr(genome, "identity", {}) or {}
-    species = getattr(identity, "species_name", "SPEACE")
-    stage = getattr(identity, "developmental_stage", "unknown")
+    species = getattr(identity, "entity_name", "SPEACE")
+    stage = getattr(identity, "nature", "unknown")
     typer.echo(f"System: {species}")
     typer.echo(f"Version: {SPEACE_VERSION}")
     typer.echo(f"Stage: {stage}")
@@ -120,6 +120,67 @@ def run_mvp(
 
 
 @app.command()
+def ignite(
+    genome_path: Optional[pathlib.Path] = typer.Option(
+        None, "--genome", "-g", help="Path to genome YAML"
+    ),
+    warmup: int = typer.Option(60, "--warmup", "-w", help="Warmup stimulation patterns"),
+    sustain: int = typer.Option(200, "--sustain", "-s", help="Sustain ticks (keep-alive)"),
+) -> None:
+    """Accende e avvia cervello + organismo (ILF integrato, sblocco stallo)."""
+    from speace_core.bootstrap.ignition import OrganismIgnition
+
+    igniter = OrganismIgnition(
+        genome_path=genome_path,
+        warmup_patterns=warmup,
+        sustain_ticks=sustain,
+    )
+    rep = igniter.ignite()
+    for line in rep["log"]:
+        typer.echo(line)
+    typer.echo("\n=== Stato Organismo ===")
+    typer.echo(f"Vivo: {rep['alive']}")
+    typer.echo(f"Tick: {rep['tick']}")
+    phi = rep["coherence_phi"]
+    typer.echo(f"Coherence Phi: {phi:.4f}" if phi is not None else "Coherence Phi: n/a")
+    en = rep["mean_energy"]
+    typer.echo(f"Mean Energy: {en:.4f}" if en is not None else "Mean Energy: n/a")
+    typer.echo(f"Active Neurons: {rep['active_neurons']}")
+    typer.echo(f"Systemic Coherence Index: {rep['systemic_coherence_index']:.4f}")
+    ilf = rep["ilf_value"]
+    typer.echo(f"ILF Value: {ilf:.4f}" if ilf is not None else "ILF Value: n/a")
+    typer.echo(f"Sottosistemi nel campo: {', '.join(rep['field_subsystems'])}")
+    typer.echo(f"Snapshot persistiti: {rep['snapshots_persisted']}")
+
+
+@app.command()
+def live(
+    cycle_interval: float = typer.Option(
+        300.0, "--cycle-interval", "-c", help="Secondi tra i cicli del team non-LLM"
+    ),
+    tick_interval: float = typer.Option(
+        1.0, "--tick-interval", "-t", help="Secondi tra i tick del cervello"
+    ),
+    dashboards: bool = typer.Option(
+        False, "--dashboards", help="Avvia anche le dashboard web del daemon"
+    ),
+) -> None:
+    """Avvia cervello/organismo 24/7 + team agentico NON-LLM (auto-miglioramento)."""
+    from evolution_daemon.launcher import LiveOrganism
+    import asyncio as _asyncio
+
+    organism = LiveOrganism(
+        cycle_interval_sec=cycle_interval,
+        tick_interval=tick_interval,
+        start_dashboards=dashboards,
+    )
+    try:
+        _asyncio.run(organism.run())
+    except KeyboardInterrupt:
+        typer.echo("Interrotto da tastiera.")
+
+
+@app.command()
 def dashboard() -> None:
     """Launch the SPEACE organismic web dashboard."""
     try:
@@ -162,8 +223,11 @@ def monitor(
             md = getattr(genome, "monitoring_dashboard", {}) or {}
             host = md.get("host", host)
             port = md.get("port", port)
-        except Exception:
-            pass
+        except Exception as exc:
+            import logging
+            logging.getLogger("speace.cli").warning(
+                "Failed to load monitoring_dashboard genome config: %s", exc, exc_info=True
+            )
 
     typer.echo(f"Starting SPEACE monitor at http://{host}:{port}")
     uvicorn.run(
@@ -318,6 +382,230 @@ def report(
         typer.echo("Recommendations:")
         for rec in rep.recommendations:
             typer.echo(f"  - [{rec.category}] {rec.message}")
+
+
+@app.command()
+def assimilate(
+    genome_path: Optional[pathlib.Path] = typer.Option(
+        None, "--genome", "-g", help="Path to genome YAML"
+    ),
+) -> None:
+    """Assimila il sistema Windows (processi, servizi, dispositivi, storage)."""
+    if genome_path is None:
+        genome_path = _default_genome_path()
+    genome = load_genome(genome_path)
+    from speace_core.cellular_brain.system_assimilation import WindowsSystemAssimilator
+    from speace_core.cellular_brain.system_assimilation.assimilation_models import SystemAssimilationConfig
+    assimilator = WindowsSystemAssimilator(config=SystemAssimilationConfig(
+        enable_assimilation=True, allow_wmi_queries=True,
+    ))
+    report = assimilator.assimilate()
+    typer.echo(f"System: {report.system_info.hostname}")
+    typer.echo(f"OS: {report.system_info.os_platform} {report.system_info.os_release}")
+    typer.echo(f"Arch: {report.system_info.architecture}")
+    typer.echo(f"Admin: {report.system_info.is_admin}")
+    typer.echo(f"Processes: {report.process_count}")
+    typer.echo(f"Services: {report.service_count}")
+    typer.echo(f"Devices: {report.device_count}")
+    typer.echo(f"Storage:")
+    for d in report.storage_devices:
+        size_gb = d.get("size_bytes", 0) / (1024**3)
+        free_gb = d.get("free_bytes", 0) / (1024**3)
+        typer.echo(f"  {d.get('device_id', '?')}: {free_gb:.1f} GB free / {size_gb:.1f} GB total")
+    typer.echo("Assimilation complete.")
+
+
+@app.command()
+def vfs_index(
+    genome_path: Optional[pathlib.Path] = typer.Option(
+        None, "--genome", "-g", help="Path to genome YAML"
+    ),
+) -> None:
+    """Indicizza la root del computer via VFS (senza duplicare file)."""
+    if genome_path is None:
+        genome_path = _default_genome_path()
+    genome = load_genome(genome_path)
+    genome_sa = getattr(genome, "system_assimilation", None)
+    if genome_sa is None or not getattr(genome_sa, "enable_vfs", False):
+        typer.echo("VFS not enabled in genome. Set system_assimilation.enable_vfs: true")
+        raise typer.Exit(1)
+    from speace_core.cellular_brain.virtual_file_system import VirtualFileSystemEngine
+    from speace_core.cellular_brain.virtual_file_system.vfs_models import VFSConfig, AccessRule, VFSPermission
+    rules = []
+    for r in getattr(genome_sa, "access_rules", []):
+        perms = []
+        for p in r.allowed_permissions:
+            try:
+                perms.append(VFSPermission[p.upper()])
+            except KeyError:
+                pass
+        rules.append(AccessRule(
+            rule_id=f"dna_{r.path_prefix}",
+            path_prefix=r.path_prefix,
+            allowed_permissions=perms,
+            allowed=not r.requires_approval or r.approved,
+            requires_approval=r.requires_approval,
+            approved=r.approved,
+        ))
+    vfs_config = VFSConfig(
+        root_mount_point=getattr(genome_sa, "root_mount_point", "C:\\"),
+        speace_install_path=str(pathlib.Path(__file__).parent.parent.resolve()),
+        access_rules=rules,
+        enable_vfs=True,
+    )
+    engine = VirtualFileSystemEngine(config=vfs_config)
+    result = engine.index_root()
+    typer.echo(f"Root: {result['root']}")
+    typer.echo(f"Indexed: {result['indexed']} entries")
+    typer.echo(f"Errors: {result['errors']}")
+    typer.echo(f"Total in index: {result['total_indexed']}")
+    typer.echo("VFS index created. Files are NOT duplicated — only metadata mapped.")
+
+
+@app.command()
+def vfs_ls(
+    path: str = typer.Argument(".", help="Virtual path to list"),
+    genome_path: Optional[pathlib.Path] = typer.Option(
+        None, "--genome", "-g", help="Path to genome YAML"
+    ),
+) -> None:
+    """Elenca una directory della root via VFS."""
+    if genome_path is None:
+        genome_path = _default_genome_path()
+    genome = load_genome(genome_path)
+    genome_sa = getattr(genome, "system_assimilation", None)
+    if genome_sa is None or not getattr(genome_sa, "enable_vfs", False):
+        typer.echo("VFS not enabled in genome.")
+        raise typer.Exit(1)
+    from speace_core.cellular_brain.virtual_file_system import VirtualFileSystemEngine
+    from speace_core.cellular_brain.virtual_file_system.vfs_models import VFSConfig, AccessRule, VFSPermission
+    rules = []
+    for r in getattr(genome_sa, "access_rules", []):
+        perms = []
+        for p in r.allowed_permissions:
+            try:
+                perms.append(VFSPermission[p.upper()])
+            except KeyError:
+                pass
+        rules.append(AccessRule(
+            rule_id=f"dna_{r.path_prefix}", path_prefix=r.path_prefix,
+            allowed_permissions=perms, allowed=not r.requires_approval or r.approved,
+            requires_approval=r.requires_approval, approved=r.approved,
+        ))
+    vfs_config = VFSConfig(
+        root_mount_point=getattr(genome_sa, "root_mount_point", "C:\\"),
+        speace_install_path=str(pathlib.Path(__file__).parent.parent.resolve()),
+        access_rules=rules, enable_vfs=True,
+    )
+    engine = VirtualFileSystemEngine(config=vfs_config)
+    entries = engine.list_directory(path)
+    if entries is None:
+        typer.echo(f"Permission denied or path not found: {path}")
+        raise typer.Exit(1)
+    for e in entries:
+        kind = "D" if e.get("is_dir") else "F"
+        size = e.get("size_bytes", 0)
+        name = e.get("name", "?")
+        err = e.get("error", "")
+        if err:
+            typer.echo(f"[{kind}] {name}  ({err})")
+        else:
+            typer.echo(f"[{kind}] {name}  {size} bytes")
+
+
+@app.command()
+def observe(
+    output: str = typer.Option(
+        "data/organism_observer/report.json",
+        "--output", "-o",
+        help="Percorso del file JSON di output",
+    ),
+    history: Optional[str] = typer.Option(
+        None, "--history", "-H",
+        help="Carica eventi da un file JSONL storico",
+    ),
+    live: bool = typer.Option(
+        False, "--live", "-l",
+        help="Modalità live: resta in ascolto per N secondi",
+    ),
+    seconds: int = typer.Option(
+        60, "--seconds", "-s",
+        help="Secondi di ascolto in modalità live",
+    ),
+) -> None:
+    """Analizza la geometria funzionale dell'organismo (OFG).
+
+    Costruisce l'Operational Functional Graph dagli eventi intercettati
+    e calcola le metriche topologiche (degree, betweenness, modularità,
+    small-world, hub).
+    """
+    import json
+    import time
+    from speace_core.organism_observer.event_collector import EventCollector
+    from speace_core.organism_observer.functional_graph import FunctionalGraph
+    from speace_core.organism_observer.topology_metrics import TopologyMetrics
+
+    collector = EventCollector(persist_path=output.replace(".json", ".jsonl"))
+
+    if history:
+        n = collector.load_history(history)
+        typer.echo(f"Caricati {n} eventi da {history}")
+
+    if live:
+        try:
+            # Tenta di agganciarsi all'organismo in esecuzione
+            from speace_core.orchestrator import CellularBrainOrchestrator
+            from speace_core.cellular_brain.organism.organism_bus import OrganismBus
+
+            typer.echo(f"Ascolto live per {seconds}s...")
+            bus = OrganismBus()
+            collector.wrap(bus)
+            # Simula qualche evento per test
+            import uuid
+            from datetime import datetime, timezone
+            from speace_core.cellular_brain.organism.organism_models import OrganismBusMessage
+
+            start = time.time()
+            while time.time() - start < seconds:
+                # Poll the event bus state if available
+                time.sleep(1)
+            typer.echo("Raccolta completata.")
+        except ImportError as exc:
+            typer.echo(f"Errore: {exc}")
+            raise typer.Exit(1) from exc
+
+    collector.flush()
+    typer.echo(f"Eventi raccolti: {collector.count()}")
+
+    graph = FunctionalGraph(collector)
+    graph.build()
+    typer.echo(f"Grafo: {graph.node_count} nodi, {graph.edge_count} archi")
+
+    metrics = TopologyMetrics(graph)
+    report = metrics.compute_all()
+
+    report["collector"] = collector.summary()
+    report["graph"] = graph.summary()
+
+    dst = output
+    pathlib.Path(dst).parent.mkdir(parents=True, exist_ok=True)
+    pathlib.Path(dst).write_text(json.dumps(report, indent=2), encoding="utf-8")
+    typer.echo(f"Report salvato in {dst}")
+
+    # Stampa riepilogo a schermo
+    typer.echo("")
+    typer.echo("=== RIEPILOGO GEOMETRIA COGNITIVA ===")
+    typer.echo(f"  Nodi:           {report['node_count']}")
+    typer.echo(f"  Archi:          {report['edge_count']}")
+    typer.echo(f"  Densità:        {report['density']:.4f}")
+    typer.echo(f"  Clustering:     {report['avg_clustering']:.4f}")
+    typer.echo(f"  Efficienza:     {report['global_efficiency']:.4f}")
+    typer.echo(f"  Small-world sigma:  {report['small_world']['sigma']:.4f}")
+    typer.echo(f"  Modularità Q:   {report['modularity']['Q']:.4f}")
+    typer.echo(f"  Comunità:       {report['modularity']['n_communities']}")
+    typer.echo(f"  Hub (top):")
+    for h in report.get("hubs", {}).get("broadcasters", [])[:3]:
+        typer.echo(f"    > {h['node']}: out={h['score']:.3f}")
 
 
 if __name__ == "__main__":
