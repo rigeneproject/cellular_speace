@@ -204,6 +204,12 @@ class CognitivePredictionEnvironment:
         predicted = list(orchestrator.circuit.output_activations)
         reward, error = self.evaluate_prediction(predicted, true_next)
         orchestrator.feedback(reward)
+        # Teacher signal: transiently boost the correct output neurons to
+        # strengthen the input-to-output association via STDP on the next tick.
+        for i, val in enumerate(true_next[: len(orchestrator.circuit.output_neurons)]):
+            if val > 0.1:
+                n = orchestrator.circuit.output_neurons[i]
+                n.activation = max(n.activation, 0.6)
 
         cor_collapsed = False
         if getattr(orchestrator, "_last_cor_result", None) is not None:

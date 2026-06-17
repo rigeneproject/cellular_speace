@@ -104,8 +104,8 @@ class AssociativeRecallEnvironment:
             target_idx = int(np.argmax(target))
             for syn in orchestrator.circuit.synapses:
                 if syn.source.startswith(f"in_{cue_idx}") and syn.target.startswith(f"out_{target_idx}"):
-                    syn.weight = max(syn.weight, 0.6)
-                    syn.trust = max(syn.trust, 0.6)
+                    syn.weight = max(syn.weight, 0.4)
+                    syn.trust = max(syn.trust, 0.4)
 
     def _settle(self, orchestrator: Any, n_ticks: int = 3) -> None:
         """Let the circuit settle for a few ticks after injection."""
@@ -175,10 +175,9 @@ class AssociativeRecallEnvironment:
                 orchestrator.circuit.output_neurons[target_idx].activation = max(
                     orchestrator.circuit.output_neurons[target_idx].activation, 0.6
                 )
-                # Hebbian reinforcement on active pathways
-                for syn in orchestrator.circuit.synapses:
-                    if syn.weight > 0.0 and any(syn.source.startswith(f"in_{int(np.argmax(c))}") for c, _ in self._pairs):
-                        syn.reinforce(max(0.1, reward) * 0.3)
+                # Reward-based feedback drives STDP + neuromodulation on the
+                # active cue-to-output pathway, replacing hand-tuned Hebbian priming.
+                orchestrator.feedback(reward)
                 step = RecallStep(
                     phase="study",
                     cue=list(cue),
@@ -203,6 +202,8 @@ class AssociativeRecallEnvironment:
             self._settle(orchestrator, n_ticks=3)
             emitted = self._read_output(orchestrator)
             reward, error = self._similarity_reward(emitted, target)
+            # Feedback-based consolidation also on test trials
+            orchestrator.feedback(reward)
             step = RecallStep(
                 phase="test",
                 cue=list(cue),

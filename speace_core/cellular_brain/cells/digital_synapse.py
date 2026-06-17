@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from pydantic import Field
 
@@ -17,6 +17,10 @@ class DigitalSynapse(DigitalCell):
     stability: float = 0.0
     recurrence_count: int = 0
 
+    # T-STDP — spike timing records for plasticity
+    last_pre_spike_tick: Optional[int] = None
+    last_post_spike_tick: Optional[int] = None
+
     async def receive(self, signal: DigitalSignal) -> None:
         pass
 
@@ -29,13 +33,13 @@ class DigitalSynapse(DigitalCell):
         return signal
 
     def reinforce(self, success_score: float) -> None:
-        self.weight += 0.01 * success_score
-        self.trust += 0.005 * success_score
+        self.weight += 0.02 * success_score
+        self.trust += 0.01 * success_score
         self.weight = max(0.0, min(1.0, self.weight))
         self.trust = max(0.0, min(1.0, self.trust))
 
     def weaken(self, error_score: float) -> None:
-        self.weight -= 0.01 * error_score
-        self.trust -= 0.005 * error_score
+        self.weight -= 0.02 * error_score
+        self.trust -= 0.01 * error_score
         self.weight = max(0.0, min(1.0, self.weight))
         self.trust = max(0.0, min(1.0, self.trust))
