@@ -57,6 +57,9 @@ from speace_core.cellular_brain.metacognition.confidence_engine import (
 from speace_core.cellular_brain.regulation.energy_control_agent import EnergyControlAgent
 from speace_core.cellular_brain.regulation.inhibition_engine import InhibitionEngine
 from speace_core.cellular_brain.regulation.stdp_plasticity_engine import STDPPlasticityEngine
+from speace_core.cellular_brain.neuroperiodic.neuroperiodic_integrator import (
+    NeuroPeriodicIntegrator,
+)
 from speace_core.cellular_brain.regions.region_registry import RegionRegistry
 from speace_core.cellular_brain.regions.region_factory import RegionFactory
 from speace_core.cellular_brain.regions.inter_region_plasticity import InterRegionPlasticityEngine
@@ -3305,6 +3308,9 @@ class CellularBrainOrchestrator(FieldAwareMixin, BaseModel):
         for n in all_neurons:
             n.bind_genome(genome)
 
+        # T-DNA — build a genome-aware periodic integrator to seed connectome weights.
+        periodic_integrator = NeuroPeriodicIntegrator.from_genome(genome) if genome else NeuroPeriodicIntegrator()
+
         synapses: List[DigitalSynapse] = []
         for _ in range(n_synapses):
             src = random.choice(all_neurons)
@@ -3316,11 +3322,12 @@ class CellularBrainOrchestrator(FieldAwareMixin, BaseModel):
                 role="digital_synapse",
                 source=src.cell_id,
                 target=tgt.cell_id,
-                weight=random.uniform(0.1, 0.9),
             )
             # T-NPT — inherit periodic identity from source/target neurons.
             syn.source_periodic_element_id = src.periodic_element_id
             syn.target_periodic_element_id = tgt.periodic_element_id
+            # T-DNA — derive initial weight, trust, plasticity and decay from bond physics.
+            syn.apply_periodic_prediction(periodic_integrator)
             syn.bind_genome(genome)
             synapses.append(syn)
             src.targets.append(tgt.cell_id)
