@@ -21,6 +21,12 @@ class DigitalSynapse(DigitalCell):
     last_pre_spike_tick: Optional[int] = None
     last_post_spike_tick: Optional[int] = None
 
+    # T-NPT — Neural Periodic Table identity
+    periodic_element_id: Optional[int] = None
+    periodic_symbol: Optional[str] = None
+    source_periodic_element_id: Optional[int] = None
+    target_periodic_element_id: Optional[int] = None
+
     async def receive(self, signal: DigitalSignal) -> None:
         pass
 
@@ -43,3 +49,42 @@ class DigitalSynapse(DigitalCell):
         self.trust -= 0.01 * error_score
         self.weight = max(0.0, min(1.0, self.weight))
         self.trust = max(0.0, min(1.0, self.trust))
+
+    def get_periodic_element(self):
+        """Get the NeuralElement assigned to this synapse, if any."""
+        from speace_core.cellular_brain.neuroperiodic.neural_element import (
+            build_element,
+        )
+        if self.periodic_element_id is not None:
+            return build_element(self.periodic_element_id)
+        return None
+
+    def get_source_periodic_element(self):
+        """Get the NeuralElement for the source neuron, if known."""
+        from speace_core.cellular_brain.neuroperiodic.neural_element import (
+            build_element,
+        )
+        if self.source_periodic_element_id is not None:
+            return build_element(self.source_periodic_element_id)
+        return None
+
+    def get_target_periodic_element(self):
+        """Get the NeuralElement for the target neuron, if known."""
+        from speace_core.cellular_brain.neuroperiodic.neural_element import (
+            build_element,
+        )
+        if self.target_periodic_element_id is not None:
+            return build_element(self.target_periodic_element_id)
+        return None
+
+    def predict_bond_properties(self) -> dict:
+        """Predict synaptic bond properties from source/target periodic elements."""
+        from speace_core.cellular_brain.neuroperiodic.neuroperiodic_integrator import (
+            NeuroPeriodicIntegrator,
+        )
+        src = self.get_source_periodic_element()
+        tgt = self.get_target_periodic_element()
+        if src is None or tgt is None:
+            return {}
+        integrator = NeuroPeriodicIntegrator()
+        return integrator.predict_synapse_by_elements(src, tgt)

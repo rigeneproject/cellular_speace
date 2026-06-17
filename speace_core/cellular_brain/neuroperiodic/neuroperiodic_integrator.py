@@ -155,6 +155,30 @@ class NeuroPeriodicIntegrator(BaseModel):
     # Synapse prediction
     # ------------------------------------------------------------------
 
+    def predict_synapse_by_elements(self, src: NeuralElement,
+                                    tgt: NeuralElement) -> Dict[str, Any]:
+        """Predict synapse properties between two NeuralElements."""
+        bond = BondFormationEngine.form_bond(src, tgt)
+        bond = self.laws.apply_bond_rules(src, tgt, bond)
+        self.bond_registry.register(bond)
+
+        def _val(v):
+            return v.value if hasattr(v, 'value') else v
+        return {
+            "source": src.symbol,
+            "target": tgt.symbol,
+            "bond_type": _val(bond.bond_type),
+            "bond_order": _val(bond.bond_order),
+            "polarity": _val(bond.polarity),
+            "strength": bond.bond_strength(),
+            "plasticity": bond.plasticity,
+            "energy_cost": bond.energy_cost(),
+            "signal_delay": bond.signal_delay(),
+            "amplification": bond.molecule.amplification_factor(),
+            "compatibility": src.compatibility_score(tgt),
+            "applicable_rules": [r.name for r in self.laws.get_applicable_rules(src, tgt)],
+        }
+
     def predict_synapse(self, source_cell_type: str,
                         target_cell_type: str) -> Dict[str, Any]:
         """Predict synapse properties between two cell types."""

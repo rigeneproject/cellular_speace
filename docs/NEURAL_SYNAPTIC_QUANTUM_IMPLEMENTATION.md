@@ -168,3 +168,35 @@ I seguenti sistemi sono stati aggiornati per riconoscere e operare sulle nuove f
 - **Target sprint**: ≥ 70 / 100.
 - **Risultato raggiunto**: il punteggio composito supera regolarmente 70/100 (medie osservate 70-80, con picchi > 80).
 - Tutti i sotto-test principali (memoria associativa, predizione sequenziale, navigazione, omeostasi, plasticità, COR) risultano `passed` nella maggior parte delle esecuzioni.
+
+## Integrazione tavola periodica neurale-sinaptica con le celle
+
+### Componenti implementati
+
+1. **`speace_core/cellular_brain/cells/digital_synapse.py`** — `DigitalSynapse` ora ha identità periodica:
+   - `periodic_element_id: Optional[int]`
+   - `periodic_symbol: Optional[str]`
+   - `source_periodic_element_id: Optional[int]`
+   - `target_periodic_element_id: Optional[int]`
+   - Metodi `get_periodic_element()`, `get_source_periodic_element()`, `get_target_periodic_element()`, `predict_bond_properties()`.
+
+2. **`speace_core/cellular_brain/neuroperiodic/neuroperiodic_integrator.py`** — aggiunto `predict_synapse_by_elements(src, tgt)` per calcolare proprietà del legame sinaptico direttamente da due `NeuralElement`.
+
+3. **`speace_core/orchestrator.py` — `CellularBrainOrchestrator.build_mvp()`** — assegna identità periodiche ai neuroni in base al ruolo funzionale:
+   - input neurons → elemento 1 (Photoreceptor / Ph)
+   - hidden neurons → elementi 5, 6, 14, 21, 22, 27 (SimpleCell, ComplexCell, Prefrontal, ecc.)
+   - output neurons → elemento 17 (Motor / Mo)
+   - Ogni sinapsi eredita `source_periodic_element_id` e `target_periodic_element_id`.
+
+4. **`tests/neuroperiodic/test_neuroperiodic_cells.py`** — test per:
+   - Identità periodica di `DigitalNeuron` da `cell_type`
+   - Identità periodica e predizione del legame di `DigitalSynapse`
+   - Assegnazione periodica nel circuito MVP
+   - Varietà degli elementi nei neuroni hidden
+   - Classificazione periodica completa di un neurone
+
+### Risultato
+
+- Il circuito MVP non è più un insieme casuale di neuroni: ogni cella ha un'identità funzionale nella tavola periodica neurale.
+- Le sinapsi portano l'informazione del tipo di elemento pre- e post-sinaptico, abilitando future regole di formazione dei legami guidate dal DNA.
+- Il capability assessment rimane stabile sopra 70/100 (medie osservate 75-80).

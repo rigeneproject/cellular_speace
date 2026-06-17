@@ -3284,6 +3284,23 @@ class CellularBrainOrchestrator(FieldAwareMixin, BaseModel):
             for i in range(n_outputs)
         ]
 
+        # T-NPT — assign periodic-table identities based on functional role.
+        input_element_z = 1   # Photoreceptor / sensory input
+        output_element_z = 17 # Motor neuron / output (Mo)
+        hidden_element_zs = [5, 6, 14, 21, 22, 27]  # association/memory/executive elements
+        for i, n in enumerate(input_neurons):
+            n.cell_type = "input"
+            n.periodic_element_id = input_element_z
+            n.periodic_symbol = "Ph"
+        for i, n in enumerate(hidden_neurons):
+            z = hidden_element_zs[i % len(hidden_element_zs)]
+            n.cell_type = "generic_neuron"
+            n.periodic_element_id = z
+        for i, n in enumerate(output_neurons):
+            n.cell_type = "output"
+            n.periodic_element_id = output_element_z
+            n.periodic_symbol = "Mo"
+
         all_neurons = input_neurons + hidden_neurons + output_neurons
         for n in all_neurons:
             n.bind_genome(genome)
@@ -3301,6 +3318,9 @@ class CellularBrainOrchestrator(FieldAwareMixin, BaseModel):
                 target=tgt.cell_id,
                 weight=random.uniform(0.1, 0.9),
             )
+            # T-NPT — inherit periodic identity from source/target neurons.
+            syn.source_periodic_element_id = src.periodic_element_id
+            syn.target_periodic_element_id = tgt.periodic_element_id
             syn.bind_genome(genome)
             synapses.append(syn)
             src.targets.append(tgt.cell_id)
