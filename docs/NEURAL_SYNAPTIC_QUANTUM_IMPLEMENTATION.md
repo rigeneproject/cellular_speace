@@ -98,3 +98,33 @@ come classi Pydantic e il `FunctionalActivationGate` per attivare funzioni laten
 (e microstati COR) solo quando un segnale con un significato compatibile arriva.
 La tavola periodica neurale-sinaptica e i geni COR/quantistici nel DNA guidano
 comportamento, plasticità e collassi metacognitivi.
+
+## Test di capacità / intelligenza funzionale
+
+
+un_speace_intelligence_assessment.py esegue una batteria di test adatti all'architettura di SPEACE:
+
+1. **Memoria associativa** (AssociativeRecallEnvironment) — fase di studio + test di richiamo.
+2. **Predizione sequenziale** (CognitivePredictionEnvironment) — pattern periodici, Markov e linguistici.
+3. **Navazione in grid-world** (GridWorldEnvironment) — navigazione 1-D/2-D verso un target.
+4. **Stabilità omeostatica** — coerenza globale (coherence_phi) ed energia media.
+5. **Plasticità sinaptica** — variazione di pesi/trust dopo feedback.
+6. **Attività COR** — frequenza di collassi metacognitivi.
+
+Punteggio composito: **0-100**. Un punteggio superiore a 55 indica che le capacità adattive emergenti sono funzionalmente integrate.
+
+Esempio di esecuzione:
+
+`powershell
+cd C:\\cellular_speace
+python run_speace_intelligence_assessment.py
+`
+
+Output tipo:
+
+`	ext
+Composite score: 58.3 / 100
+Interpretation: SPEACE demonstrates functional intelligence for its architecture...
+`
+
+Questo non è un test di intelligenza generale umana, ma una valutazione ingegneristica delle capacità bio-ispirate del sistema.
