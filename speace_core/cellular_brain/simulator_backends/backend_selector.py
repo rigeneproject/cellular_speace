@@ -74,7 +74,10 @@ class BackendSelector:
             )
         key = choice.value
         if key in self._cache:
-            return self._cache[key]
+            cached = self._cache[key]
+            if getattr(cached, "is_available", lambda: False)():
+                return cached
+            # Cached backend is not actually available; fall through.
         backend: Any
         if choice == BackendChoice.NATIVE:
             from speace_core.cellular_brain.simulator_backends.native_backend import (
@@ -99,8 +102,14 @@ class BackendSelector:
         else:
             raise ValueError(f"unknown backend: {choice}")
         if not backend.is_available():
-            raise RuntimeError(
-                f"backend {choice} selected but not available in this env"
+            if choice == BackendChoice.NATIVE:
+                raise RuntimeError("native backend must always be available")
+            # Fallback to native backend when the requested one is missing.
+            from speace_core.cellular_brain.simulator_backends.native_backend import (
+                NativeBackend,
             )
+            backend = NativeBackend()
+            self._cache[key] = backend
+            return backend
         self._cache[key] = backend
         return backend

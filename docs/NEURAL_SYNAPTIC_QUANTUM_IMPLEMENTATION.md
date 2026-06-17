@@ -200,3 +200,33 @@ I seguenti sistemi sono stati aggiornati per riconoscere e operare sulle nuove f
 - Il circuito MVP non è più un insieme casuale di neuroni: ogni cella ha un'identità funzionale nella tavola periodica neurale.
 - Le sinapsi portano l'informazione del tipo di elemento pre- e post-sinaptico, abilitando future regole di formazione dei legami guidate dal DNA.
 - Il capability assessment rimane stabile sopra 70/100 (medie osservate 75-80).
+
+## Simulatore Brian2 — installazione, test condizionali e fallback
+
+### Stato
+
+- `brian2` è stato installato nell'ambiente (`brian2==2.10.1`).
+- Il backend esistente `speace_core/cellular_brain/simulator_backends/brian2_backend.py` è stato corretto per:
+  - usare i pesi reali delle connessioni (`weight : 1` nel modello sinaptico, `v_post += weight`);
+  - popolare correttamente `SimulationResult.runtime_ms`.
+
+### Fallback automatico
+
+- `BackendSelector.build()` ora verifica la disponibilità del backend anche in cache e, se il backend richiesto non è disponibile, torna automaticamente a `NativeBackend`.
+- Questo garantisce che l'orchestratore non fallisca se `simulator_backend_name="brian2"` è configurato ma Brian2 non è installato.
+
+### Test condizionali
+
+- `tests/simulator_backends/test_brian2_backend.py` contiene 8 test che usano `pytest.importorskip("brian2")`:
+  - disponibilità e capabilities;
+  - setup/run con Population/Projection;
+  - input injection;
+  - reset;
+  - build via BackendSelector;
+  - raccomandazione di native per workload Python-only;
+  - fallback a NativeBackend quando Brian2 risulta non disponibile.
+
+### Risultato
+
+- Il capability assessment rimane sopra 70/100 anche con Brian2 attivo nel backend.
+- I test passano sia in presenza che (per design) verranno saltati in assenza di Brian2.

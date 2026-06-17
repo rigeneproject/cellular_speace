@@ -94,17 +94,22 @@ class Brian2Backend(SimulatorBackend):
         ng.I = 0.0
         self._ng = ng
         self._neurons = {n.neuron_id: i for i, n in enumerate(all_neurons)}
-        # Build Synapses
-        syn = b2.Synapses(ng, ng, on_pre="v += 0.1")
+        # Build Synapses with per-connection weights.
+        syn = b2.Synapses(ng, ng, model="weight : 1", on_pre="v_post += weight")
         conns: List[ConnectionSpec] = []
+        sources: List[int] = []
+        targets: List[int] = []
+        weights: List[float] = []
         for proj in projections:
             for c in proj.connections:
                 if c.source_id in self._neurons and c.target_id in self._neurons:
-                    syn.connect(
-                        i=self._neurons[c.source_id],
-                        j=self._neurons[c.target_id],
-                    )
+                    sources.append(self._neurons[c.source_id])
+                    targets.append(self._neurons[c.target_id])
+                    weights.append(float(c.weight))
                     conns.append(c)
+        if sources:
+            syn.connect(i=b2.array(sources), j=b2.array(targets))
+            syn.weight = b2.array(weights)
         self._synapses = syn
         self._projections = projections
         self._spike_monitor = b2.SpikeMonitor(ng)
@@ -137,7 +142,8 @@ class Brian2Backend(SimulatorBackend):
             except Exception:
                 samples = []
             state[nid] = samples
-        return SimulationResult(spikes=spikes, state=state)
+        runtime = float(duration_ms)
+        return SimulationResult(spikes=spikes, state=state, runtime_ms=runtime)
 
     def reset(self) -> None:
         if self._ng is not None and self._brian2 is not None:
