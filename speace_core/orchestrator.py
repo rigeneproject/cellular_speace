@@ -57,6 +57,7 @@ from speace_core.cellular_brain.metacognition.confidence_engine import (
 from speace_core.cellular_brain.regulation.energy_control_agent import EnergyControlAgent
 from speace_core.cellular_brain.regulation.inhibition_engine import InhibitionEngine
 from speace_core.cellular_brain.regulation.stdp_plasticity_engine import STDPPlasticityEngine
+from speace_core.cellular_brain.dynamics.stdp_engine import STDPEngine
 from speace_core.cellular_brain.neuroperiodic.neuroperiodic_integrator import (
     NeuroPeriodicIntegrator,
 )
@@ -811,6 +812,7 @@ class CellularBrainOrchestrator(FieldAwareMixin, BaseModel):
                 reconfigure_on_collapse=True,
                 report_dir="data/dynamics/cor",
             )
+            self._cor_engine.stdp_engine = STDPEngine()
 
         # T-SIM — Simulator backend initialization
         if self.simulator_backend_enabled and self._simulator_backend is None:

@@ -35,6 +35,10 @@ import json
 import math
 import time
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from speace_core.cellular_brain.dynamics.stdp_engine import STDPEngine
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -132,6 +136,8 @@ class CognitiveObjectiveReduction:
         self.max_hypotheses = max(2, max_hypotheses)
         self.collapse_refractory_ticks = max(0, collapse_refractory_ticks)
         self.reconfigure_on_collapse = reconfigure_on_collapse
+        self.synaptic_reinforcement_rate = 0.03
+        self.stdp_engine: Optional["STDPEngine"] = None
 
         self._report_dir = Path(report_dir)
         self._report_dir.mkdir(parents=True, exist_ok=True)
@@ -377,31 +383,74 @@ class CognitiveObjectiveReduction:
     def _apply_reconfiguration(
         self, dominant: CORHypothesis
     ) -> Tuple[bool, Dict[str, Any]]:
-        """Apply a safe, bounded reconfiguration after collapse."""
+        """Apply a safe, bounded reconfiguration after collapse.
+
+        Conservative COR consolidation:
+          - Only synapses recently active (pre/post spike timing recorded)
+            and aligned with the dominant latent label are reinforced.
+          - Reinforcement is routed through STDP when available, otherwise
+            a tiny direct weight boost is applied.
+          - Latent states are trimmed to free capacity.
+        """
         summary: Dict[str, Any] = {"label": dominant.label}
         changes = 0
+        stdp_changes = 0
+        direct_changes = 0
 
-        # 1. Boost synapses that connect neurons sharing the dominant label.
-        if hasattr(self.circuit, "synapses"):
-            label = dominant.configuration.get("dominant_label")
-            neuron_map = {n.cell_id: n for n in self._all_neurons()}
-            for synapse in self.circuit.synapses:
-                src = neuron_map.get(getattr(synapse, "source", None))
-                tgt = neuron_map.get(getattr(synapse, "target", None))
-                if src is None or tgt is None:
-                    continue
-                src_latent = getattr(src, "latent_states", None) or {}
-                tgt_latent = getattr(tgt, "latent_states", None) or {}
-                if label in src_latent and label in tgt_latent:
-                    weight = getattr(synapse, "weight", 0.5)
-                    setattr(synapse, "weight", min(1.0, weight + 0.05))
+        if not hasattr(self.circuit, "synapses"):
+            return True, summary
+
+        label = dominant.configuration.get("dominant_label")
+        neuron_map = {n.cell_id: n for n in self._all_neurons()}
+
+        # Conservative reinforcement: only recently active synapses
+        # that connect neurons sharing the dominant label.
+        for synapse in self.circuit.synapses:
+            src = neuron_map.get(getattr(synapse, "source", None))
+            tgt = neuron_map.get(getattr(synapse, "target", None))
+            if src is None or tgt is None:
+                continue
+            src_latent = getattr(src, "latent_states", None) or {}
+            tgt_latent = getattr(tgt, "latent_states", None) or {}
+            if label not in src_latent or label not in tgt_latent:
+                continue
+
+            # Prefer STDP-based reinforcement for synapses with timing evidence.
+            has_timing = (
+                getattr(synapse, "last_pre_spike_tick", None) is not None
+                and getattr(synapse, "last_post_spike_tick", None) is not None
+            )
+            if has_timing and self.stdp_engine is not None:
+                delta_ticks = synapse.last_post_spike_tick - synapse.last_pre_spike_tick
+                update = self.stdp_engine.update_synapse(
+                    synapse,
+                    delta_ticks=delta_ticks,
+                    dopamine=0.3,  # moderate consolidation signal
+                    base_plasticity=self.synaptic_reinforcement_rate,
+                )
+                if abs(update["delta"]) > 1e-9:
+                    stdp_changes += 1
                     changes += 1
-            summary["synapses_strengthened"] = changes
+                    continue
 
-        # 2. Clear exhausted latent states to free capacity.
+            # Fallback: tiny direct weight boost bounded to avoid runaway growth.
+            weight = getattr(synapse, "weight", 0.5)
+            boost = self.synaptic_reinforcement_rate * 0.3
+            new_weight = min(1.0, weight + boost)
+            setattr(synapse, "weight", new_weight)
+            # Also nudge trust in the same direction.
+            trust = getattr(synapse, "trust", 0.5)
+            setattr(synapse, "trust", min(1.0, trust + boost * 0.5))
+            direct_changes += 1
+            changes += 1
+
+        summary["synapses_strengthened"] = changes
+        summary["stdp_reinforced"] = stdp_changes
+        summary["direct_reinforced"] = direct_changes
+
+        # Trim weakest latent states to free capacity.
         for neuron in self._all_neurons():
             if len(getattr(neuron, "latent_states", {})) > self.min_latent_states:
-                # Trim weakest states.
                 latent = neuron.latent_states
                 sorted_items = sorted(latent.items(), key=lambda x: x[1], reverse=True)
                 neuron.latent_states = dict(sorted_items[: self.min_latent_states])
