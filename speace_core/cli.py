@@ -407,7 +407,7 @@ def assimilate(
     typer.echo(f"Processes: {report.process_count}")
     typer.echo(f"Services: {report.service_count}")
     typer.echo(f"Devices: {report.device_count}")
-    typer.echo(f"Storage:")
+    typer.echo("Storage:")
     for d in report.storage_devices:
         size_gb = d.get("size_bytes", 0) / (1024**3)
         free_gb = d.get("free_bytes", 0) / (1024**3)
@@ -603,7 +603,7 @@ def observe(
     typer.echo(f"  Small-world sigma:  {report['small_world']['sigma']:.4f}")
     typer.echo(f"  Modularità Q:   {report['modularity']['Q']:.4f}")
     typer.echo(f"  Comunità:       {report['modularity']['n_communities']}")
-    typer.echo(f"  Hub (top):")
+    typer.echo("  Hub (top):")
     for h in report.get("hubs", {}).get("broadcasters", [])[:3]:
         typer.echo(f"    > {h['node']}: out={h['score']:.3f}")
 

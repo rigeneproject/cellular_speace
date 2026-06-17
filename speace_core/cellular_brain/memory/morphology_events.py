@@ -495,6 +495,48 @@ class MorphologyEventType(str, Enum):
     # Embodied Action Actuator
     ACTION_EXECUTED = "action_executed"
     ACTION_BLOCKED = "action_blocked"
+    # T152 — Passive Multisensory Observation
+    SENSOR_SNAPSHOT = "sensor_snapshot"
+    # Dopaminergic drive circuit events
+    DOPAMINE_BURST = "dopamine_burst"
+    DOPAMINE_DIP = "dopamine_dip"
+    # T-Phase 8C — MM-APR (Multi-Modal Adversarial Peer Review) veto router
+    MMAPR_VETO_GATE_TRIGGERED = "mmapr_veto_gate_triggered"
+    MMAPR_VETO_HARD_BLOCKED = "mmapr_veto_hard_blocked"
+    MMAPR_VETO_SOFT_FLAGGED = "mmapr_veto_soft_flagged"
+    MMAPR_VETO_REVERSED_BY_HUMAN = "mmapr_veto_reversed_by_human"
+    MMAPR_CLASS_A_PROPOSAL_ADMITTED = "mmapr_class_a_proposal_admitted"
+    MMAPR_CLASS_B_STRUCTURAL_VETO = "mmapr_class_b_structural_veto"
+    MMAPR_CLASS_C_ADVERSARIAL_VETO = "mmapr_class_c_adversarial_veto"
+    MMAPR_CLASS_D_META_VETO = "mmapr_class_d_meta_veto"
+
+    # Neuromodulatory system events
+    SEROTONIN_BURST = "serotonin_burst"
+    SEROTONIN_DIP = "serotonin_dip"
+    ACETYLCHOLINE_RELEASED = "acetylcholine_released"
+    ACETYLCHOLINE_DIP = "acetylcholine_dip"
+    NORADRENALINE_BURST = "noradrenaline_burst"
+    NORADRENALINE_DIP = "noradrenaline_dip"
+    GABA_RELEASED = "gaba_released"
+    GABA_SUPPRESSED = "gaba_suppressed"
+    THALAMIC_RELAY = "thalamic_relay"
+    THALAMIC_GATE = "thalamic_gate"
+    THALAMO_CORTICAL_LOOP = "thalamo_cortical_loop"
+    DMN_ACTIVATED = "dmn_activated"
+    DMN_DEACTIVATED = "dmn_deactivated"
+    TASK_POSITIVE_NETWORK_ACTIVATED = "task_positive_network_activated"
+    RECEPTOR_BINDING = "receptor_binding"
+    RECEPTOR_UNBINDING = "receptor_unbinding"
+
+    # Functional Resonance Layer events
+    FUNCTIONAL_ASSEMBLY_FORMED = "functional_assembly_formed"
+    FUNCTIONAL_ASSEMBLY_DISSOLVED = "functional_assembly_dissolved"
+    FUNCTIONAL_RESONANCE_UPDATED = "functional_resonance_updated"
+
+    # Salience Network Layer events
+    SALIENCE_BURST = "salience_burst"
+    SALIENCE_DIP = "salience_dip"
+    SALIENCE_NETWORK_UPDATED = "salience_network_updated"
 
 
 class MorphologyEvent(BaseModel):

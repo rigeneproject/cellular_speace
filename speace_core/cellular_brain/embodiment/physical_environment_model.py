@@ -80,9 +80,15 @@ class PhysicalEnvironmentModel:
         return np.clip(vec, 0.0, None)
 
     def _persist_state(self) -> None:
+        state_dict = self._vector_to_dict(self.state)
+        sensors = [
+            {"name": k, "value": v}
+            for k, v in state_dict.items()
+        ]
         record = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
-            "state": self._vector_to_dict(self.state),
+            "state": state_dict,
+            "sensors": sensors,
         }
         with open(self.state_path, "a", encoding="utf-8") as f:
             f.write(json.dumps(record, ensure_ascii=False) + "\n")

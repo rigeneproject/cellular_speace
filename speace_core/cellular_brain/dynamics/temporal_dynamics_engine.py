@@ -128,6 +128,33 @@ class TemporalDynamicsEngine:
         self.num_synapses = len(self.synapse_keys)
 
     # ------------------------------------------------------------------ #
+    # Dynamic registration (T156-fix)
+    # ------------------------------------------------------------------ #
+
+    def _register_neuron(self, neuron_id: str) -> int:
+        """Auto-register a neuron that was not present at construction time.
+
+        Used by ``get_neuron_state`` and ``inject_input`` to gracefully handle
+        neurons added to the circuit after this engine was built (e.g. via
+        neurogenesis). The neuron is appended with default state (a=0,
+        threshold=0.5, energy=1.0) and the input buffer is extended to match.
+        """
+        if neuron_id in self.neuron_id_to_idx:
+            return self.neuron_id_to_idx[neuron_id]
+        idx = len(self.neuron_ids)
+        self.neuron_ids.append(neuron_id)
+        self.neuron_id_to_idx[neuron_id] = idx
+
+        # Extend state arrays (only those initialized in __init__)
+        self.a = np.append(self.a, 0.0)
+        self.e = np.append(self.e, 0.5)  # match __init__ default energy
+        self.input_buffer = np.append(self.input_buffer, 0.0)
+        self.oscillator_forcing = np.append(self.oscillator_forcing, 0.0)
+
+        self.num_neurons = len(self.neuron_ids)
+        return idx
+
+    # ------------------------------------------------------------------ #
     # Simulation step
     # ------------------------------------------------------------------ #
 
@@ -173,7 +200,9 @@ class TemporalDynamicsEngine:
         """Return the current continuous activation *a(t)* for a neuron."""
         idx = self.neuron_id_to_idx.get(neuron_id)
         if idx is None:
-            raise KeyError(f"Neuron '{neuron_id}' not found")
+            # T156-fix: auto-register late-added neurons (e.g. after
+            # neurogenesis) so downstream benchmark lookups do not crash.
+            idx = self._register_neuron(neuron_id)
         return float(self.a[idx])
 
     def get_synapse_weight(self, source: str, target: str) -> float:
@@ -194,7 +223,8 @@ class TemporalDynamicsEngine:
         """
         idx = self.neuron_id_to_idx.get(neuron_id)
         if idx is None:
-            raise KeyError(f"Neuron '{neuron_id}' not found")
+            # T156-fix: auto-register late-added neurons (conservative).
+            idx = self._register_neuron(neuron_id)
         self.input_buffer[idx] += stimulus
 
     def couple_oscillations(self, oscillator_values: Dict[str, float]) -> None:

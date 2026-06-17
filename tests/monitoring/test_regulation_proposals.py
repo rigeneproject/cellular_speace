@@ -1,5 +1,7 @@
 """Tests for T104 — Safe Regulation Layer."""
 
+from __future__ import annotations
+
 import json
 import time
 

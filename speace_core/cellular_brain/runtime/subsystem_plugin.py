@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Any
 
+from speace_core.cellular_brain.runtime.subsystem_context import SubsystemContext
+
 
 class SubsystemPlugin(ABC):
     """Base class for SPEACE subsystem plugins (coordinators)."""

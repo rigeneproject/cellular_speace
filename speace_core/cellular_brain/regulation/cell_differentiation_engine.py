@@ -55,12 +55,36 @@ class CellDifferentiationEngine:
         )
 
     def select_cell_fate(self, context: DifferentiationContext) -> str:
-        """Select cell type based on context and genome rules."""
+        """Select cell type based on context, genome rules, and periodic table."""
         region = (context.region or "").lower()
         role = context.role.lower()
         energy = context.energy
         connectivity = context.connectivity
         fires = context.consecutive_fires
+
+        # --- Periodic table guided differentiation (T184) ---
+        try:
+            from speace_core.cellular_brain.neuroperiodic.neuroperiodic_integrator import (
+                NeuroPeriodicIntegrator,
+            )
+            integrator = NeuroPeriodicIntegrator()
+            suggestion = integrator.suggest_differentiation({
+                "region": region,
+                "energy": energy,
+                "activation": context.activation,
+                "consecutive_fires": fires,
+                "role": role,
+                "connectivity": connectivity,
+            })
+            if suggestion.get("classified") and suggestion.get("suggested_elements"):
+                primary = suggestion["suggested_elements"][0]
+                if primary.get("cell_types"):
+                    suggested_ct = primary["cell_types"][0]
+                    # Use periodic suggestion if it maps to a valid type
+                    if suggested_ct != "generic_neuron":
+                        return suggested_ct
+        except ImportError:
+            pass  # Fall through to rule-based if module not available
 
         # Input / sensory
         if role == "input" or region in {"sensory", "input"}:
@@ -141,28 +165,16 @@ class CellDifferentiationEngine:
         # Language-specialized phenotypes
         if new_type == "auditory_neuron":
             neuron.neuron_role = "auditory"
-            if not hasattr(neuron, "phoneme_sensitivity"):
+            if neuron.phoneme_sensitivity == 0.0:
                 neuron.phoneme_sensitivity = 0.7
         if new_type == "broca_neuron":
             neuron.neuron_role = "production"
-            if not hasattr(neuron, "grammatical_role"):
-                neuron.grammatical_role = ""
-            if not hasattr(neuron, "sequence_buffer"):
-                neuron.sequence_buffer = []
         if new_type == "wernicke_neuron":
             neuron.neuron_role = "comprehension"
-            if not hasattr(neuron, "comprehension_strength"):
+            if neuron.comprehension_strength == 0.0:
                 neuron.comprehension_strength = 0.6
-            if not hasattr(neuron, "context_window"):
-                neuron.context_window = []
         if new_type == "semantic_pointer_neuron":
             neuron.neuron_role = "semantic_pointer"
-            if not hasattr(neuron, "symbol"):
-                neuron.symbol = None
-            if not hasattr(neuron, "assembly_id"):
-                neuron.assembly_id = None
-            if not hasattr(neuron, "binding_strength"):
-                neuron.binding_strength = 0.0
 
         # Record epigenetic mark
         neuron.epigenetic_marks[new_type] = {

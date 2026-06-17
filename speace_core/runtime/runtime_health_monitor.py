@@ -49,17 +49,27 @@ class RuntimeHealthMonitor:
         self._peak_memory_rss_mb = max(self._peak_memory_rss_mb, rss_mb)
 
     def health_score(self) -> float:
-        """Return a [0,1] score. 1.0 = perfect health."""
+        """Return a [0,1] score. 1.0 = perfect health.
+
+        Uses graduated penalties with a recovery floor of 0.15 to prevent
+        rapid collapse into emergency halt from transient simultaneous
+        conditions.  Before v0.9.0 the penalties summed to 0.95 which
+        could drop health to 0.05, immediately triggering halt at ≤0.1.
+        """
         score = 1.0
         if self._tick_jitter_ms > self.max_tick_jitter_ms:
-            score -= 0.25
+            # Graduated: penalty increases with how far over the threshold
+            overshoot = min(self._tick_jitter_ms / self.max_tick_jitter_ms - 1.0, 2.0)
+            score -= 0.10 + 0.10 * overshoot  # 0.10–0.30
         if self._tick_latency_ms > self.max_tick_latency_ms:
-            score -= 0.30
+            overshoot = min(self._tick_latency_ms / self.max_tick_latency_ms - 1.0, 2.0)
+            score -= 0.10 + 0.10 * overshoot  # 0.10–0.30
         if self._peak_memory_rss_mb > self.max_memory_rss_mb:
-            score -= 0.25
+            overshoot = min(self._peak_memory_rss_mb / self.max_memory_rss_mb - 1.0, 2.0)
+            score -= 0.10 + 0.05 * overshoot  # 0.10–0.20
         if self._consecutive_exceptions >= self.max_consecutive_exceptions:
-            score -= 0.40
-        return max(0.0, score)
+            score -= 0.20
+        return max(0.15, score)  # Floor at 0.15 to avoid emergency halt from transient spikes
 
     def is_degraded(self) -> bool:
         return self.health_score() < 0.7

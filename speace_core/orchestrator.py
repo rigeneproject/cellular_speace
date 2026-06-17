@@ -1,7 +1,8 @@
 import asyncio
 import random
 import time
-from typing import Any, List, Optional
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -33,7 +34,15 @@ from speace_core.cellular_brain.regulation.homeostasis_engine import (
     SystemMetrics,
 )
 from speace_core.cellular_brain.memory.morphological_memory import MorphologicalMemory
+from speace_core.cellular_brain.memory.morphology_events import MorphologyEventType
 from speace_core.cellular_brain.memory.morphology_snapshot import MorphologySnapshot
+from speace_core.cellular_brain.memory.semantic.cell_assembly import (
+    SemanticMemoryMetrics,
+    SemanticRecallResult,
+)
+from speace_core.cellular_brain.memory.semantic.cell_assembly_engine import CellAssemblyEngine
+from speace_core.cellular_brain.memory.semantic.semantic_memory_store import SemanticMemoryStore
+from speace_core.cellular_brain.memory.semantic.semantic_recall_engine import SemanticRecallEngine
 from speace_core.cellular_brain.execution.burst_engine import EventDrivenBurstEngine
 from speace_core.cellular_brain.regulation.neurogenesis_engine import NeurogenesisEngine
 from speace_core.cellular_brain.regulation.plasticity_engine import PlasticityEngine
@@ -76,13 +85,37 @@ from speace_core.dna.models import SharedGenome
 from speace_core.cellular_brain.runtime.coordinators.memory_coordinator import MemoryCoordinator
 from speace_core.cellular_brain.runtime.coordinators.evolution_coordinator import EvolutionCoordinator
 from speace_core.cellular_brain.runtime.coordinators.metabolism_coordinator import MetabolismCoordinator
+from speace_core.cellular_brain.runtime.coordinators.persistence_coordinator import PersistenceCoordinator
+from speace_core.cellular_brain.runtime.coordinators.self_improvement_coordinator import SelfImprovementCoordinator
+from speace_core.cellular_brain.runtime.coordinators.action_governance_coordinator import ActionGovernanceCoordinator
+from speace_core.cellular_brain.runtime.coordinators.world_model_coordinator import WorldModelCoordinator
 from speace_core.cellular_brain.runtime.subsystem_scheduler import SubsystemScheduler
 from speace_core.cellular_brain.runtime.subsystem_context import SubsystemContext, TickState
+from speace_core.cellular_brain.neuro_os import (
+    CognitiveScheduler,
+    ProcessTable,
+    MemoryPressureManager,
+)
+from speace_core.cellular_brain.system_assimilation.cognitive_hypervisor import (
+    CognitiveHypervisor,
+    SystemEvent,
+)
+from speace_core.cellular_brain.system_assimilation.cognitive_namespace import (
+    UnifiedNamespace,
+)
+from speace_core.cellular_brain.embodiment.cognitive_actuator import (
+    CognitiveActuator,
+    ActionProposal,
+    ActionResult,
+)
 from speace_core.cellular_brain.sleep.digital_sleep_controller import DigitalSleepController
 from speace_core.cellular_brain.immune.digital_immune_controller import DigitalImmuneController
 from speace_core.cellular_brain.tool_registry.tool_registry_controller import ToolRegistryController
 from speace_core.cellular_brain.identity_kernel.identity_kernel import IdentityKernel
 from speace_core.cellular_brain.cognition.global_workspace import GlobalWorkspace
+from speace_core.cellular_brain.cognition.linguistic_cognitive_bridge import (
+    LinguisticCognitiveBridge,
+)
 from speace_core.cellular_brain.dynamics.temporal_dynamics_engine import TemporalDynamicsEngine
 from speace_core.cellular_brain.dynamics.neural_oscillator_bank import NeuralOscillatorBank
 from speace_core.cellular_brain.dynamics.phase_coupling_engine import PhaseCouplingEngine
@@ -91,13 +124,49 @@ from speace_core.cellular_brain.dynamics.predictive_coding_engine import Predict
 from speace_core.cellular_brain.dynamics.active_inference_engine import ActiveInferenceEngine
 from speace_core.cellular_brain.dynamics.global_homeostatic_drive import GlobalHomeostaticDrive
 from speace_core.cellular_brain.dynamics.criticality_monitor import CriticalityMonitor
+from speace_core.cellular_brain.dynamics.serotonergic_drive_circuit import SerotonergicModulator
+from speace_core.cellular_brain.dynamics.cholinergic_drive_circuit import CholinergicModulator
+from speace_core.cellular_brain.dynamics.noradrenergic_drive_circuit import NoradrenergicModulator
+from speace_core.cellular_brain.dynamics.dopaminergic_drive_circuit import DopaminergicModulator
+from speace_core.cellular_brain.dynamics.gabaergic_modulator import GABAergicModulator
+from speace_core.cellular_brain.dynamics.dmn_switching_engine import DMNSwitchingEngine
+from speace_core.cellular_brain.dynamics.functional_resonance_layer import FunctionalResonanceLayer, GlobalResonanceMetrics
+from speace_core.cellular_brain.dynamics.salience_network_layer import SalienceNetworkLayer
+from speace_core.cellular_brain.regions.thalamic_relay_engine import ThalamicRelayEngine
+from speace_core.cellular_brain.analysis.information_density_engine import InformationDensityEngine
+from speace_core.cellular_brain.analysis.progress_tracker import IncrementalProgressTracker
+from speace_core.cellular_brain.dynamics.thought_phase_transition_engine import (
+    ThoughtPhaseTransitionEngine,
+    ThoughtPhase,
+)
+from speace_core.cellular_brain.dynamics.cognitive_objective_reduction import (
+    CognitiveObjectiveReduction,
+    CORResult,
+)
+from speace_core.cellular_brain.dynamics.scale_coupling_engine import ScaleCouplingEngine
+from speace_core.cellular_brain.simulator_backends import (
+    BackendSelector,
+    BackendChoice,
+    NativeBackend,
+    Population,
+    Projection,
+    NeuronSpec,
+    ConnectionSpec,
+)
+# ReplicationDynamicsEngine imported lazily to avoid circular imports
+from speace_core.cellular_brain.base.receptor_profile import ReceptorType
 from speace_core.cellular_brain.regulation.emergent_dynamics_stabilizer import EmergentDynamicsStabilizer
 from speace_core.cellular_brain.regulation.cognitive_attractor_tracker import CognitiveAttractorTracker
+from speace_core.cellular_brain.harmony.systemic_harmony_layer import SystemicHarmonyLayer
+from speace_core.cellular_brain.cognition.capability_gap_analyzer import CapabilityGapAnalyzer
+from speace_core.monitoring.bottleneck_detector import BottleneckDetector
+from speace_core.ilf import GlobalFieldIntegrator, FieldState, ILFMetrics
+from speace_core.ilf.field_integrator import FieldAwareMixin
 
 import numpy as np
 
 
-class CellularBrainOrchestrator(BaseModel):
+class CellularBrainOrchestrator(FieldAwareMixin, BaseModel):
     genome: SharedGenome
     circuit: NeuralCircuit
     tick_interval: float = 0.0
@@ -180,7 +249,7 @@ class CellularBrainOrchestrator(BaseModel):
     _last_cellular_repair_result = None
     _last_cellular_defense_result = None
     _last_cellular_epigenetic_result = None
-    _previous_damage_state: dict = {}
+    _previous_damage_state: dict | None = None
     # T43 — Semantic Cell Assembly Memory
     semantic_memory_enabled: bool = False
     _semantic_memory_store: "SemanticMemoryStore | None" = None
@@ -208,10 +277,16 @@ class CellularBrainOrchestrator(BaseModel):
     associative_pattern_completion_enabled: bool = False
     _associative_pattern_completion = None
 
+    # Persistence Layer
+    persistence_enabled: bool = True
+    _persistence_layer: Any | None = None
+    _last_metrics: Any | None = None
+
     # T66 — Runtime coordinators (strangler fig decomposition)
     _memory_coordinator: MemoryCoordinator | None = None
     _evolution_coordinator: EvolutionCoordinator | None = None
     _metabolism_coordinator: MetabolismCoordinator | None = None
+    _persistence_coordinator: PersistenceCoordinator | None = None
     _subsystem_scheduler: SubsystemScheduler | None = None
 
     # T67 — Digital Sleep & Memory Consolidation
@@ -240,6 +315,10 @@ class CellularBrainOrchestrator(BaseModel):
     active_inference_enabled: bool = False
     homeostatic_drive_enabled: bool = False
     criticality_monitor_enabled: bool = False
+    # ARC-AGI benchmark
+    arc_agi_benchmark_enabled: bool = False
+    evaluation_mode: bool = False
+    _arc_agi_adapter: Any = None
     _temporal_dynamics: TemporalDynamicsEngine | None = None
     _oscillator_bank: NeuralOscillatorBank | None = None
     _phase_coupling: PhaseCouplingEngine | None = None
@@ -248,6 +327,29 @@ class CellularBrainOrchestrator(BaseModel):
     _active_inference: ActiveInferenceEngine | None = None
     _homeostatic_drive: GlobalHomeostaticDrive | None = None
     _criticality_monitor: CriticalityMonitor | None = None
+
+    # Neuromodulatory systems (disabled by default)
+    serotonergic_modulation_enabled: bool = False
+    cholinergic_modulation_enabled: bool = False
+    noradrenergic_modulation_enabled: bool = False
+    gabaergic_modulation_enabled: bool = False
+    dmn_switching_enabled: bool = False
+    thalamic_relay_enabled: bool = False
+    receptor_binding_enabled: bool = False
+    functional_resonance_enabled: bool = False
+    _serotonergic_modulator: "SerotonergicModulator | None" = None
+    _cholinergic_modulator: "CholinergicModulator | None" = None
+    _noradrenergic_modulator: "NoradrenergicModulator | None" = None
+    _gabaergic_modulator: "GABAergicModulator | None" = None
+    _dmn_switching: "DMNSwitchingEngine | None" = None
+    _thalamic_relay: "ThalamicRelayEngine | None" = None
+    _functional_resonance: "FunctionalResonanceLayer | None" = None
+    _salience_network: "SalienceNetworkLayer | None" = None
+    _frl_routing_multipliers: Optional[Dict[Tuple[str, str], float]] = None
+    _dmn_network_ratio: float = 1.0
+    _last_global_salience: float = 0.0
+    _last_coherence_phi: float = 0.0
+    salience_network_enabled: bool = False
 
     # Emergent Dynamics Stabilizer
     emergent_dynamics_stabilizer_enabled: bool = False
@@ -263,6 +365,77 @@ class CellularBrainOrchestrator(BaseModel):
     _last_sensor_snapshot: dict | None = None
     _last_predicted_state_dict: dict | None = None
     _last_action_proposed: dict | None = None
+
+    # T162 — Cognitive Integration & Systemic Harmony
+    systemic_harmony_enabled: bool = False
+    _systemic_harmony_layer: SystemicHarmonyLayer | None = None
+
+    # ILF — Informational Logical Field (causal field for brain orchestration)
+    ilf_enabled: bool = False
+    ilf_broadcast_interval: float = 0.0  # 0 = every cycle
+    _ilf_field_effects_enabled: bool = True
+
+    # Neuro-OS — organic operating system layer
+    neuro_os_enabled: bool = False
+    _cognitive_scheduler: CognitiveScheduler | None = None
+    _process_table: ProcessTable | None = None
+    _memory_pressure: MemoryPressureManager | None = None
+    _last_scheduling_decision: Any = None
+
+    # System Assimilation — VFS e Windows System Assimilation
+    system_assimilation_enabled: bool = False
+    vfs_enabled: bool = False
+    _vfs_engine: Any = None
+    _system_assimilator: Any = None
+    _last_assimilation_report: Any = None
+    _last_vfs_index: Any = None
+
+    # Cognitive Hypervisor — system event monitoring into neural space
+    hypervisor_enabled: bool = False
+    _cognitive_hypervisor: CognitiveHypervisor | None = None
+
+    # Cognitive Actuator — neural decisions into system actions
+    actuator_enabled: bool = False
+    _cognitive_actuator: CognitiveActuator | None = None
+
+    # Capability Gap Analyzer & Bottleneck Detector
+    _capability_gap_analyzer: CapabilityGapAnalyzer | None = None
+    _bottleneck_detector: BottleneckDetector | None = None
+    _last_capability_gap_report: dict | None = None
+    _last_bottleneck_report: dict | None = None
+
+    # T-New — Information Density & Phase Transition Engines
+    information_density_enabled: bool = False
+    thought_phase_transition_enabled: bool = False
+    scale_coupling_enabled: bool = False
+    progress_tracking_enabled: bool = False
+    replication_enabled: bool = False
+    _information_density_engine: InformationDensityEngine | None = None
+    _thought_phase_transition_engine: ThoughtPhaseTransitionEngine | None = None
+    _scale_coupling_engine: ScaleCouplingEngine | None = None
+    _progress_tracker: IncrementalProgressTracker | None = None
+    _replication_engine: ReplicationDynamicsEngine | None = None
+    _last_thought_phase: str = "default"
+    _last_progress_report: dict | None = None
+
+    # T-COR — Cognitive Objective Reduction
+    cor_enabled: bool = False
+    cor_phi_threshold_factor: float = 0.55
+    cor_min_latent_states: int = 2
+    cor_max_hypotheses: int = 8
+    cor_collapse_refractory_ticks: int = 10
+    _cor_engine: CognitiveObjectiveReduction | None = None
+    _last_cor_result: CORResult | None = None
+
+    # T-SIM — Pluggable simulator backend (Brian2 / NEST / NEURON / Native)
+    simulator_backend_enabled: bool = False
+    simulator_backend_name: str = "auto"  # auto, native, brian2, nest, neuron
+    simulator_backend_interval_ticks: int = 10
+    simulator_backend_duration_ms: float = 10.0
+    _simulator_backend_selector: BackendSelector | None = None
+    _simulator_backend: Any = None
+    _simulator_backend_last_tick: int = -1
+    _simulator_backend_log: List[Dict[str, Any]] = []
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -342,10 +515,23 @@ class CellularBrainOrchestrator(BaseModel):
         self._memory_coordinator = MemoryCoordinator()
         self._evolution_coordinator = EvolutionCoordinator()
         self._metabolism_coordinator = MetabolismCoordinator()
+        self._persistence_coordinator = PersistenceCoordinator(
+            snapshot_interval=50,
+            data_dir="data/persistence",
+            event_bus=None,
+        )
+        self._persistence_coordinator.initialize(self._build_subsystem_context())
+        self._self_improvement_coordinator = SelfImprovementCoordinator()
+        self._action_governance_coordinator = ActionGovernanceCoordinator()
+        self._world_model_coordinator = WorldModelCoordinator()
         self._subsystem_scheduler = SubsystemScheduler()
         self._subsystem_scheduler.assign("memory", self._memory_coordinator)
         self._subsystem_scheduler.assign("evolution", self._evolution_coordinator)
         self._subsystem_scheduler.assign("metabolism", self._metabolism_coordinator)
+        self._subsystem_scheduler.assign("persistence", self._persistence_coordinator)
+        self._subsystem_scheduler.assign("self_improvement", self._self_improvement_coordinator)
+        self._subsystem_scheduler.assign("action_governance", self._action_governance_coordinator)
+        self._subsystem_scheduler.assign("world_model", self._world_model_coordinator)
 
         # T67 — Digital Sleep
         if self.sleep_enabled:
@@ -370,7 +556,93 @@ class CellularBrainOrchestrator(BaseModel):
                 memory=self._memory,
             )
 
-        # Continuous dynamics modules initialization
+        # T132 — LinguisticCognitiveBridge: GlobalWorkspace ↔ language areas
+        if self.global_workspace_enabled and hasattr(self, "_global_workspace"):
+            from speace_core.cellular_brain.language.broca_area import DigitalBrocaArea
+            from speace_core.cellular_brain.language.wernicke_area import DigitalWernickeArea
+            self._linguistic_bridge = LinguisticCognitiveBridge(
+                workspace=self._global_workspace,
+                broca=DigitalBrocaArea(cpg_period=2),
+                wernicke=DigitalWernickeArea(
+                    vocab=_build_bridge_vocabulary(),
+                    coherence_threshold=0.2,
+                ),
+                verbalisation_threshold=0.3,
+            )
+        else:
+            self._linguistic_bridge = None
+
+        # ARC-AGI adapter (lazy init on first use to avoid circular imports)
+        if self.arc_agi_benchmark_enabled:
+            from speace_core.benchmark.arc_agi_adapter import ARCAGIAdapter
+            from speace_core.cellular_brain.cognition.few_shot_program_induction_engine import (
+                FewShotProgramInductionEngine,
+            )
+            from speace_core.cellular_brain.cognition.spatial_symbolic_reasoning_layer import (
+                SpatialSymbolicReasoningLayer,
+            )
+
+            self._arc_agi_adapter = ARCAGIAdapter(
+                engine=FewShotProgramInductionEngine(
+                    spatial_layer=SpatialSymbolicReasoningLayer()
+                ),
+                data_dir="data/arc_agi",
+                evaluation_mode=self.evaluation_mode,
+            )
+
+        # System Assimilation — VFS e Windows System Assimilation (dopo _initialize_dynamic_modules)
+        genome_sa = getattr(self.genome, "system_assimilation", None)
+        if genome_sa is not None:
+            self.vfs_enabled = getattr(genome_sa, "enable_vfs", False)
+            self.system_assimilation_enabled = getattr(genome_sa, "enable_assimilation", False)
+        if self.vfs_enabled:
+            from speace_core.cellular_brain.virtual_file_system import VirtualFileSystemEngine
+            from speace_core.cellular_brain.virtual_file_system.vfs_models import VFSConfig, AccessRule, VFSPermission
+            rules = []
+            for r in getattr(genome_sa, "access_rules", []):
+                perms = []
+                for p in r.allowed_permissions:
+                    try:
+                        perms.append(VFSPermission[p.upper()])
+                    except KeyError:
+                        pass
+                rules.append(AccessRule(
+                    rule_id=f"dna_{r.path_prefix}",
+                    path_prefix=r.path_prefix,
+                    allowed_permissions=perms,
+                    allowed=not r.requires_approval or r.approved,
+                    requires_approval=r.requires_approval,
+                    approved=r.approved,
+                ))
+            vfs_config = VFSConfig(
+                root_mount_point=getattr(genome_sa, "root_mount_point", "C:\\"),
+                speace_install_path="C:\\cellular_speace",
+                access_rules=rules,
+                enable_vfs=True,
+            )
+            self._vfs_engine = VirtualFileSystemEngine(config=vfs_config)
+            self._last_vfs_index = self._vfs_engine.index_root()
+        if self.system_assimilation_enabled:
+            from speace_core.cellular_brain.system_assimilation import WindowsSystemAssimilator
+            from speace_core.cellular_brain.system_assimilation.assimilation_models import SystemAssimilationConfig
+            self._system_assimilator = WindowsSystemAssimilator(config=SystemAssimilationConfig(
+                enable_assimilation=True,
+                allow_wmi_queries=True,
+            ))
+            self._last_assimilation_report = self._system_assimilator.assimilate()
+
+        self._capability_gap_analyzer = CapabilityGapAnalyzer(directory="data/capability_gaps")
+        self._bottleneck_detector = BottleneckDetector(directory="data/bottleneck_reports")
+
+        # Neuro-OS: read genome config and enable
+        self._neuro_os_cfg = getattr(self.genome, "neuro_os", {}) or {}
+        if self._neuro_os_cfg.get("enabled", False):
+            self.neuro_os_enabled = True
+
+        self._initialize_dynamic_modules()
+
+    def _initialize_dynamic_modules(self) -> None:
+        """Initialize dynamics and embodiment modules. Idempotent: safe to call again after flags change."""
         all_neurons = (
             self.circuit.input_neurons
             + self.circuit.hidden_neurons
@@ -378,7 +650,7 @@ class CellularBrainOrchestrator(BaseModel):
         )
         dynamics_cfg = self.genome.dynamics.model_dump() if self.genome.dynamics else {}
 
-        if self.temporal_dynamics_enabled:
+        if self.temporal_dynamics_enabled and self._temporal_dynamics is None:
             td_cfg = dynamics_cfg.get("temporal_dynamics", {})
             self._temporal_dynamics = TemporalDynamicsEngine(
                 neurons=all_neurons,
@@ -392,19 +664,18 @@ class CellularBrainOrchestrator(BaseModel):
                 plasticity_rate=td_cfg.get("plasticity_rate", 0.05),
             )
 
-        if self.neural_oscillator_enabled:
+        if self.neural_oscillator_enabled and self._oscillator_bank is None:
             self._oscillator_bank = NeuralOscillatorBank()
             for n in all_neurons:
                 self._oscillator_bank.register_neuron(n.cell_id, band="theta", coupling_strength=0.1)
 
-        if self.phase_coupling_enabled:
+        if self.phase_coupling_enabled and self._phase_coupling is None:
             self._phase_coupling = PhaseCouplingEngine()
-            # Register oscillator bank bands as oscillators if available
             if self._oscillator_bank is not None:
                 for band, params in self._oscillator_bank.bands.items():
                     self._phase_coupling.register_oscillator(band, freq=params["freq"])
 
-        if self.energy_field_enabled:
+        if self.energy_field_enabled and self._energy_field is None:
             ef_cfg = dynamics_cfg.get("energy_field", {})
             self._energy_field = EnergyFieldEngine(
                 global_supply_rate=ef_cfg.get("global_supply_rate", 0.02),
@@ -423,7 +694,7 @@ class CellularBrainOrchestrator(BaseModel):
                 if s.state != "pruned":
                     self._energy_field.register_synapse(s.source, s.target)
 
-        if self.predictive_coding_enabled:
+        if self.predictive_coding_enabled and self._predictive_coding is None:
             pc_cfg = dynamics_cfg.get("predictive_coding", {})
             self._predictive_coding = PredictiveCodingEngine(
                 learning_rate=pc_cfg.get("learning_rate", 0.1)
@@ -439,10 +710,10 @@ class CellularBrainOrchestrator(BaseModel):
             if hidden_dim and output_dim:
                 self._predictive_coding.set_connection("abstract", "association")
 
-        if self.active_inference_enabled:
+        if self.active_inference_enabled and self._active_inference is None:
             self._active_inference = ActiveInferenceEngine()
 
-        if self.homeostatic_drive_enabled:
+        if self.homeostatic_drive_enabled and self._homeostatic_drive is None:
             hd_cfg = dynamics_cfg.get("homeostatic_drive", {})
             self._homeostatic_drive = GlobalHomeostaticDrive(
                 plasticity_range=tuple(hd_cfg.get("plasticity_range", [0.0, 2.0])),
@@ -453,7 +724,43 @@ class CellularBrainOrchestrator(BaseModel):
                 efficiency_plasticity_threshold=hd_cfg.get("efficiency_plasticity_threshold", -0.2),
             )
 
-        if self.criticality_monitor_enabled:
+        # Neuromodulatory systems initialization
+        if self.serotonergic_modulation_enabled and self._serotonergic_modulator is None:
+            self._serotonergic_modulator = SerotonergicModulator()
+        if self.cholinergic_modulation_enabled and self._cholinergic_modulator is None:
+            self._cholinergic_modulator = CholinergicModulator()
+        if self.noradrenergic_modulation_enabled and self._noradrenergic_modulator is None:
+            self._noradrenergic_modulator = NoradrenergicModulator()
+        if self.gabaergic_modulation_enabled and self._gabaergic_modulator is None:
+            self._gabaergic_modulator = GABAergicModulator()
+        if self.dmn_switching_enabled and self._dmn_switching is None:
+            self._dmn_switching = DMNSwitchingEngine()
+        if self.thalamic_relay_enabled and self._thalamic_relay is None:
+            self._thalamic_relay = ThalamicRelayEngine()
+        if self.salience_network_enabled and self._salience_network is None:
+            self._salience_network = SalienceNetworkLayer()
+        if self.receptor_binding_enabled:
+            all_neurons = (
+                self.circuit.input_neurons
+                + self.circuit.hidden_neurons
+                + self.circuit.output_neurons
+            )
+            for n in all_neurons:
+                if n.receptor_profile is None:
+                    profile_type = "inhibitory" if n.inhibitory else "excitatory"
+                    n.init_receptor_profile(profile_type)
+
+        if self.functional_resonance_enabled and self._functional_resonance is None:
+            self._functional_resonance = FunctionalResonanceLayer()
+            if self._region_registry is not None:
+                for rid in self._region_registry.regions:
+                    self._functional_resonance.register_region(rid)
+            else:
+                for rid in ["sensory", "limbic", "hippocampus", "default_mode",
+                            "prefrontal", "cerebellar", "motor", "brainstem_homeostatic"]:
+                    self._functional_resonance.register_region(rid)
+
+        if self.criticality_monitor_enabled and self._criticality_monitor is None:
             cm_cfg = dynamics_cfg.get("criticality_monitor", {})
             self._criticality_monitor = CriticalityMonitor(
                 avalanche_window=cm_cfg.get("avalanche_window", 10.0),
@@ -461,17 +768,85 @@ class CellularBrainOrchestrator(BaseModel):
                 max_history=cm_cfg.get("max_history", 10000),
             )
 
+        # T-New — Information Density Engine
+        if self.information_density_enabled and self._information_density_engine is None:
+            self._information_density_engine = InformationDensityEngine(
+                circuit=self.circuit,
+                region_connectome=getattr(self, "_region_registry", None),
+            )
+
+        # T-New — Scale Coupling Engine
+        if self.scale_coupling_enabled and self._scale_coupling_engine is None:
+            self._scale_coupling_engine = ScaleCouplingEngine(
+                circuit=self.circuit,
+                region_connectome=getattr(self, "_region_registry", None),
+                orchestrator=self,
+            )
+            if self.phase_coupling_enabled and self._phase_coupling is not None:
+                self._scale_coupling_engine.set_phase_coupling_engine(self._phase_coupling)
+
+        # T-New — Thought Phase Transition Engine
+        if self.thought_phase_transition_enabled and self._thought_phase_transition_engine is None:
+            self._thought_phase_transition_engine = ThoughtPhaseTransitionEngine(
+                density_engine=self._information_density_engine,
+                topology_metrics=None,
+                coherence_provider=getattr(self, "_coherence_observer", None),
+                scale_coupling_engine=self._scale_coupling_engine,
+            )
+
+        # T-COR — Cognitive Objective Reduction Engine
+        if self.cor_enabled and self._cor_engine is None:
+            self._cor_engine = CognitiveObjectiveReduction(
+                circuit=self.circuit,
+                coherence_source=getattr(self, "_coherence_observer", None),
+                metacognitive_source=getattr(self, "_metacognitive_monitor", None),
+                ilf_source=getattr(self, "_field_integrator", None),
+                phi_threshold_factor=self.cor_phi_threshold_factor,
+                min_latent_states=self.cor_min_latent_states,
+                max_hypotheses=self.cor_max_hypotheses,
+                collapse_refractory_ticks=self.cor_collapse_refractory_ticks,
+                reconfigure_on_collapse=True,
+                report_dir="data/dynamics/cor",
+            )
+
+        # T-SIM — Simulator backend initialization
+        if self.simulator_backend_enabled and self._simulator_backend is None:
+            self._simulator_backend_selector = BackendSelector()
+            choice = self._resolve_simulator_backend_choice()
+            if choice == BackendChoice.NATIVE:
+                self._simulator_backend = NativeBackend()
+            else:
+                try:
+                    self._simulator_backend = self._simulator_backend_selector.build(choice)
+                except Exception:
+                    self._simulator_backend = NativeBackend()
+
+        # T-New — Incremental Progress Tracker
+        if self.progress_tracking_enabled and self._progress_tracker is None:
+            self._progress_tracker = IncrementalProgressTracker()
+
+        # T-New — Replication Dynamics Engine
+        if self.replication_enabled and self._replication_engine is None:
+            from speace_core.cellular_brain.evolution.replication_dynamics_engine import (
+                ReplicationDynamicsEngine,
+            )
+            self._replication_engine = ReplicationDynamicsEngine(
+                replica_dir="data/replication",
+                orchestrator=self,
+                mutation_rate=0.05,
+                min_fitness_for_replication=0.3,
+            )
+
         # Emergent Dynamics Stabilizer
-        if self.emergent_dynamics_stabilizer_enabled:
+        if self.emergent_dynamics_stabilizer_enabled and self._emergent_dynamics_stabilizer is None:
             self._emergent_dynamics_stabilizer = EmergentDynamicsStabilizer()
             self._cognitive_attractor_tracker = CognitiveAttractorTracker()
 
         # T72 — Sensorimotor Embodiment initialization
-        if self.embodiment_enabled:
+        if self.embodiment_enabled and self._sensor_array is None:
             self._sensor_array = CyberPhysicalSensorArray()
             self._sensor_array.start_continuous_sampling(interval_ms=1000)
             self._physical_environment = PhysicalEnvironmentModel()
-            # Seed baseline from first reading
             first_reading = self._sensor_array.read_all()
             flat_first = self._flatten_sensor_snapshot(first_reading)
             self._physical_environment.update(flat_first)
@@ -481,7 +856,6 @@ class CellularBrainOrchestrator(BaseModel):
             self._last_predicted_state_dict = None
             self._last_action_proposed = None
 
-            # Register embodiment states and actions for active inference
             if self.active_inference_enabled and self._active_inference is not None:
                 self._active_inference.register_state("stable", 0.5)
                 self._active_inference.register_state("unstable", 0.5)
@@ -490,6 +864,63 @@ class CellularBrainOrchestrator(BaseModel):
                 )
                 self._active_inference.register_action(
                     "actuate", {"stable": 0.3, "unstable": 0.7}
+                )
+
+        # ILF — Informational Logical Field initialization
+        if self.ilf_enabled:
+            self.init_field_integrator(
+                ilf_config=None,
+                broadcast_interval=self.ilf_broadcast_interval,
+            )
+            # Register neural circuit as a field-aware subsystem
+            self.register_subsystem_to_field(
+                name="neural_circuit",
+                get_metrics_fn=self._get_circuit_ilf_metrics,
+                on_field_update_fn=self._on_ilf_update,
+                reconfigure_fn=self._on_ilf_update,
+                weight=1.0,
+            )
+
+        # Neuro-OS initialization
+        if self.neuro_os_enabled:
+            self._cognitive_scheduler = CognitiveScheduler(
+                tick_interval=self.tick_interval,
+            )
+            self._process_table = ProcessTable()
+            self._memory_pressure = MemoryPressureManager()
+
+            # Register known modules from the existing tick loop
+            for phase in SubsystemScheduler.PHASE_ORDER:
+                cat = CognitiveScheduler.MODULE_CATEGORIES.get(phase, "cognition")
+                def _make_run_phase(p: str) -> Any:
+                    return lambda ctx: self._subsystem_scheduler.run_phase(p, ctx) if self._subsystem_scheduler else None
+                self._cognitive_scheduler.register_module(
+                    phase, _make_run_phase(phase), category=cat,
+                )
+
+            # Cognitive Hypervisor — system event monitoring
+            hv_cfg = self._neuro_os_cfg.get("cognitive_hypervisor", {})
+            if hv_cfg.get("enabled", False):
+                self.hypervisor_enabled = True
+                self._cognitive_hypervisor = CognitiveHypervisor(
+                    namespace=UnifiedNamespace(),
+                    poll_interval=hv_cfg.get("poll_interval", 2.0),
+                    event_capacity=hv_cfg.get("event_capacity", 1000),
+                    enable_process_monitor=hv_cfg.get("enable_process_monitor", True),
+                    enable_file_monitor=hv_cfg.get("enable_file_monitor", True),
+                    enable_socket_monitor=hv_cfg.get("enable_socket_monitor", True),
+                    enable_service_monitor=hv_cfg.get("enable_service_monitor", True),
+                    enable_system_metrics=hv_cfg.get("enable_system_metrics", True),
+                )
+                self._cognitive_hypervisor.start()
+
+            # Cognitive Actuator — system action execution
+            act_cfg = self._neuro_os_cfg.get("cognitive_actuator", {})
+            if act_cfg.get("enabled", False):
+                self.actuator_enabled = True
+                self._cognitive_actuator = CognitiveActuator(
+                    emergency_halt=None,
+                    approval_callback=self._actuator_approval_callback,
                 )
 
     def _build_subsystem_context(self) -> SubsystemContext:
@@ -503,6 +934,7 @@ class CellularBrainOrchestrator(BaseModel):
                 last_confidence_state=self.last_confidence_state,
                 last_routing_result=self.last_routing_result,
                 negative_feedback_count=self.negative_feedback_count,
+                last_global_salience=self._last_global_salience,
             ),
         )
 
@@ -514,6 +946,51 @@ class CellularBrainOrchestrator(BaseModel):
 
     async def _tick(self) -> None:
         self.current_tick += 1
+
+        # Neuro-OS scheduling decision (beginning of cycle)
+        neuro_os_decision: Any = None
+        if self.neuro_os_enabled and self._cognitive_scheduler is not None:
+            metrics = self.latest_metrics
+            decision = self._cognitive_scheduler.tick(
+                prediction_error=getattr(metrics, "noise_level", 0.0),
+                coherence=getattr(metrics, "coherence_phi", 0.5) if metrics else 0.5,
+                energy=getattr(metrics, "mean_energy", 1.0) if metrics else 1.0,
+                noise_level=getattr(metrics, "noise_level", 0.0) if metrics else 0.0,
+                novelty_score=0.0,
+                curiosity_score=0.0,
+                metabolism_cost=0.0,
+                causal_model_uncertainty=0.0,
+                ilf_coherence=self.ilf_systemic_coherence_index if self.ilf_enabled else None,
+                context=None,
+            )
+            self._last_scheduling_decision = decision
+            neuro_os_decision = decision
+
+            # Process table tick (watchdog/cleanup)
+            if self._process_table is not None:
+                self._process_table.tick(self.current_tick)
+
+            # Memory pressure consolidation (every 10 ticks)
+            if self._memory_pressure is not None and self.current_tick % 10 == 0:
+                self._memory_pressure.consolidate(self.current_tick)
+
+            # Cognitive Hypervisor: drain events and inject into circuit
+            if self.hypervisor_enabled and self._cognitive_hypervisor is not None:
+                events = self._cognitive_hypervisor.drain_events(max_events=20)
+                for event in events:
+                    pattern = event.to_neural_pattern(vector_size=10)
+                    if self.circuit.input_neurons:
+                        target = self.circuit.input_neurons[
+                            hash(event.cell_id) % len(self.circuit.input_neurons)
+                        ]
+                        target.activation = max(0.0, min(1.0, target.activation + pattern[0] * 0.3))
+                        # Spread to connected neurons via astrocytes for broader integration
+                        for astro in self.circuit.astrocytes:
+                            astro.signal_strength = max(
+                                astro.signal_strength,
+                                pattern[9] * 0.1,
+                            )
+
         if self.execution_mode == "event_driven_burst":
             burst_results = self._burst_engine.run_event_cycle(self.circuit)
             if self.stdp_enabled:
@@ -547,6 +1024,7 @@ class CellularBrainOrchestrator(BaseModel):
             pruned_count=sum(1 for s in self.circuit.synapses if s.state == "pruned"),
         )
         self.metrics_log.append(metrics)
+        self._last_metrics = metrics
 
         # ------------------------------------------------------------------ #
         # Continuous dynamics integration (additive, disabled by default)
@@ -619,6 +1097,212 @@ class CellularBrainOrchestrator(BaseModel):
             for n in all_neurons:
                 self._criticality_monitor.record_activation(n.cell_id, float(self.current_tick))
             _ = self._criticality_monitor.recommend_modulation()
+
+        # ------------------------------------------------------------------ #
+        # Neuromodulatory systems tick (disabled by default)
+        # ------------------------------------------------------------------ #
+
+        # Compute average excitation for GABAergic and other modulators
+        mean_excitation = (
+            sum(abs(getattr(n, "activation", 0.0)) for n in all_neurons) / len(all_neurons)
+            if all_neurons
+            else 0.0
+        )
+        novelty = getattr(metrics, "noise_level", 0.0) if metrics else 0.0
+        coherence = getattr(metrics, "coherence_phi", 0.5) if metrics else 0.5
+
+        if self.serotonergic_modulation_enabled and self._serotonergic_modulator is not None:
+            self._serotonergic_modulator.tick(
+                reward_signal=max(0.0, coherence - 0.5),
+                punishment_signal=max(0.0, 0.5 - coherence),
+                memory=self._memory,
+            )
+            # Apply serotonin effects to circuit
+            inh_mod = self._serotonergic_modulator.get_inhibition_modulation()
+            flex_mod = self._serotonergic_modulator.get_flexibility_modulation()
+            persist_mod = self._serotonergic_modulator.get_persistence_modulation()
+            for n in all_neurons:
+                if n.inhibitory:
+                    n.inhibition_strength *= inh_mod
+                n.plasticity_rate = max(0.001, min(1.0, n.plasticity_rate * flex_mod * 0.5 + 0.5))
+
+        if self.cholinergic_modulation_enabled and self._cholinergic_modulator is not None:
+            self._cholinergic_modulator.tick(
+                novelty_signal=novelty,
+                attention_demand=mean_excitation,
+                memory=self._memory,
+            )
+            # Apply ACh effects to circuit
+            attn_mod = self._cholinergic_modulator.get_attention_modulation()
+            ach_learn, ach_reason = self._cholinergic_modulator.get_plasticity_gate()
+            if not ach_learn:
+                for n in all_neurons:
+                    n.plasticity_rate *= 0.5
+
+        if self.noradrenergic_modulation_enabled and self._noradrenergic_modulator is not None:
+            self._noradrenergic_modulator.tick(
+                salient_stimulus=mean_excitation * novelty,
+                unexpected_event=novelty,
+                cognitive_load=mean_excitation,
+                memory=self._memory,
+            )
+
+        if self.gabaergic_modulation_enabled and self._gabaergic_modulator is not None:
+            oscillation_energy = 0.0
+            if self.neural_oscillator_enabled and self._oscillator_bank is not None:
+                for band in self._oscillator_bank.bands:
+                    oscillation_energy += self._oscillator_bank.get_envelope(band)
+                oscillation_energy /= max(1, len(self._oscillator_bank.bands))
+            seizure_risk = max(0.0, mean_excitation - 2.0) * 0.5
+            self._gabaergic_modulator.tick(
+                mean_excitation=mean_excitation,
+                oscillation_energy=oscillation_energy,
+                seizure_risk=seizure_risk,
+                memory=self._memory,
+            )
+            # Apply GABA effects to circuit
+            gaba_inh = self._gabaergic_modulator.get_inhibition_multiplier()
+            noise_supp = self._gabaergic_modulator.get_noise_suppression()
+            for n in all_neurons:
+                if n.inhibitory:
+                    n.inhibition_strength = max(0.0, min(2.0, n.inhibition_strength * gaba_inh))
+                if hasattr(n, "activation") and n.activation > 0:
+                    n.activation *= noise_supp
+
+        # ------------------------------------------------------------------ #
+        # Salience Network Layer — integrate interoception, prediction error,
+        # novelty and neuromodulatory arousal into a global salience signal
+        # ------------------------------------------------------------------ #
+        if self.salience_network_enabled and self._salience_network is not None:
+            prediction_error = 0.0
+            if self.predictive_coding_enabled and self._predictive_coding is not None:
+                prediction_error = min(1.0, self._predictive_coding.get_free_energy())
+
+            interoceptive_salience = max(
+                0.0, min(1.0, mean_excitation + novelty)
+            )
+            ne_arousal = 0.3
+            if self.noradrenergic_modulation_enabled and self._noradrenergic_modulator is not None:
+                ne_arousal = self._noradrenergic_modulator.state.noradrenaline_level
+
+            current_phi = getattr(metrics, "coherence_phi", 0.5) if metrics else 0.5
+            novelty_signal = 0.0
+            if self._last_coherence_phi > 0.0:
+                novelty_signal = min(
+                    1.0, abs(current_phi - self._last_coherence_phi) * 3.0
+                )
+            self._last_coherence_phi = current_phi
+
+            salience_state = self._salience_network.tick(
+                interoceptive_salience=interoceptive_salience,
+                prediction_error=prediction_error,
+                novelty_signal=novelty_signal,
+                neuromodulator_arousal=ne_arousal,
+                unexpected_event=novelty,
+                memory=self._memory,
+            )
+            self._last_global_salience = salience_state.smoothed_salience
+
+            # Broadcast salience to global workspace if available
+            if self.global_workspace_enabled and self._global_workspace is not None:
+                salience_dim = self._global_workspace._broadcast_dim
+                salience_broadcast = [self._last_global_salience] * salience_dim
+                self._global_workspace.broadcast("salience_network", salience_broadcast)
+
+        if self.dmn_switching_enabled and self._dmn_switching is not None:
+            ne_level = 0.3
+            ach_level = 0.5
+            if self._noradrenergic_modulator is not None:
+                ne_level = self._noradrenergic_modulator.state.noradrenaline_level
+            if self._cholinergic_modulator is not None:
+                ach_level = self._cholinergic_modulator.state.acetylcholine_level
+            # Use global salience when SalienceNetworkLayer is enabled,
+            # otherwise fall back to local novelty estimate.
+            dmn_salience_signal = (
+                self._last_global_salience
+                if self.salience_network_enabled and self._salience_network is not None
+                else novelty
+            )
+            self._dmn_switching.tick(
+                cognitive_demand=mean_excitation,
+                salience_signal=dmn_salience_signal,
+                noradrenaline_level=ne_level,
+                acetylcholine_level=ach_level,
+                memory=self._memory,
+            )
+            self._dmn_network_ratio = self._dmn_switching.get_network_ratio()
+        else:
+            self._dmn_network_ratio = 1.0
+
+        if self.thalamic_relay_enabled and self._thalamic_relay is not None:
+            global_arousal = 1.0
+            attention_focus = 0.5
+            ach_level = 0.5
+            ne_level = 0.3
+            if self._noradrenergic_modulator is not None:
+                ne_level = self._noradrenergic_modulator.state.noradrenaline_level
+                global_arousal = self._noradrenergic_modulator.get_arousal_modulation()
+                attention_focus = self._noradrenergic_modulator.get_focus_modulation()
+            # Modulate thalamic attention focus with global salience
+            if self.salience_network_enabled and self._salience_network is not None:
+                attention_focus = max(
+                    0.0,
+                    min(
+                        1.0,
+                        attention_focus * (0.5 + 0.5 * self._last_global_salience),
+                    ),
+                )
+            if self._cholinergic_modulator is not None:
+                ach_level = self._cholinergic_modulator.state.acetylcholine_level
+            self._thalamic_relay.tick(
+                global_arousal=global_arousal,
+                attention_focus=attention_focus,
+                cholinergic_level=ach_level,
+                noradrenergic_level=ne_level,
+                memory=self._memory,
+            )
+
+        # ------------------------------------------------------------------ #
+        # Functional Resonance Layer (Communication Through Coherence)
+        # ------------------------------------------------------------------ #
+        if self.functional_resonance_enabled and self._functional_resonance is not None:
+            # Record region-level activations for phase extraction
+            if self._region_registry is not None:
+                all_neurons_frl = (
+                    self.circuit.input_neurons
+                    + self.circuit.hidden_neurons
+                    + self.circuit.output_neurons
+                )
+                for rid in self._region_registry.regions:
+                    region_n = [
+                        n for n in all_neurons_frl
+                        if getattr(n, "region", None) == rid
+                    ]
+                    if region_n:
+                        mean_act = sum(
+                            abs(getattr(n, "activation", 0.0)) for n in region_n
+                        ) / len(region_n)
+                        self._functional_resonance.record_activation(rid, mean_act)
+
+            # Tick FRL to compute coherence, assemblies, metrics
+            frl_metrics = self._functional_resonance.tick(memory=self._memory)
+            # Store FRL per-pair routing multipliers for injection into routing pipeline
+            self._frl_routing_multipliers = self._functional_resonance.get_routing_multipliers_map() or {}
+
+            # Log resonance event periodically
+            if self.current_tick % 20 == 0 and frl_metrics is not None:
+                self._memory.create_event(
+                    event_type=MorphologyEventType.FUNCTIONAL_RESONANCE_UPDATED,
+                    source_id="functional_resonance_layer",
+                    metadata={
+                        "global_coherence": frl_metrics.global_coherence,
+                        "mean_pairwise_coherence": frl_metrics.mean_pairwise_coherence,
+                        "assembly_count": frl_metrics.assembly_count,
+                        "largest_assembly_size": frl_metrics.largest_assembly_size,
+                        "temporal_binding_index": frl_metrics.temporal_binding_index,
+                        "metastability": frl_metrics.metastability,
+                    },
+                )
 
         # ------------------------------------------------------------------ #
         # T72 — Sensorimotor Embodiment Loop
@@ -832,6 +1516,73 @@ class CellularBrainOrchestrator(BaseModel):
                     for n in all_neurons:
                         n.activation = getattr(n, "activation", 0.0) * decay_factor
 
+        # ------------------------------------------------------------------ #
+        # FRL — Communication Through Coherence: inject phase-aware per-pair
+        #       routing multipliers into the routing pipeline
+        # ------------------------------------------------------------------ #
+        per_pair_multipliers: Dict[Tuple[str, str], float] | None = None
+        if self.functional_resonance_enabled and self._functional_resonance is not None and self._region_registry is not None and self._frl_routing_multipliers is not None:
+            per_pair_multipliers = dict(self._frl_routing_multipliers)
+
+        # ------------------------------------------------------------------ #
+        # DMN — modulate routing based on DMN ↔ TPN dominance
+        # ------------------------------------------------------------------ #
+        if self._region_registry is not None:
+            if routing_multiplier_map is None:
+                routing_multiplier_map = {rid: 1.0 for rid in self._region_registry.regions}
+            dmn_ratio = self._dmn_network_ratio
+            dmn_regions = {"default_mode", "hippocampus", "limbic"}
+            tpn_regions = {"prefrontal", "motor", "sensory", "cerebellar"}
+            if dmn_ratio > 1.3:
+                for rid in routing_multiplier_map:
+                    if rid in dmn_regions:
+                        routing_multiplier_map[rid] *= 1.2
+                    elif rid in tpn_regions:
+                        routing_multiplier_map[rid] *= 0.85
+            elif dmn_ratio < 0.7:
+                for rid in routing_multiplier_map:
+                    if rid in tpn_regions:
+                        routing_multiplier_map[rid] *= 1.2
+                    elif rid in dmn_regions:
+                        routing_multiplier_map[rid] *= 0.85
+
+        # ------------------------------------------------------------------ #
+        # Neuromodulators — derive routing effects from current modulator states
+        # ------------------------------------------------------------------ #
+        if routing_multiplier_map is not None and self._region_registry is not None:
+            # Noradrenaline: high NE → narrow/focused; low NE → broad/exploratory
+            if self.noradrenergic_modulation_enabled and self._noradrenergic_modulator is not None:
+                ne = self._noradrenergic_modulator.state.noradrenaline_level
+                if ne > 0.7:
+                    for rid in routing_multiplier_map:
+                        if rid not in ("sensory", "motor", "brainstem_homeostatic"):
+                            routing_multiplier_map[rid] *= 1.0 - (ne - 0.7) * 0.5
+                elif ne < 0.3:
+                    for rid in routing_multiplier_map:
+                        routing_multiplier_map[rid] *= 1.1
+
+            # Acetylcholine: high ACh → boost attention/hippocampus/prefrontal routing
+            if self.cholinergic_modulation_enabled and self._cholinergic_modulator is not None:
+                ach = self._cholinergic_modulator.state.acetylcholine_level
+                if ach > 0.6:
+                    for rid in routing_multiplier_map:
+                        if rid in ("hippocampus", "prefrontal", "sensory"):
+                            routing_multiplier_map[rid] *= 1.0 + (ach - 0.6) * 0.75
+
+            # Serotonin: high 5HT → mild behavioral suppression (reduce routing)
+            if self.serotonergic_modulation_enabled and self._serotonergic_modulator is not None:
+                sht = self._serotonergic_modulator.state.serotonin_level
+                if sht > 0.7:
+                    for rid in routing_multiplier_map:
+                        routing_multiplier_map[rid] *= 0.9
+
+            # GABA: globally suppress routing when GABA levels are high
+            if self.gabaergic_modulation_enabled and self._gabaergic_modulator is not None:
+                gaba_lvl = self._gabaergic_modulator.state.gaba_level
+                gaba_routing_factor = 1.0 - gaba_lvl * 0.3
+                for rid in routing_multiplier_map:
+                    routing_multiplier_map[rid] *= gaba_routing_factor
+
         # Regional Signal Routing (T25)
         if self.region_signal_routing_enabled and self._region_registry is not None:
             confidence_score = 0.0
@@ -844,6 +1595,7 @@ class CellularBrainOrchestrator(BaseModel):
                 memory=self._memory,
                 confidence_score=confidence_score,
                 routing_multiplier_map=routing_multiplier_map,
+                per_pair_multipliers=per_pair_multipliers,
                 current_tick=self.current_tick,
             )
 
@@ -908,6 +1660,10 @@ class CellularBrainOrchestrator(BaseModel):
                 activation_signature = activation_signature[:target_len]
             self._global_workspace.broadcast("circuit", activation_signature)
             self._last_global_workspace_step_result = self._global_workspace.step()
+
+        # T132 — LinguisticCognitiveBridge: verbalise workspace state
+        if self._linguistic_bridge is not None:
+            self._linguistic_bridge.tick()
 
         # T44 — Associative Learning Between Assemblies
         if (
@@ -979,6 +1735,178 @@ class CellularBrainOrchestrator(BaseModel):
         # Record morphological snapshot every tick
         snapshot = self._build_morphology_snapshot(metrics)
         self._memory.record_snapshot(snapshot)
+
+        # T162 — Cognitive Integration & Systemic Harmony
+        if self.systemic_harmony_enabled and self._systemic_harmony_layer is not None:
+            try:
+                harmony = self._systemic_harmony_layer.tick()
+                if harmony:
+                    narrative = getattr(self, "_narrative_engine", None)
+                    if narrative is not None:
+                        narrative.record(
+                            event_type="systemic_harmony_tick",
+                            description=f"Harmony score: {harmony.get('aggregate_harmony', 0):.2f}",
+                            importance=4,
+                            metadata={"harmony": harmony},
+                        )
+            except Exception as exc:
+                import logging
+                logging.getLogger("speace.orchestrator").warning(
+                    "Systemic harmony tick failed: %s", exc, exc_info=True
+                )
+
+        # System Assimilation — VFS index refresh
+        if self.vfs_enabled and self._vfs_engine is not None:
+            try:
+                if self.current_tick % 100 == 0:
+                    self._last_vfs_index = self._vfs_engine.index_root()
+            except Exception as exc:
+                import logging
+                logging.getLogger("speace.orchestrator").warning(
+                    "VFS index refresh failed: %s", exc, exc_info=True
+                )
+
+        # System Assimilation — refresh report every 200 ticks
+        if self.system_assimilation_enabled and self._system_assimilator is not None:
+            try:
+                if self.current_tick % 200 == 0:
+                    self._last_assimilation_report = self._system_assimilator.assimilate()
+            except Exception as exc:
+                import logging
+                logging.getLogger("speace.orchestrator").warning(
+                    "System assimilation refresh failed: %s", exc, exc_info=True
+                )
+
+        # Capability Gap Analyzer — every 50 ticks
+        if self.current_tick % 50 == 0:
+            try:
+                self._run_capability_gap_analysis()
+            except Exception as exc:
+                import logging
+                logging.getLogger("speace.orchestrator").warning(
+                    "Capability gap analysis failed: %s", exc, exc_info=True
+                )
+
+        # Bottleneck Detector — every 50 ticks
+        if self.current_tick % 50 == 0:
+            try:
+                self._run_bottleneck_detection()
+            except Exception as exc:
+                import logging
+                logging.getLogger("speace.orchestrator").warning(
+                    "Bottleneck detection failed: %s", exc, exc_info=True
+                )
+
+        # ------------------------------------------------------------------ #
+        # T-New — Information Density & Phase Transition monitoring
+        # ------------------------------------------------------------------ #
+        if self.information_density_enabled and self._information_density_engine is not None:
+            density_report = self._information_density_engine.compute_all()
+        else:
+            density_report = None
+
+        if self.scale_coupling_enabled and self._scale_coupling_engine is not None:
+            coupling_metrics = self._scale_coupling_engine.tick()
+        else:
+            coupling_metrics = None
+
+        if self.thought_phase_transition_enabled and self._thought_phase_transition_engine is not None:
+            transitions = self._thought_phase_transition_engine.tick(tick=self.current_tick)
+            if transitions:
+                self._last_thought_phase = transitions[-1].target_phase.value
+                # Feed phase to replication engine
+                if self.replication_enabled and self._replication_engine is not None:
+                    self._replication_engine.set_thought_phase(self._last_thought_phase)
+
+        # T-COR — Cognitive Objective Reduction tick
+        if self.cor_enabled and self._cor_engine is not None:
+            meta_payload = None
+            if getattr(self, "metacognition_enabled", False) and self._metacognitive_monitor is not None:
+                try:
+                    latest_meta = self._metacognitive_monitor.latest_result()
+                    if latest_meta is not None:
+                        meta_payload = latest_meta.model_dump() if hasattr(latest_meta, "model_dump") else dict(latest_meta)
+                except Exception:
+                    meta_payload = None
+            self._last_cor_result = self._cor_engine.tick(
+                tick=self.current_tick,
+                meta_state=meta_payload,
+            )
+            if self._last_cor_result and self._last_cor_result.collapsed:
+                # Emit metacognitive event if self-model changed
+                if getattr(self, "metacognition_enabled", False) and self._metacognitive_monitor is not None:
+                    try:
+                        cor_payload = self._cor_engine.generate_meta_event_payload()
+                        if cor_payload:
+                            self._metacognitive_monitor.generate_meta_state(
+                                {
+                                    "cognitive_objective_reduction": cor_payload,
+                                    "dynamics": {"chaos_score": self._last_cor_result.entropy_h},
+                                    "cognition": {"self_model": {"coherence_phi": self._last_cor_result.coherence_phi}},
+                                }
+                            )
+                    except Exception:
+                        pass
+
+        # ------------------------------------------------------------------ #
+        # T-SIM — Pluggable simulator backend step
+        # ------------------------------------------------------------------ #
+        if self.simulator_backend_enabled and self._simulator_backend is not None:
+            if (self.current_tick - self._simulator_backend_last_tick) >= self.simulator_backend_interval_ticks:
+                self._run_simulator_backend_step()
+                self._simulator_backend_last_tick = self.current_tick
+
+        # ------------------------------------------------------------------ #
+        # T-New — Incremental Progress Tracking
+        # ------------------------------------------------------------------ #
+        if self.progress_tracking_enabled and self._progress_tracker is not None:
+            metrics = self.latest_metrics
+            meta_accuracy = None
+            if self.last_confidence_state is not None:
+                meta_accuracy = self.last_confidence_state.confidence_score
+            n_regions = len(getattr(self._region_registry, "regions", {})) if self._region_registry else 0
+            n_circuits = 1
+            n_types = 0
+            n_syn = len(self.circuit.synapses) if self.circuit else 0
+            si_cycles = 0
+            si_success = 0
+            if self._self_improvement_loop is not None:
+                si_cycles = getattr(self._self_improvement_loop, "_cycle_count", 0)
+                si_data = getattr(self._self_improvement_loop, "_outcome_tracker", None)
+                if si_data is not None:
+                    outcomes = si_data.get_history() if hasattr(si_data, "get_history") else []
+                    si_success = sum(1 for o in outcomes if getattr(o, "success", False))
+            progress = self._progress_tracker.tick(
+                coherence_phi=getattr(metrics, "coherence_phi", None) if metrics else None,
+                n_regions=n_regions,
+                n_circuits=n_circuits,
+                n_neuron_types=n_types,
+                n_synapses=n_syn,
+                confidence_accuracy=meta_accuracy,
+                self_improvement_cycles=si_cycles,
+                successful_patches=si_success,
+                external_interventions=0,
+            )
+            self._last_progress_report = self._progress_tracker.get_progress_report()
+
+        # ------------------------------------------------------------------ #
+        # T-New — Replication dynamics (periodic check)
+        # ------------------------------------------------------------------ #
+        if self.replication_enabled and self._replication_engine is not None:
+            if self.current_tick > 0 and self.current_tick % 200 == 0:
+                import asyncio
+                from speace_core.cellular_brain.evolution.replication_dynamics_engine import (
+                    ReplicationMode,
+                )
+                asyncio.ensure_future(
+                    self._replication_engine.replicate(mode=ReplicationMode.BUDDING)
+                )
+
+        # ILF — Field tick (causal broadcast at end of cycle)
+        if self.ilf_enabled and self._field_integrator is not None:
+            field_state = self.field_tick()
+            if field_state and field_state.needs_intervention():
+                pass  # Could trigger evolutionary intervention here
 
     def inject(self, pattern: List[float]) -> None:
         self.circuit.inject_input(pattern)
@@ -1268,6 +2196,154 @@ class CellularBrainOrchestrator(BaseModel):
         else:
             self._last_cellular_epigenetic_result = None
 
+    def _run_capability_gap_analysis(self) -> None:
+        if self._capability_gap_analyzer is None:
+            return
+        try:
+            failure_memory_path = Path("data/failure_memory")
+            # Try new API first, fall back to analyze_arc_failures
+            if hasattr(self._capability_gap_analyzer, 'analyze_from_failures'):
+                gaps = self._capability_gap_analyzer.analyze_from_failures(str(failure_memory_path))
+            elif hasattr(self._capability_gap_analyzer, 'analyze_arc_failures'):
+                gaps = self._capability_gap_analyzer.analyze_arc_failures({})
+            else:
+                gaps = []
+            if gaps:
+                self._last_capability_gap_report = gaps
+                import logging
+                logging.getLogger("speace.orchestrator").info(
+                    "Capability gaps identified: %d gaps", len(gaps)
+                )
+        except Exception:
+            pass
+
+    def _run_bottleneck_detection(self) -> None:
+        if self._bottleneck_detector is None:
+            return
+        try:
+            failure_memory_path = Path("data/failure_memory")
+            vfs_index = getattr(self, "_last_vfs_index", None)
+            vfs_entry_count = len(vfs_index) if vfs_index else 0
+            # Try both method names
+            if hasattr(self._bottleneck_detector, 'detect'):
+                report = self._bottleneck_detector.detect(
+                    failure_memory_dir=str(failure_memory_path),
+                    vfs_entry_count=vfs_entry_count,
+                )
+            elif hasattr(self._bottleneck_detector, 'analyze'):
+                report = self._bottleneck_detector.analyze(
+                    failure_memory_dir=str(failure_memory_path),
+                    vfs_entry_count=vfs_entry_count,
+                )
+            else:
+                report = None
+            if report:
+                self._last_bottleneck_report = report
+        except Exception:
+            pass
+
+    # ------------------------------------------------------------------ #
+    # ILF — Informational Logical Field integration
+    # ------------------------------------------------------------------ #
+
+    def _get_circuit_ilf_metrics(self) -> ILFMetrics:
+        """Converte lo stato del circuito in ILFMetrics per il campo."""
+        m = self.latest_metrics
+        all_neurons = (
+            self.circuit.input_neurons
+            + self.circuit.hidden_neurons
+            + self.circuit.output_neurons
+        )
+
+        # Region outputs: medie per regione
+        region_outputs = {}
+        if self._region_registry:
+            for rid in self._region_registry.regions:
+                neuron_activations = [
+                    n.activation for n in all_neurons
+                    if getattr(n, "region", None) == rid
+                ]
+                if neuron_activations:
+                    region_outputs[rid] = sum(neuron_activations) / len(neuron_activations)
+
+        # Cell states: tutte le cellule con ruolo e stato
+        cell_states = {}
+        cell_types = {}
+        for neuron in all_neurons:
+            cid = neuron.cell_id
+            cell_states[cid] = neuron.activation
+            cell_types[cid] = getattr(neuron, "neuron_role", "unknown")
+
+        # Synapse states
+        for synapse in self.circuit.synapses:
+            sid = getattr(synapse, "synapse_id", None) or f"syn_{id(synapse)}"
+            cell_states[sid] = synapse.weight * synapse.trust
+            cell_types[sid] = synapse.state
+
+        # Energy levels per regione
+        energy_levels = {}
+        if self._region_registry and m:
+            for rid in self._region_registry.regions:
+                energy_levels[rid] = m.mean_energy
+
+        total_neurons = len(all_neurons)
+        active_neurons = sum(1 for n in all_neurons if n.activation > 0.1) if all_neurons else 1
+
+        return ILFMetrics(
+            region_outputs=region_outputs,
+            cell_states=cell_states,
+            cell_types=cell_types,
+            energy_levels=energy_levels,
+            memory_utilization=active_neurons / total_neurons if total_neurons > 0 else 0.5,
+            memory_retention=m.coherence_phi if m else 0.5,
+            learning_rate=0.1,
+            error_rate=min(1.0, m.noise_level if m else 0.1),
+            goal_activations={},
+            ilf_history=[],
+        )
+
+    def _on_ilf_update(self, state: FieldState) -> None:
+        """ILF CAUSA aggiornamento dei parametri del circuito."""
+        if not self._ilf_field_effects_enabled:
+            return
+
+        all_neurons = (
+            self.circuit.input_neurons
+            + self.circuit.hidden_neurons
+            + self.circuit.output_neurons
+        )
+
+        # Adattamento soglie e gain basato sul campo
+        for neuron in all_neurons:
+            # ILF basso: aumentare soglia, ridurre gain
+            if state.ilf_value < 0.4:
+                neuron.threshold = min(0.9, neuron.threshold * 1.05)
+                neuron.plasticity_rate = max(0.01, neuron.plasticity_rate * 0.95)
+            # ILF alto: diminuire soglia, aumentare plasticita'
+            elif state.ilf_value > 0.65:
+                neuron.threshold = max(0.15, neuron.threshold * 0.97)
+                neuron.plasticity_rate = min(1.0, neuron.plasticity_rate * 1.03)
+
+            # Noise alto: regolazione robusta
+            if state.field_noise > 0.25:
+                neuron.plasticity_rate = max(0.01, neuron.plasticity_rate * 0.9)
+
+        # Coherence in calo: rafforzare connessioni esistenti
+        if state.coherence_gradient < -0.05:
+            for synapse in self.circuit.synapses:
+                if synapse.state == "active":
+                    synapse.weight = min(1.0, synapse.weight * 1.02)
+
+        # Adaptation bassa: aumentare esplorazione sinaptica
+        if state.adaptation < 0.35:
+            for synapse in self.circuit.synapses:
+                if synapse.state == "active" and hasattr(synapse, "decay") and synapse.decay > 0.01:
+                    synapse.decay = min(0.2, synapse.decay * 1.05)
+
+    # ------------------------------------------------------------------ #
+    # Morphology snapshot
+    # ------------------------------------------------------------------ #
+
     def _build_morphology_snapshot(self, metrics: SystemMetrics) -> MorphologySnapshot:
         active = sum(1 for s in self.circuit.synapses if s.state != "pruned")
         weights = [s.weight for s in self.circuit.synapses if s.state != "pruned"]
@@ -1327,6 +2403,161 @@ class CellularBrainOrchestrator(BaseModel):
     @property
     def region_registry(self) -> RegionRegistry | None:
         return self._region_registry
+
+    # ------------------------------------------------------------------ #
+    # ILF — Informational Logical Field helper properties
+    # ------------------------------------------------------------------ #
+
+    @property
+    def ilf_systemic_coherence_index(self) -> float:
+        """SCI corrente dal campo ILF."""
+        if self._field_integrator:
+            return self._field_integrator.get_systemic_coherence_index()
+        return 0.0
+
+    @property
+    def ilf_current_state(self) -> Optional[FieldState]:
+        """Stato corrente del campo ILF."""
+        if self._field_integrator:
+            return self._field_integrator.get_current_state()
+        return None
+
+    def get_field_state(self) -> Optional[FieldState]:
+        """Get current ILF field state (delegates to field integrator)."""
+        if self._field_integrator:
+            return self._field_integrator.get_current_state()
+        return None
+
+    @property
+    def ilf_reconfiguration_count(self) -> int:
+        """Numero totale di riconfigurazioni causate dal campo."""
+        if self._field_integrator:
+            stats = self._field_integrator.get_statistics()
+            return stats.get('total_reconfigurations', 0)
+        return 0
+
+    # ------------------------------------------------------------------ #
+    # Neuro-OS — Cognitive Scheduler & Process Table
+    # ------------------------------------------------------------------ #
+
+    def should_run_module(self, module_id: str, default: bool = True) -> bool:
+        """Check scheduling decision for a module.
+
+        If Neuro-OS is enabled and a scheduling decision exists,
+        respect the decision. Otherwise fall back to the default.
+        """
+        if not self.neuro_os_enabled or self._last_scheduling_decision is None:
+            return default
+        return self._last_scheduling_decision.should_run(module_id)
+
+    def get_scheduling_decision(self) -> Any:
+        return self._last_scheduling_decision
+
+    def get_cognitive_scheduler(self) -> CognitiveScheduler | None:
+        return self._cognitive_scheduler
+
+    def get_process_table(self) -> ProcessTable | None:
+        return self._process_table
+
+    def get_memory_pressure_manager(self) -> MemoryPressureManager | None:
+        return self._memory_pressure
+
+    # ------------------------------------------------------------------ #
+    # Cognitive Hypervisor — accessor methods
+    # ------------------------------------------------------------------ #
+
+    def get_cognitive_hypervisor(self) -> CognitiveHypervisor | None:
+        return self._cognitive_hypervisor
+
+    def get_unified_namespace(self) -> UnifiedNamespace | None:
+        if self._cognitive_hypervisor is not None:
+            return self._cognitive_hypervisor.namespace
+        return None
+
+    # ------------------------------------------------------------------ #
+    # Cognitive Actuator — accessor methods
+    # ------------------------------------------------------------------ #
+
+    def get_cognitive_actuator(self) -> CognitiveActuator | None:
+        return self._cognitive_actuator
+
+    def _actuator_approval_callback(self, proposal: ActionProposal) -> bool:
+        """Approval gate for actuator actions.
+        
+        For now, auto-approve read-only / reversible operations,
+        block high-risk operations unless explicitly configured.
+        """
+        if proposal.estimated_risk < 0.3:
+            return True
+        if proposal.is_reversible:
+            return True
+        if proposal.operation in CognitiveActuator.HIGH_RISK_OPERATIONS:
+            return False
+        return True
+
+    def execute_action(self, proposal: ActionProposal) -> ActionResult | None:
+        """Execute a system action through the CognitiveActuator."""
+        if self._cognitive_actuator is not None:
+            return self._cognitive_actuator.execute(proposal)
+        return None
+
+    def decode_and_execute_pattern(
+        self, pattern: List[float], source_cell_id: str = "",
+    ) -> ActionResult | None:
+        """Decode a neural pattern into an action and execute it."""
+        if self._cognitive_actuator is None:
+            return None
+        proposal = self._cognitive_actuator.decode_pattern(pattern, source_cell_id)
+        if proposal is None:
+            return None
+        return self._cognitive_actuator.execute(proposal)
+
+    def freeze_actuator(self) -> None:
+        if self._cognitive_actuator is not None:
+            self._cognitive_actuator.freeze()
+
+    def unfreeze_actuator(self) -> None:
+        if self._cognitive_actuator is not None:
+            self._cognitive_actuator.unfreeze()
+
+    def spawn_agent_process(
+        self,
+        process_id: str,
+        name: str,
+        category: str = "agent",
+        priority: float = 0.5,
+    ) -> Any:
+        """Spawn a tracked cognitive process."""
+        if self._process_table is not None:
+            return self._process_table.spawn(
+                process_id=process_id,
+                name=name,
+                category=category,
+                priority=priority,
+            )
+        return None
+
+    def neuro_os_snapshot(self) -> dict:
+        """Full Neuro-OS state snapshot."""
+        result: dict = {"enabled": self.neuro_os_enabled}
+        if self._cognitive_scheduler is not None:
+            result["scheduler"] = self._cognitive_scheduler.snapshot()
+        if self._process_table is not None:
+            result["process_table"] = self._process_table.snapshot()
+        if self._memory_pressure is not None:
+            result["memory_pressure"] = self._memory_pressure.snapshot()
+        if self.hypervisor_enabled and self._cognitive_hypervisor is not None:
+            result["hypervisor"] = self._cognitive_hypervisor.snapshot()
+        if self.actuator_enabled and self._cognitive_actuator is not None:
+            result["actuator"] = self._cognitive_actuator.snapshot()
+        return result
+
+    @property
+    def neuro_os_stats(self) -> dict:
+        """Quick scheduling statistics."""
+        if self._cognitive_scheduler is not None:
+            return self._cognitive_scheduler.get_scheduling_stats()
+        return {}
 
     # ------------------------------------------------------------------ #
     # T45 — Autonomous Self-Improvement Loop
@@ -1872,8 +3103,166 @@ class CellularBrainOrchestrator(BaseModel):
         self._last_skill_transfer_audit_result = suite.model_dump()
         return self._last_skill_transfer_audit_result
 
+    # ------------------------------------------------------------------ #
+    # ARC-AGI benchmark integration
+    # ------------------------------------------------------------------ #
+
+    def _build_modulator_context(self) -> Dict[str, float]:
+        """Collect current neuromodulator/FRL/DMN state for ARC-AGI context."""
+        ctx: Dict[str, float] = {
+            "acetylcholine": 0.5,
+            "noradrenaline": 0.3,
+            "serotonin": 0.5,
+            "gaba_level": 0.5,
+            "global_coherence": 0.5,
+            "metastability": 0.0,
+            "dmn_ratio": 1.0,
+        }
+        if self.cholinergic_modulation_enabled and self._cholinergic_modulator is not None:
+            ctx["acetylcholine"] = self._cholinergic_modulator.state.acetylcholine_level
+        if self.noradrenergic_modulation_enabled and self._noradrenergic_modulator is not None:
+            ctx["noradrenaline"] = self._noradrenergic_modulator.state.noradrenaline_level
+        if self.serotonergic_modulation_enabled and self._serotonergic_modulator is not None:
+            ctx["serotonin"] = self._serotonergic_modulator.state.serotonin_level
+        if self.gabaergic_modulation_enabled and self._gabaergic_modulator is not None:
+            ctx["gaba_level"] = self._gabaergic_modulator.state.gaba_level
+        if self.functional_resonance_enabled and self._functional_resonance is not None:
+            frl_m = self._functional_resonance.get_global_metrics()
+            ctx["global_coherence"] = frl_m.global_coherence
+            ctx["metastability"] = frl_m.metastability
+        if self.dmn_switching_enabled and self._dmn_switching is not None:
+            ctx["dmn_ratio"] = self._dmn_switching.get_network_ratio()
+        return ctx
+
+    async def run_arc_agi_benchmark(
+        self,
+        split: str = "training",
+        limit: Optional[int] = None,
+        use_modulator_context: bool = True,
+    ) -> Dict[str, Any]:
+        if self._arc_agi_adapter is None:
+            raise RuntimeError(
+                "ARC-AGI adapter not initialized. "
+                "Enable arc_agi_benchmark_enabled in genome or set it before build."
+            )
+        tasks = self._arc_agi_adapter.load_tasks(split=split, limit=limit)
+        modulator_context = self._build_modulator_context() if use_modulator_context else None
+        result = self._arc_agi_adapter.run_benchmark(tasks=tasks, modulator_context=modulator_context)
+        return result
+
+    async def run_arc_agi_task(
+        self,
+        task_id: Optional[str] = None,
+        use_modulator_context: bool = True,
+    ) -> List[Any]:
+        if self._arc_agi_adapter is None:
+            raise RuntimeError("ARC-AGI adapter not initialized.")
+        tasks = self._arc_agi_adapter.load_tasks(split="training")
+        task = next((t for t in tasks if t.task_id == task_id), None) if task_id else tasks[0]
+        if task is None:
+            raise ValueError(f"Task {task_id} not found")
+        modulator_context = self._build_modulator_context() if use_modulator_context else None
+        return self._arc_agi_adapter.evaluate_task(task, modulator_context=modulator_context)
+
+    def get_arc_agi_adapter(self) -> Any:
+        return self._arc_agi_adapter
+
+    # ------------------------------------------------------------------ #
+    # T-SIM — Simulator backend helpers
+    # ------------------------------------------------------------------ #
+
+    def _resolve_simulator_backend_choice(self) -> BackendChoice:
+        """Resolve the requested backend name to a BackendChoice enum."""
+        if self._simulator_backend_selector is None:
+            self._simulator_backend_selector = BackendSelector()
+        name = (self.simulator_backend_name or "auto").lower()
+        if name == "auto":
+            neuron_count = len(self.circuit.all_neurons) if self.circuit else 100
+            return self._simulator_backend_selector.recommend(
+                neuron_count=neuron_count,
+                needs_morphology=False,
+                needs_stdp=False,
+                prefers_python=True,
+                allow_external_deps=True,
+            )
+        try:
+            return BackendChoice(name)
+        except ValueError:
+            return BackendChoice.NATIVE
+
+    def _build_simulator_population(self) -> Tuple[Population, Projection]:
+        """Export the current circuit as Population/Projection for backends."""
+        neurons = self.circuit.all_neurons if self.circuit else []
+        specs = []
+        for n in neurons:
+            specs.append(
+                NeuronSpec(
+                    neuron_id=n.cell_id,
+                    cell_type=n.cell_type,
+                    threshold=float(n.threshold),
+                    reset=0.0,
+                    resting=0.0,
+                    tau_ms=10.0,
+                    refractory_ms=float(getattr(n, "refractory_period", 0)) + 1.0,
+                    initial_voltage=float(n.activation),
+                    metadata={"region": n.region, "periodic_symbol": n.periodic_symbol},
+                )
+            )
+        pop = Population(label="circuit", neurons=specs)
+        proj = Projection(source=pop, target=pop, label="circuit_projection")
+        for syn in (self.circuit.synapses if self.circuit else []):
+            if syn.source and syn.target:
+                proj.connect(
+                    source_id=syn.source,
+                    target_id=syn.target,
+                    weight=float(syn.weight) * float(syn.trust),
+                    delay_ms=1.0,
+                )
+        return pop, proj
+
+    def _run_simulator_backend_step(self) -> Dict[str, Any]:
+        """Run one simulation step with the selected backend and sync results."""
+        if self._simulator_backend is None:
+            return {}
+        pop, proj = self._build_simulator_population()
+        try:
+            self._simulator_backend.setup(populations=[pop], projections=[proj])
+            # Seed inputs proportional to current activation
+            inputs = {
+                n.neuron_id: float(n.activation) * 0.5
+                for n in (self.circuit.all_neurons if self.circuit else [])
+            }
+            self._simulator_backend.set_neurons_input(inputs)
+            result = self._simulator_backend.run(
+                duration_ms=self.simulator_backend_duration_ms,
+                dt_ms=0.1,
+            )
+            # Optionally boost native neurons that spiked in the backend
+            for nid, spike_times in result.spikes.items():
+                if spike_times:
+                    neuron = self.circuit._find_neuron(nid)
+                    if neuron is not None:
+                        neuron.activation = min(1.0, neuron.activation + 0.1)
+            log_entry = {
+                "tick": self.current_tick,
+                "backend": getattr(self._simulator_backend, "kind", "unknown"),
+                "neurons": len(pop),
+                "synapses": len(proj.connections),
+                "spike_count": sum(len(v) for v in result.spikes.values()),
+            }
+            self._simulator_backend_log.append(log_entry)
+            return log_entry
+        except Exception as exc:
+            log_entry = {
+                "tick": self.current_tick,
+                "backend": getattr(self._simulator_backend, "kind", "unknown"),
+                "error": str(exc),
+            }
+            self._simulator_backend_log.append(log_entry)
+            return log_entry
+
     @classmethod
-    def build_mvp(cls, genome: SharedGenome) -> "CellularBrainOrchestrator":
+    def build_mvp(cls, genome: SharedGenome, **kwargs: Any) -> "CellularBrainOrchestrator":
         n_inputs = 10
         n_hidden = 60
         n_outputs = 10
@@ -1940,4 +3329,33 @@ class CellularBrainOrchestrator(BaseModel):
             oligodendrocytes=oligodendrocytes,
         )
 
-        return cls(genome=genome, circuit=circuit)
+        # Apply COR genes from Digital DNA (functional Orch-OR tuning)
+        cor_genes = getattr(genome, "cor_genes", None)
+        if cor_genes and getattr(cor_genes, "enabled", False):
+            kwargs.setdefault("cor_enabled", True)
+            kwargs.setdefault("cor_phi_threshold_factor", cor_genes.phi_threshold_factor)
+            kwargs.setdefault("cor_min_latent_states", cor_genes.min_latent_states)
+            kwargs.setdefault("cor_max_hypotheses", cor_genes.max_hypotheses)
+            kwargs.setdefault("cor_collapse_refractory_ticks", cor_genes.collapse_refractory_ticks)
+
+        return cls(genome=genome, circuit=circuit, **kwargs)
+
+
+# --------------------------------------------------------------------------- #
+# Helper: seed vocabulary for the LinguisticCognitiveBridge
+# --------------------------------------------------------------------------- #
+
+def _build_bridge_vocabulary() -> dict:
+    """Seed vocabulary for the bridge's Wernicke area (8-dim semantic space)."""
+    return {
+        "consciousness": [0.1, 0.9, 0.0, 0.0, 0.0, 0.3, 0.0, 0.0],
+        "awareness":    [0.1, 0.9, 0.0, 0.0, 0.0, 0.3, 0.0, 0.0],
+        "coherence":    [0.0, 0.8, 0.0, 0.0, 0.0, 0.0, 0.5, 0.0],
+        "energy":       [0.0, 0.7, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        "thought":      [0.0, 0.6, 0.5, 0.0, 0.0, 0.4, 0.0, 0.0],
+        "predict":      [0.0, 0.0, 0.9, 0.0, 0.0, 0.0, 0.0, 0.5],
+        "remember":     [0.0, 0.0, 0.3, 0.0, 0.0, 0.5, 0.0, 0.8],
+        "learn":        [0.0, 0.0, 0.7, 0.0, 0.0, 0.0, 0.8, 0.0],
+        "workspace":    [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.9, 0.0],
+        "linguistic":   [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.7],
+    }

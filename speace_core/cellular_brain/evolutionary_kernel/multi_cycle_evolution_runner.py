@@ -1,7 +1,7 @@
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -14,7 +14,9 @@ from speace_core.cellular_brain.evolutionary_kernel.evolutionary_cycle_models im
 )
 from speace_core.cellular_brain.memory.morphology_events import MorphologyEvent, MorphologyEventType
 from speace_core.dna.parser import load_genome
-from speace_core.orchestrator import CellularBrainOrchestrator
+
+if TYPE_CHECKING:
+    from speace_core.orchestrator import CellularBrainOrchestrator
 
 
 class CycleMemoryEntry(BaseModel):
@@ -62,7 +64,7 @@ class MultiCycleEvolutionRunner:
 
     def __init__(
         self,
-        orchestrator: CellularBrainOrchestrator,
+        orchestrator: "CellularBrainOrchestrator",
         cycle_count: int = 10,
         cycle_interval_ticks: int = 5,
         max_variants_per_cycle: int = 3,

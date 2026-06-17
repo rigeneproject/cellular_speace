@@ -18,6 +18,14 @@ class DigitalDNAVariant(BaseModel):
     inhibition_decay: float = 1.0
     neurogenesis_rate: float = 1.0
     perturbation_strength: float = 0.1
+
+    # T-COR — Cognitive Objective Reduction genes
+    cor_enabled: bool = False
+    cor_phi_threshold_factor: float = 0.55
+    cor_min_latent_states: int = 2
+    cor_max_hypotheses: int = 8
+    cor_collapse_refractory_ticks: int = 10
+
     fitness_score: float = 0.0
     entropy_before: float = 0.0
     entropy_after: float = 0.0
@@ -54,6 +62,11 @@ class DigitalDNAExpressionManager:
             inhibition_decay=base.inhibition_decay,
             neurogenesis_rate=base.neurogenesis_rate,
             perturbation_strength=base.perturbation_strength,
+            cor_enabled=base.cor_enabled,
+            cor_phi_threshold_factor=base.cor_phi_threshold_factor,
+            cor_min_latent_states=base.cor_min_latent_states,
+            cor_max_hypotheses=base.cor_max_hypotheses,
+            cor_collapse_refractory_ticks=base.cor_collapse_refractory_ticks,
         )
         if parameter_changes:
             for key, value in parameter_changes.items():
@@ -73,11 +86,19 @@ class DigitalDNAExpressionManager:
         mutation_sigma: float = 0.1,
     ) -> DigitalDNAVariant:
         import random
-        changes: Dict[str, float] = {}
-        for param in ["mutation_rate", "routing_gain", "plasticity_gain", "inhibition_decay", "neurogenesis_rate"]:
+        changes: Dict[str, Any] = {}
+        for param in ["mutation_rate", "routing_gain", "plasticity_gain", "inhibition_decay", "neurogenesis_rate", "cor_phi_threshold_factor"]:
             current = getattr(variant, param)
             delta = random.gauss(0.0, mutation_sigma)
             changes[param] = max(0.1, min(2.0, current + delta))
+        # COR integer parameters
+        for param in ["cor_min_latent_states", "cor_max_hypotheses", "cor_collapse_refractory_ticks"]:
+            current = getattr(variant, param)
+            delta = random.randint(-1, 1)
+            changes[param] = max(1, current + delta)
+        # COR boolean toggle
+        if random.random() < 0.1:
+            changes["cor_enabled"] = not variant.cor_enabled
         return self.create_variant(parent=variant, parameter_changes=changes)
 
     def crossover_variants(
@@ -86,9 +107,14 @@ class DigitalDNAExpressionManager:
         b: DigitalDNAVariant,
     ) -> DigitalDNAVariant:
         import random
-        changes: Dict[str, float] = {}
-        for param in ["mutation_rate", "routing_gain", "plasticity_gain", "inhibition_decay", "neurogenesis_rate"]:
+        changes: Dict[str, Any] = {}
+        for param in [
+            "mutation_rate", "routing_gain", "plasticity_gain", "inhibition_decay",
+            "neurogenesis_rate", "cor_phi_threshold_factor",
+            "cor_min_latent_states", "cor_max_hypotheses", "cor_collapse_refractory_ticks",
+        ]:
             changes[param] = getattr(random.choice([a, b]), param)
+        changes["cor_enabled"] = random.choice([a, b]).cor_enabled
         child = self.create_variant(parent=a, parameter_changes=changes)
         child.parent_id = f"cross({a.variant_id},{b.variant_id})"
         return child
@@ -126,7 +152,7 @@ class DigitalDNAExpressionManager:
     # ------------------------------------------------------------------ #
 
     @staticmethod
-    def express(variant: DigitalDNAVariant) -> Dict[str, float]:
+    def express(variant: DigitalDNAVariant) -> Dict[str, Any]:
         return {
             "mutation_rate": variant.mutation_rate,
             "routing_gain": variant.routing_gain,
@@ -134,6 +160,11 @@ class DigitalDNAExpressionManager:
             "inhibition_decay": variant.inhibition_decay,
             "neurogenesis_rate": variant.neurogenesis_rate,
             "perturbation_strength": variant.perturbation_strength,
+            "cor_enabled": variant.cor_enabled,
+            "cor_phi_threshold_factor": variant.cor_phi_threshold_factor,
+            "cor_min_latent_states": variant.cor_min_latent_states,
+            "cor_max_hypotheses": variant.cor_max_hypotheses,
+            "cor_collapse_refractory_ticks": variant.cor_collapse_refractory_ticks,
         }
 
     # ------------------------------------------------------------------ #

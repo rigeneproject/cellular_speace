@@ -54,9 +54,10 @@ class SafeRegulationExecutor:
         alert_type = proposal.get("alert", {}).get("alert_type", "unknown")
 
         # Safety gate: only tunable parameters
-        targets = self._ALLOWED_TARGETS.get(action, [])
-        if targets is None:
+        if action not in self._ALLOWED_TARGETS:
             return self._log(pid, action, "blocked", "action not in allowed catalog", current_health, current_health)
+
+        targets = self._ALLOWED_TARGETS[action]
 
         # Structural changes are blocked
         if not targets:
@@ -105,7 +106,7 @@ class SafeRegulationExecutor:
 
     def _estimate_post_health(self, current_health: float, proposal: Dict[str, Any]) -> float:
         # Simulation: small positive or negative delta based on estimated_risk
-        risk = proposal.get("estimated_risk", 0.3)
+        risk = proposal.get("risk_score", 0.3)
         confidence = proposal.get("confidence", {}).get("confidence", 0.5)
         import random
         delta = (confidence * 0.1) - (risk * 0.05)

@@ -406,6 +406,37 @@ brain_regions:
     plasticity_bias: 0.8
     role_description: "Symbolic grounding, comprehension, production, and semantic binding"
 
+# T184 — Neural Periodic Table
+periodic_table:
+  enabled: true
+  element_mapping:
+    sensory_neuron: 1
+    auditory_neuron: 7
+    wernicke_neuron: 8
+    broca_neuron: 9
+    semantic_pointer_neuron: 10
+    hippocampal_neuron: 11
+    prefrontal_neuron: 14
+    limbic_neuron: 15
+    default_mode_neuron: 16
+    motor_neuron: 17
+    cerebellar_neuron: 18
+    brainstem_neuron: 19
+    inhibitory_neuron: 20
+    regulatory_neuron: 26
+    generic_neuron: 27
+    digital_astrocyte: 23
+    digital_microglia: 24
+    digital_oligodendrocyte: 25
+    input: 1
+    output: 17
+  bond_defaults:
+    default_bond_type: "covalent"
+    default_plasticity: 0.5
+    default_decay: 0.01
+  use_for_differentiation: true
+  use_for_synapse_prediction: true
+
 # T66-A — Species Orientation Genome Layer
 species_orientation:
   name: "Distributed Digital-Physical Organism"
@@ -475,3 +506,356 @@ species_orientation:
     stage_5: "authorized cyber-physical embodiment"
     stage_6: "socio-technical organism"
     stage_7: "regulated planetary-scale organism"
+
+# System Assimilation — regole di accesso al filesystem e al sistema operativo
+system_assimilation:
+  enable_vfs: true
+  enable_assimilation: true
+  root_mount_point: "C:\\"
+  access_rules:
+    - path_prefix: "C:\\"
+      allowed_permissions:
+        - read
+        - list
+      requires_approval: false
+      approved: false
+    - path_prefix: "C:\\cellular_speace"
+      allowed_permissions:
+        - read
+        - write
+        - list
+        - execute
+      requires_approval: false
+      approved: true
+    - path_prefix: "C:\\Users"
+      allowed_permissions:
+        - read
+        - write
+        - list
+      requires_approval: true
+      approved: false
+    - path_prefix: "C:\\Windows\\System32"
+      allowed_permissions:
+        - read
+      requires_approval: true
+      approved: false
+    - path_prefix: "C:\\Program Files"
+      allowed_permissions:
+        - read
+      requires_approval: false
+      approved: false
+    - path_prefix: "C:\\ProgramData"
+      allowed_permissions:
+        - read
+      requires_approval: false
+      approved: false
+
+# Neuro-OS — Organic Operating System Layer
+# Adaptive scheduling, process management, and memory pressure control.
+neuro_os:
+  enabled: true
+  cognitive_scheduler:
+    enabled: true
+    tick_interval: 1.0
+    salience_decay: 0.9
+    salience_boost_factor: 0.3
+    metabolic_boost_factor: 0.4
+    coherence_boost_factor: 0.5
+    circadian_awake_boost: 0.1
+    circadian_sleep_boost_maintenance: 0.2
+    circadian_sleep_penalty_embodiment: 0.1
+    load_shedding_energy_threshold: 0.4
+    critical_modules:
+      - homeostasis_engine
+      - emergency_halt_gate
+      - brainstem_controller
+  process_table:
+    enabled: true
+    max_processes: 50
+    watchdog_ticks: 1000
+    default_energy_budget: 0.1
+    default_max_inactive_ticks: 500
+  memory_pressure:
+    enabled: true
+    auto_consolidate: true
+    swap_directory: data/memory_swap
+    tiers:
+      - name: L1_working
+        capacity: 1000
+        access_cost: 1.0
+        consolidation_threshold: 0.3
+        eviction_policy: lru
+      - name: L2_morphological
+        capacity: 10000
+        access_cost: 5.0
+        consolidation_threshold: 0.5
+        eviction_policy: lru
+      - name: L3_semantic
+        capacity: 100000
+        access_cost: 20.0
+        consolidation_threshold: 0.7
+        eviction_policy: lfu
+    eviction_rate: 0.1
+    consolidation_rate: 0.2
+    max_pressure_before_swap: 0.7
+  cognitive_hypervisor:
+    enabled: true
+    poll_interval: 2.0
+    event_capacity: 1000
+    enable_process_monitor: true
+    enable_file_monitor: true
+    enable_socket_monitor: true
+    enable_service_monitor: true
+    enable_system_metrics: true
+  cognitive_actuator:
+    enabled: true
+    max_history: 500
+    auto_approve_read_ops: true
+    require_approval_for:
+      - shutdown
+      - reboot
+      - hibernate
+      - delete_file
+      - kill_pid
+      - modify_system_service
+
+# T-COR — Cognitive Objective Reduction
+# Functional emulation of Orch-OR-style collapse dynamics.
+# COR is not a quantum-physical theory; it is an informational mechanism
+# that triggers a metacognitive collapse when cognitive entropy multiplied
+# by metacognitive pressure exceeds the global coherence threshold.
+cor_genes:
+  enabled: true
+  phi_threshold_factor: 0.55
+  min_latent_states: 2
+  max_hypotheses: 8
+  collapse_refractory_ticks: 10
+  reconfigure_on_collapse: true
+  safety_invariants:
+    - "COR must never override safety governance or immune rejection."
+    - "COR events must be logged and auditable."
+    - "COR reconfiguration must preserve constitutional identity."
+    - "COR is a functional analogy, not a claim of phenomenal consciousness."
+
+
+# T-DNA — Neural Periodic Table genes
+# These expressions drive the mathematical laws of the periodic table
+# instead of hard-coding them in Python. Variables:
+#   g = normalized group position (0..1)
+#   p = normalized period position (0..1)
+periodic_table_genes:
+  enabled: true
+  trends:
+    electronegativity:
+      name: "Electronegativity"
+      description: "Inhibition tendency; increases across period, decreases down group"
+      across_period: "min(1.0, 0.15 + g * 0.85)"
+      down_group: "max(0.1, 1.0 - p * 0.6)"
+      noise_amplitude: 0.05
+    ionization_energy:
+      name: "Ionization Energy"
+      description: "Activation threshold; increases across period, decreases down group"
+      across_period: "min(1.0, 0.2 + g * 0.8)"
+      down_group: "max(0.15, 1.0 - p * 0.5)"
+      noise_amplitude: 0.05
+    atomic_radius:
+      name: "Atomic Radius"
+      description: "Receptive field size; decreases across period, increases down group"
+      across_period: "max(0.1, 1.0 - g * 0.7)"
+      down_group: "min(1.0, 0.2 + p * 0.8)"
+      noise_amplitude: 0.05
+    plasticity:
+      name: "Neural Plasticity"
+      description: "Ability to change; peaks in middle periods"
+      across_period: "0.3 + 0.5 * (1.0 - abs(g - 0.5) * 2.0)"
+      down_group: "0.2 + 0.6 * (1.0 - abs(p - 0.4) * 1.5)"
+      noise_amplitude: 0.05
+    metabolic_cost:
+      name: "Metabolic Cost"
+      description: "Energy consumption; increases with period depth"
+      across_period: "0.2 + g * 0.3"
+      down_group: "0.2 + p * 0.7"
+      noise_amplitude: 0.05
+    myelination_potential:
+      name: "Myelination Potential"
+      description: "Tendency to be myelinated in stable pathways"
+      across_period: "0.3 + 0.5 * (1.0 - abs(g - 0.4))"
+      down_group: "max(0.1, 0.8 - p * 0.5)"
+      noise_amplitude: 0.05
+  valence_rules:
+    - name: "Octet Rule"
+      description: "Excitatory neurons preferentially connect to ~7-9 targets"
+      condition: "source.is_excitatory() and target.is_inhibitory()"
+      result:
+        max_connections: 8
+        bond_type: "covalent"
+    - name: "Complementary Valence"
+      description: "Excitatory→Inhibitory pairs form strong, stable connections"
+      condition: "source.is_excitatory() and target.is_inhibitory()"
+      result:
+        compatibility_boost: 0.3
+        bond_type: "ionic"
+    - name: "Like-Valence Repulsion"
+      description: "Inhibitory→Inhibitory pairs are rare and weak"
+      condition: "source.is_inhibitory() and target.is_inhibitory()"
+      result:
+        compatibility_penalty: -0.3
+        max_strength: 0.3
+    - name: "Modulatory Gating"
+      description: "Modulatory elements gate excitatory→inhibitory pairs"
+      condition: "source.is_modulatory() or target.is_modulatory()"
+      result:
+        bond_type: "hydrogen"
+        plasticity_boost: 0.2
+    - name: "Hierarchical Feedforward"
+      description: "Lower period → higher period forms feedforward pathways"
+      condition: "source.period.value < target.period.value"
+      result:
+        polarity: "forward"
+        direction_boost: 0.2
+    - name: "Hierarchical Feedback"
+      description: "Higher period → lower period forms feedback pathways"
+      condition: "source.period.value > target.period.value"
+      result:
+        polarity: "backward"
+        direction_boost: 0.15
+    - name: "Same-Group Resonance"
+      description: "Same-group elements form recurrent/resonant connections"
+      condition: "source.group == target.group and source.atomic_number != target.atomic_number"
+      result:
+        bond_type: "metallic"
+        polarity: "recurrent"
+    - name: "Glial Inertness"
+      description: "Glial elements do not form strong directed bonds"
+      condition: "source.block.value == 'g' or target.block.value == 'g'"
+      result:
+        bond_type: "van_der_waals"
+        max_strength: 0.2
+    - name: "Cross-Block Modulation"
+      description: "D-block elements modulate P-block and S-block connections"
+      condition: "source.block.value == 'd' and target.block.value in ('p', 's')"
+      result:
+        bond_type: "hydrogen"
+        modulation_factor: 0.3
+  reaction_rules:
+    - name: "Sensory Integration"
+      description: "Sensory input + feature extraction → feature detection"
+      reactants: ["Ph", "Sc"]
+      products: ["Cc"]
+      energy_barrier: 0.3
+      rate_constant: 0.5
+    - name: "Auditory Comprehension"
+      description: "Auditory + Wernicke → semantic comprehension"
+      reactants: ["Hc", "Au", "We"]
+      products: ["Sp"]
+      energy_barrier: 0.4
+      rate_constant: 0.3
+    - name: "Memory Formation"
+      description: "Hippocampal + entorhinal + dentate → memory binding"
+      reactants: ["Hp", "En", "Dg"]
+      products: ["Dm"]
+      energy_barrier: 0.5
+      rate_constant: 0.2
+    - name: "Executive Decision"
+      description: "Prefrontal + limbic → executive command"
+      reactants: ["Pf", "Lb"]
+      products: ["Mo"]
+      catalyst: "Dp"
+      energy_barrier: 0.6
+      rate_constant: 0.4
+    - name: "Motor Correction"
+      description: "Motor + cerebellar → refined motor output"
+      reactants: ["Mo", "Cb"]
+      products: ["Mo"]
+      energy_barrier: 0.35
+      rate_constant: 0.6
+    - name: "Inhibitory Gating"
+      description: "Inhibitory interneuron gates any excitatory signal"
+      reactants: ["Sc", "In"]
+      products: []
+      energy_barrier: 0.2
+      rate_constant: 0.7
+    - name: "Dopaminergic Facilitation"
+      description: "Dopamine facilitates prefrontal→motor planning"
+      reactants: ["Pf", "Mo"]
+      products: ["Mo"]
+      catalyst: "Dp"
+      energy_barrier: 0.3
+      rate_constant: 0.5
+    - name: "Serotonergic Regulation"
+      description: "Serotonin modulates limbic→prefrontal valence"
+      reactants: ["Lb", "Pf"]
+      products: ["Pf"]
+      catalyst: "Sr"
+      energy_barrier: 0.4
+      rate_constant: 0.3
+    - name: "Default Mode Reflection"
+      description: "Hippocampal→default mode during offline periods"
+      reactants: ["Hp", "Dm"]
+      products: ["Dm"]
+      energy_barrier: 0.5
+      rate_constant: 0.2
+    - name: "Astrocytic Support"
+      description: "Astrocyte regulates energy in any active circuit"
+      reactants: ["Pf", "As"]
+      products: ["Pf"]
+      energy_barrier: 0.1
+      rate_constant: 0.3
+  default_bond_energy: 0.5
+  default_bond_plasticity: 0.5
+
+
+# T-FAG — Functional Activation Gate (lazy on-demand neural sub-functions)
+functional_activation:
+  enabled: true
+  rules:
+    - rule_id: "sensory_input"
+      description: "Enable sensory encoding when a sensory signal arrives"
+      trigger_meanings: ["sensory", "visual", "auditory", "somatosensory"]
+      trigger_tags: ["input"]
+      min_strength: 0.0
+      activate_latent_state: "sensory_encoding"
+      latent_state_weight: 0.7
+      enable_wave: true
+      wave_frequency: 20.0
+    - rule_id: "language_input"
+      description: "Enable linguistic processing on language signals"
+      trigger_meanings: ["phoneme", "word", "syntax", "semantic"]
+      trigger_tags: ["language"]
+      min_strength: 0.0
+      activate_latent_state: "linguistic_processing"
+      latent_state_weight: 0.6
+      activate_receptor_profile: "excitatory"
+      plasticity_delta: 0.02
+    - rule_id: "inhibitory_gating"
+      description: "Switch to inhibitory mode on gating signals"
+      trigger_meanings: ["inhibit", "gate", "suppress"]
+      trigger_tags: ["regulation"]
+      min_strength: 0.1
+      activate_receptor_profile: "inhibitory"
+      threshold_delta: -0.1
+    - rule_id: "memory_consolidation"
+      description: "Enable memory-related latent state on consolidation cues"
+      trigger_meanings: ["consolidate", "memory", "replay"]
+      trigger_tags: ["hippocampus"]
+      min_strength: 0.0
+      activate_latent_state: "memory_trace"
+      latent_state_weight: 0.5
+      wave_frequency: 5.0
+
+
+# T-QUANTUM — Quantum-inspired layer genes
+# Configures the optional quantum emulation. This is a functional analogy,
+# not a claim of real quantum coherence in biological neurons.
+quantum_genes:
+  enabled: false
+  qubits_per_neuron: 1
+  default_initial_state: 0
+  entanglement_fidelity_threshold: 0.5
+  gate_noise: 0.0
+  periodic_element_qubit_map:
+    s: 1
+    p: 2
+    d: 2
+    f: 1
+    g: 1

@@ -155,3 +155,76 @@ def test_genome_has_differentiation_rules(genome):
     assert "regulatory_neuron" in genome.cell_differentiation_rules
     assert "memory_neuron" in genome.cell_differentiation_rules
     assert "generic_neuron" in genome.cell_differentiation_rules
+    # T132 — Linguistic cell types
+    assert "auditory_neuron" in genome.cell_differentiation_rules
+    assert "broca_neuron" in genome.cell_differentiation_rules
+    assert "wernicke_neuron" in genome.cell_differentiation_rules
+    assert "semantic_pointer_neuron" in genome.cell_differentiation_rules
+
+
+def test_auditory_region_becomes_auditory_neuron(engine, circuit):
+    n = DigitalNeuron(cell_id="aud", role="digital_neuron")
+    n.region = "auditory"
+    circuit.hidden_neurons.append(n)
+    context = engine.evaluate_cell_context(n, circuit)
+    new_type = engine.select_cell_fate(context)
+    assert new_type == "auditory_neuron"
+
+
+def test_wernicke_region_becomes_wernicke_neuron(engine, circuit):
+    n = DigitalNeuron(cell_id="wer", role="digital_neuron")
+    n.region = "wernicke"
+    circuit.hidden_neurons.append(n)
+    context = engine.evaluate_cell_context(n, circuit)
+    new_type = engine.select_cell_fate(context)
+    assert new_type == "wernicke_neuron"
+
+
+def test_broca_region_becomes_broca_neuron(engine, circuit):
+    n = DigitalNeuron(cell_id="bro", role="digital_neuron")
+    n.region = "broca"
+    circuit.hidden_neurons.append(n)
+    context = engine.evaluate_cell_context(n, circuit)
+    new_type = engine.select_cell_fate(context)
+    assert new_type == "broca_neuron"
+
+
+def test_semantic_region_becomes_semantic_pointer_neuron(engine, circuit):
+    n = DigitalNeuron(cell_id="sem", role="digital_neuron")
+    n.region = "semantic"
+    circuit.hidden_neurons.append(n)
+    context = engine.evaluate_cell_context(n, circuit)
+    new_type = engine.select_cell_fate(context)
+    assert new_type == "semantic_pointer_neuron"
+
+
+def test_linguistic_phenotypes(engine, circuit):
+    n = DigitalNeuron(cell_id="ling", role="digital_neuron")
+    circuit.hidden_neurons.append(n)
+    context = engine.evaluate_cell_context(n, circuit)
+
+    engine.apply_differentiation(n, "auditory_neuron", context)
+    assert n.cell_type == "auditory_neuron"
+    assert n.neuron_role == "auditory"
+    assert getattr(n, "phoneme_sensitivity", 0) > 0
+
+    n2 = DigitalNeuron(cell_id="ling2", role="digital_neuron")
+    circuit.hidden_neurons.append(n2)
+    engine.apply_differentiation(n2, "wernicke_neuron", context)
+    assert n2.cell_type == "wernicke_neuron"
+    assert n2.neuron_role == "comprehension"
+    assert getattr(n2, "comprehension_strength", 0) > 0
+
+    n3 = DigitalNeuron(cell_id="ling3", role="digital_neuron")
+    circuit.hidden_neurons.append(n3)
+    engine.apply_differentiation(n3, "broca_neuron", context)
+    assert n3.cell_type == "broca_neuron"
+    assert n3.neuron_role == "production"
+    assert isinstance(getattr(n3, "sequence_buffer", None), list)
+
+    n4 = DigitalNeuron(cell_id="ling4", role="digital_neuron")
+    circuit.hidden_neurons.append(n4)
+    engine.apply_differentiation(n4, "semantic_pointer_neuron", context)
+    assert n4.cell_type == "semantic_pointer_neuron"
+    assert n4.neuron_role == "semantic_pointer"
+    assert hasattr(n4, "symbol")

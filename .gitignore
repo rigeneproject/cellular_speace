@@ -60,3 +60,8 @@ docs/_temp*.txt
 
 # PDF docs
 docs/*.pdf
+
+# Local secrets / API keys (never commit)
+.env
+.env.*
+!**/.env.example

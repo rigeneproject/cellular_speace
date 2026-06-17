@@ -1,3 +1,4 @@
+from speace_core.cellular_brain.world_model.causal_world_model import CausalWorldModel
 from speace_core.cellular_brain.world_model.world_model_models import (
     CausalLink,
     CausalSimulationResult,
@@ -28,6 +29,7 @@ from speace_core.cellular_brain.world_model.world_model_real_run_audit_runner im
 )
 
 __all__ = [
+    "CausalWorldModel",
     "CausalLink",
     "CausalSimulationResult",
     "ImpactAssessment",

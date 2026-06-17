@@ -4,6 +4,7 @@ Provides /ws/state endpoint that pushes JSON state snapshots
 via the MetricsBus.
 """
 
+import logging
 from typing import Any, Dict
 
 from speace_core.monitoring.metrics_bus import MetricsBus
@@ -30,6 +31,10 @@ def create_websocket_router(metrics_bus: MetricsBus) -> APIRouter:
     async def ws_state(websocket: WebSocket) -> None:
         await websocket.accept()
         queue = metrics_bus.subscribe()
+        if queue is None:
+            # Subscriber cap reached — close gracefully
+            await websocket.close(code=1013, reason="subscriber cap reached")
+            return
         try:
             while True:
                 state: Dict[str, Any] = await queue.get()
@@ -37,7 +42,7 @@ def create_websocket_router(metrics_bus: MetricsBus) -> APIRouter:
         except WebSocketDisconnect:
             pass
         except Exception:
-            pass
+            logging.getLogger(__name__).warning("WebSocket task failed", exc_info=True)
         finally:
             metrics_bus.unsubscribe(queue)
 

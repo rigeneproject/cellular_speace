@@ -1,4 +1,5 @@
 import json
+import logging
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -219,4 +220,4 @@ class ProposalLearningEngine:
             )
             self.memory.log_event(event)
         except Exception:
-            pass
+            logging.getLogger(__name__).warning("Proposal learning step failed", exc_info=True)

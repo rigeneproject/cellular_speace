@@ -1,0 +1,599 @@
+{
+  "state": "running",
+  "tick_count": 255826,
+  "ticks_since_start": 255825,
+  "uptime_seconds": 38.287678718566895,
+  "tick_interval": 1.0,
+  "circadian": {
+    "phase": "awake",
+    "phase_elapsed_seconds": 38.30494141578674,
+    "awake_duration": 300.0,
+    "sleep_duration": 60.0,
+    "is_sleeping": false
+  },
+  "health": {
+    "health_score": 1.0,
+    "tick_jitter_ms": 0.0,
+    "tick_latency_ms": 1148.3047008514404,
+    "consecutive_exceptions": 0,
+    "total_exceptions": 0,
+    "peak_memory_rss_mb": 0.0,
+    "thresholds": {
+      "max_tick_jitter_ms": 2000.0,
+      "max_tick_latency_ms": 5000.0,
+      "max_memory_rss_mb": 2048.0,
+      "max_consecutive_exceptions": 3
+    }
+  },
+  "lifecycle": {
+    "current_state": "active",
+    "transition_history": [
+      [
+        "initializing",
+        "active"
+      ]
+    ],
+    "possible_next_states": [
+      "baseline",
+      "conservation",
+      "recovery",
+      "degraded",
+      "critical",
+      "audit_only"
+    ]
+  },
+  "halt": {
+    "is_halted": false,
+    "halt_reason": null,
+    "halted_at": null,
+    "consecutive_brainstem_emergency": 0
+  },
+  "degradation": {
+    "actions_applied": [],
+    "slowdown_level": 0
+  },
+  "recovery": {
+    "recovery_status": "recovered",
+    "restored_from": 1781691669.9993515,
+    "resume_narrative": "Bentornato, amico mio. L'ultima volta ci siamo parlati pochi momenti fa. Stavamo discutendo di qualcosa di interessante. Il mio health score era non valutato. Sono pronto a riprendere."
+  },
+  "extended_observation": {
+    "latest_report": null,
+    "total_reports": 0,
+    "uptime_seconds": 38.30519700050354
+  },
+  "memory_audit": {
+    "latest_report": null,
+    "total_audits": 0,
+    "baseline_set": false
+  },
+  "circadian_validation": {
+    "timestamp": 1781692003.0791066,
+    "phase_order_valid": true,
+    "consolidation_present": true,
+    "narrative_compression_ratio": 0.0,
+    "drive_balance_score": 0.0,
+    "sleep_efficiency": 0.0,
+    "sleep_cycles_completed": 0,
+    "errors": [],
+    "warnings": [],
+    "is_valid": true
+  },
+  "latent_integration": {
+    "tick": 0,
+    "vector_dim": 64,
+    "history_window": 100,
+    "local_bus": {
+      "node_id": "local_runtime",
+      "inbound_queue": 0,
+      "outbound_queue": 0,
+      "peers": [],
+      "trust_scores": {}
+    },
+    "latest_metrics": {}
+  },
+  "distributed_sync": {
+    "node_id": "local_runtime",
+    "tick_count": 0,
+    "last_sync_at": 0.0,
+    "packets_sent": 0,
+    "packets_received": 0,
+    "peers": []
+  },
+  "organism_state": {
+    "current_state": "awake",
+    "ticks_in_state": 1,
+    "dwell_time_seconds": 38.306,
+    "transition_count": 0,
+    "transition_history": [],
+    "policy": {
+      "min_dwell_ticks": 3,
+      "thresholds": {
+        "energy_low": 0.2,
+        "energy_critical": 0.1,
+        "prediction_error_high": 0.7,
+        "cognitive_load_high": 0.85,
+        "curiosity_high": 0.6,
+        "stability_ok": 0.5,
+        "health_recovered": 0.7,
+        "recovery_ticks_min": 5
+      }
+    }
+  },
+  "behavior_trees": {
+    "trees": {
+      "explore_local": {
+        "name": "explore_local",
+        "last_status": "failure",
+        "tick_count": 1
+      },
+      "avoid_overload": {
+        "name": "avoid_overload",
+        "last_status": "failure",
+        "tick_count": 1
+      },
+      "prioritize_homeostatic_need": {
+        "name": "prioritize_homeostatic_need",
+        "last_status": "success",
+        "tick_count": 1
+      },
+      "search_grounding_input": {
+        "name": "search_grounding_input",
+        "last_status": "failure",
+        "tick_count": 1
+      }
+    },
+    "last_tick_latencies_ms": {
+      "explore_local": 0.00858306884765625,
+      "avoid_overload": 0.0019073486328125,
+      "prioritize_homeostatic_need": 0.010728836059570312,
+      "search_grounding_input": 0.0019073486328125
+    },
+    "tick_count": 1,
+    "active_tree_count": 4
+  },
+  "utility_drives": {
+    "drives": {
+      "exploration": 0.425,
+      "stability": 0.525,
+      "rest": 0.425,
+      "social_interaction": 0.425,
+      "prediction_error_reduction": 0.425,
+      "energy_conservation": 0.425
+    },
+    "dominant_drive": "stability",
+    "history_sample": [
+      {
+        "exploration": 0.425,
+        "stability": 0.525,
+        "rest": 0.425,
+        "social_interaction": 0.425,
+        "prediction_error_reduction": 0.425,
+        "energy_conservation": 0.425
+      }
+    ]
+  },
+  "utility_arbitration": {
+    "weights": {
+      "infant_curiosity_layer": 0.09298737727910239,
+      "cyber_physical_sensor_array": 0.09298737727910238,
+      "homeostasis_engine": 0.10666199158485273,
+      "causal_learning_auditor": 0.10476858345021041,
+      "global_workspace": 0.10392706872370266,
+      "dialogue_manager": 0.09298737727910239,
+      "distributed_latent_sync": 0.10028050490883592,
+      "metacognitive_monitor": 0.10392706872370266,
+      "reflective_narrative_generator": 0.1011921458625526,
+      "episodic_memory_consolidation": 0.1002805049088359
+    },
+    "drive_snapshot": {
+      "drives": {
+        "exploration": 0.425,
+        "stability": 0.525,
+        "rest": 0.425,
+        "social_interaction": 0.425,
+        "prediction_error_reduction": 0.425,
+        "energy_conservation": 0.425
+      },
+      "dominant_drive": "stability",
+      "history_sample": [
+        {
+          "exploration": 0.425,
+          "stability": 0.525,
+          "rest": 0.425,
+          "social_interaction": 0.425,
+          "prediction_error_reduction": 0.425,
+          "energy_conservation": 0.425
+        }
+      ]
+    },
+    "tick_count": 1,
+    "safety_floors": {
+      "causal_learning_auditor": 0.1,
+      "homeostasis_engine": 0.1
+    }
+  },
+  "goap": {
+    "last_plan": null,
+    "proposal_count": 0,
+    "tick_count": 0,
+    "planner": {
+      "action_count": 6,
+      "max_planning_ms": 50.0
+    },
+    "bridge": {
+      "confidence_threshold": 0.3,
+      "has_confidence_engine": false,
+      "has_strategy_evaluator": false
+    },
+    "registry": {
+      "registered_actions": [
+        {
+          "name": "observe_sensor",
+          "preconditions": {
+            "sensor_data_fresh": false
+          },
+          "effects": {
+            "sensor_data_fresh": true,
+            "prediction_error": "reduced"
+          },
+          "cost": 1.0,
+          "simulate_only": true
+        },
+        {
+          "name": "query_memory",
+          "preconditions": {
+            "memory_queried": false
+          },
+          "effects": {
+            "memory_queried": true,
+            "uncertainty": "reduced"
+          },
+          "cost": 1.0,
+          "simulate_only": true
+        },
+        {
+          "name": "request_clarification",
+          "preconditions": {
+            "clarification_needed": true
+          },
+          "effects": {
+            "clarification_needed": false,
+            "social_interaction": "increased"
+          },
+          "cost": 2.0,
+          "simulate_only": false
+        },
+        {
+          "name": "run_counterfactual",
+          "preconditions": {
+            "hypothesis_ready": true
+          },
+          "effects": {
+            "hypothesis_tested": true,
+            "prediction_error": "reduced"
+          },
+          "cost": 3.0,
+          "simulate_only": true
+        },
+        {
+          "name": "trigger_metacognitive_review",
+          "preconditions": {
+            "metacognition_active": false
+          },
+          "effects": {
+            "metacognition_active": true,
+            "strategy_evaluated": true
+          },
+          "cost": 2.0,
+          "simulate_only": true
+        },
+        {
+          "name": "adjust_attention",
+          "preconditions": {
+            "attention_focused": false
+          },
+          "effects": {
+            "attention_focused": true,
+            "coherence": "increased"
+          },
+          "cost": 1.0,
+          "simulate_only": true
+        }
+      ],
+      "count": 6
+    }
+  },
+  "social_cognition": {
+    "model_count": 0,
+    "models": []
+  },
+  "trust_reputation": {
+    "trust_threshold": 0.6,
+    "trust_matrix": {},
+    "history_count": 0
+  },
+  "social_coordinator": {
+    "pending_proposals": [],
+    "recent_conflicts": [],
+    "trust_snapshot": {
+      "trust_threshold": 0.6,
+      "trust_matrix": {},
+      "history_count": 0
+    }
+  },
+  "nursery": {
+    "active_session": null,
+    "builder": {
+      "scenario_count": 4,
+      "scenarios": [
+        {
+          "scenario_id": "falling_objects",
+          "name": "Falling Objects",
+          "description": "Object released from height falls due to gravity; collision produces sound.",
+          "variables": {
+            "gravity": 9.8,
+            "object_mass": 1.0,
+            "release_height": 2.0,
+            "surface_elasticity": 0.3
+          },
+          "expected_chain": [
+            "release_object",
+            "object_falls",
+            "collision_with_surface",
+            "sound_emitted"
+          ]
+        },
+        {
+          "scenario_id": "agent_approach",
+          "name": "Agent Approach",
+          "description": "Virtual agent moves toward or away; social proximity changes.",
+          "variables": {
+            "agent_speed": 1.0,
+            "initial_distance": 5.0,
+            "direction": "toward",
+            "agent_drive": "curiosity"
+          },
+          "expected_chain": [
+            "agent_perceives_target",
+            "agent_moves",
+            "distance_changes",
+            "proximity_event"
+          ]
+        },
+        {
+          "scenario_id": "tool_use",
+          "name": "Tool Use",
+          "description": "Object manipulation to reach a goal (e.g. push box to get food).",
+          "variables": {
+            "tool_type": "stick",
+            "target_distance": 3.0,
+            "obstacle_present": true
+          },
+          "expected_chain": [
+            "agent_perceives_goal",
+            "agent_selects_tool",
+            "agent_applies_tool",
+            "goal_reached"
+          ]
+        },
+        {
+          "scenario_id": "hidden_object",
+          "name": "Hidden Object",
+          "description": "Object permanence test: object hidden, agent must remember location.",
+          "variables": {
+            "hiding_duration": 5.0,
+            "distraction_count": 2,
+            "object_type": "ball"
+          },
+          "expected_chain": [
+            "object_visible",
+            "object_hidden",
+            "distraction_events",
+            "agent_queries_memory",
+            "object_revealed"
+          ]
+        }
+      ]
+    },
+    "agents": {
+      "agent_count": 0,
+      "agents": []
+    },
+    "mean_prediction_error": 0.0
+  },
+  "linguistic_bridge": {
+    "available": null,
+    "mock_mode": false,
+    "endpoint_url": "http://localhost:11434/api/generate",
+    "model": "llama3.2",
+    "language": "it",
+    "call_count": 0,
+    "last_latency_ms": 0.0,
+    "last_error": null,
+    "audit_summary": {
+      "interaction_count": 0,
+      "audit_log_path": "data\\language\\llm_audit.jsonl"
+    }
+  },
+  "game_ai_pipeline": {
+    "tick_count": 1,
+    "degraded_mode": false,
+    "last_latencies_ms": {
+      "fsm": 0.008106231689453125,
+      "utility": 0.051021575927734375,
+      "bt": 0.48851966857910156,
+      "goap": 0.0
+    },
+    "last_proposal_count": 1,
+    "max_pipeline_ms": 50.0,
+    "layers": {
+      "fsm": "awake",
+      "utility": {
+        "weights": {
+          "infant_curiosity_layer": 0.09298737727910239,
+          "cyber_physical_sensor_array": 0.09298737727910238,
+          "homeostasis_engine": 0.10666199158485273,
+          "causal_learning_auditor": 0.10476858345021041,
+          "global_workspace": 0.10392706872370266,
+          "dialogue_manager": 0.09298737727910239,
+          "distributed_latent_sync": 0.10028050490883592,
+          "metacognitive_monitor": 0.10392706872370266,
+          "reflective_narrative_generator": 0.1011921458625526,
+          "episodic_memory_consolidation": 0.1002805049088359
+        },
+        "drive_snapshot": {
+          "drives": {
+            "exploration": 0.425,
+            "stability": 0.525,
+            "rest": 0.425,
+            "social_interaction": 0.425,
+            "prediction_error_reduction": 0.425,
+            "energy_conservation": 0.425
+          },
+          "dominant_drive": "stability",
+          "history_sample": [
+            {
+              "exploration": 0.425,
+              "stability": 0.525,
+              "rest": 0.425,
+              "social_interaction": 0.425,
+              "prediction_error_reduction": 0.425,
+              "energy_conservation": 0.425
+            }
+          ]
+        },
+        "tick_count": 1,
+        "safety_floors": {
+          "causal_learning_auditor": 0.1,
+          "homeostasis_engine": 0.1
+        }
+      },
+      "bt": {
+        "trees": {
+          "explore_local": {
+            "name": "explore_local",
+            "last_status": "failure",
+            "tick_count": 1
+          },
+          "avoid_overload": {
+            "name": "avoid_overload",
+            "last_status": "failure",
+            "tick_count": 1
+          },
+          "prioritize_homeostatic_need": {
+            "name": "prioritize_homeostatic_need",
+            "last_status": "success",
+            "tick_count": 1
+          },
+          "search_grounding_input": {
+            "name": "search_grounding_input",
+            "last_status": "failure",
+            "tick_count": 1
+          }
+        },
+        "last_tick_latencies_ms": {
+          "explore_local": 0.00858306884765625,
+          "avoid_overload": 0.0019073486328125,
+          "prioritize_homeostatic_need": 0.010728836059570312,
+          "search_grounding_input": 0.0019073486328125
+        },
+        "tick_count": 1,
+        "active_tree_count": 4
+      },
+      "goap": {
+        "last_plan": null,
+        "proposal_count": 0,
+        "tick_count": 0,
+        "planner": {
+          "action_count": 6,
+          "max_planning_ms": 50.0
+        },
+        "bridge": {
+          "confidence_threshold": 0.3,
+          "has_confidence_engine": false,
+          "has_strategy_evaluator": false
+        },
+        "registry": {
+          "registered_actions": [
+            {
+              "name": "observe_sensor",
+              "preconditions": {
+                "sensor_data_fresh": false
+              },
+              "effects": {
+                "sensor_data_fresh": true,
+                "prediction_error": "reduced"
+              },
+              "cost": 1.0,
+              "simulate_only": true
+            },
+            {
+              "name": "query_memory",
+              "preconditions": {
+                "memory_queried": false
+              },
+              "effects": {
+                "memory_queried": true,
+                "uncertainty": "reduced"
+              },
+              "cost": 1.0,
+              "simulate_only": true
+            },
+            {
+              "name": "request_clarification",
+              "preconditions": {
+                "clarification_needed": true
+              },
+              "effects": {
+                "clarification_needed": false,
+                "social_interaction": "increased"
+              },
+              "cost": 2.0,
+              "simulate_only": false
+            },
+            {
+              "name": "run_counterfactual",
+              "preconditions": {
+                "hypothesis_ready": true
+              },
+              "effects": {
+                "hypothesis_tested": true,
+                "prediction_error": "reduced"
+              },
+              "cost": 3.0,
+              "simulate_only": true
+            },
+            {
+              "name": "trigger_metacognitive_review",
+              "preconditions": {
+                "metacognition_active": false
+              },
+              "effects": {
+                "metacognition_active": true,
+                "strategy_evaluated": true
+              },
+              "cost": 2.0,
+              "simulate_only": true
+            },
+            {
+              "name": "adjust_attention",
+              "preconditions": {
+                "attention_focused": false
+              },
+              "effects": {
+                "attention_focused": true,
+                "coherence": "increased"
+              },
+              "cost": 1.0,
+              "simulate_only": true
+            }
+          ],
+          "count": 6
+        }
+      }
+    }
+  },
+  "self_improvement": {},
+  "mmapr_veto_router": {}
+}

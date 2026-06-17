@@ -29,14 +29,21 @@ class SafeDegradationHandler:
         runtime_health: Dict[str, Any],
         brainstem_state: str,
         orchestrator: Any,
+        runtime_engine: Any = None,
     ) -> List[Dict[str, Any]]:
         actions: List[Dict[str, Any]] = []
         health_score = runtime_health.get("health_score", 1.0)
 
-        # Level 1: slowdown
+        # Level 1: slowdown — modify the runtime engine's tick_interval
+        # (the one actually used for sleep), not the orchestrator's.
         if self.enable_auto_slowdown and health_score < 0.6 and self._slowdown_level < 3:
             self._slowdown_level += 1
-            new_interval = getattr(orchestrator, "tick_interval", 1.0) * 1.5
+            base_interval = getattr(runtime_engine, "tick_interval", None) if runtime_engine is not None else None
+            if base_interval is None:
+                base_interval = getattr(orchestrator, "tick_interval", 1.0)
+            new_interval = base_interval * 1.5
+            if runtime_engine is not None:
+                runtime_engine.tick_interval = new_interval
             orchestrator.tick_interval = new_interval
             actions.append({
                 "action": "slowdown",
@@ -46,8 +53,15 @@ class SafeDegradationHandler:
             })
 
         # Level 2: disable non-critical subsystems
+        # NOTE: global_workspace is NOT disabled here — disabling it
+        # creates a coherence death spiral (no workspace → no synchronisation
+        # → lower phi → more degradation → even lower phi).
+        # It is only disabled under brainstem emergency (see below).
+        CRITICAL_SUBSYSTEMS = {"global_workspace_enabled"}
         if health_score < 0.4:
             for flag_name in ("community_detection_enabled", "evolution_enabled"):
+                if flag_name in CRITICAL_SUBSYSTEMS:
+                    continue
                 if getattr(orchestrator, flag_name, False):
                     setattr(orchestrator, flag_name, False)
                     actions.append({

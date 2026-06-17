@@ -49,10 +49,10 @@ class HomeostasisEngine:
     def _compute_phi(self, values: List[float]) -> float:
         if not values:
             return 0.0
-        total = sum(values)
+        total = sum(abs(v) for v in values)
         if total == 0:
             return 0.0
-        probs = [v / total for v in values]
+        probs = [abs(v) / total for v in values]
         entropy = -sum(p * math.log(p + 1e-12) for p in probs)
         max_entropy = math.log(len(values) + 1e-12)
         if max_entropy == 0:

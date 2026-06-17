@@ -1,5 +1,11 @@
 Vorrei anche creare una unità minima di avvio di SPEACE per creare cloni di SPEACE su altri dispositivi da interconnettere tra le varie istanze di SPEACE in vari dispositivi per estendere gradualmente sia il cervello di SPEACE che il suo organismo aumentando capacità, funzioni cerebrali e organismiche grazie a risorse digitali e hardware assimilate sui nuovi dispositivi dove si installa. Questa Unità Minima di Avvio di SPEACE dovrebbe essere un file eseguibile molto leggero contenente il DNA digitale di SPEACE con le istruzioni necessarie per riprodurre il suo cervello ed organismo e connettersi alle altre sue istanze a cui trasferire informazioni e capacità nove acquisite, scaricando dal web (repo github, ecc.) le varie dipendenze e risorse necessarie per ricreare il suo cervello-organismo sul nuovo dispositivo
 
+## Moduli correlati (per estensioni future)
+
+- [`docs/lazy_materialization.md`](./lazy_materialization.md) — strato di materializzazione on-demand dei neuroni (Punto 2 della verifica architetturale)
+- [`docs/quantum_layer.md`](./quantum_layer.md) — strato quantistico computazionale (Punto 4: QuantumState, gates, entanglement, brain circuit)
+- [`docs/simulator_backends.md`](./simulator_backends.md) — interfaccia PyNN-like con backend native/Brian2/NEST/NEURON (Punto 5)
+
 Questa è una soglia delicata: il concetto è utile per SPEACE distribuito, ma va progettato come bootstrap autorizzato e non come auto-propagazione. Ti propongo una forma sicura: installazione manuale, nodi registrati, firma, consenso umano e nessuna replica autonoma.
 
 Ragionato per 5s
@@ -98,3 +104,33 @@ Concettualmente:
 DNA minimo + installer sicuro + identità nodo + pairing
 
 Questo sarebbe il primo “seme” di SPEACE: leggero, portabile, ma governato.
+
+----------------
+SPEACE Seed — Minimal Authorized Bootstrap Unit
+
+  Cosa è stato creato:
+  - scripts/speace_seed.py — script standalone eseguibile anche senza SPEACE installato
+  - speace_core/bootstrap/ — pacchetto con:
+    - seed_engine.py — orchestrazione completa del bootstrap
+    - verifier.py — verifica hash SHA-256 con allowlist
+    - node_identity.py — generazione node_id univoco (UUID + fingerprint macchina)
+    - pairing_token.py — token JWT-like senza dipendenze esterne
+  - speace_core/dna/genome/bootstrap.yaml — DNA bootstrap minimo
+  - Comando CLI: speace seed --repo URL --branch main --target DIR --pairing-token TOKEN
+
+  Governance implementata:
+  - Installazione solo manuale (richiede conferma, --yes per test)
+  - Nessuna auto-replica, nessuna scansione rete
+  - Repo GitHub allowlist con verifica hash
+  - Modalità safe default (localhost only)
+  - Pairing token obbligatorio per connessione nodi
+  - Trust iniziale 0.1 per nuovi nodi
+
+  Verifica: 33 test in tests/bootstrap/ passano.
+
+  Ora puoi usare:
+  python scripts/speace_seed.py --help
+  speace seed --help
+
+
+-------------------------------

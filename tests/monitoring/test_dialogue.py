@@ -1,5 +1,7 @@
 """Tests for T107 — Vocal Interface & Dialog Organ."""
 
+from __future__ import annotations
+
 import pytest
 from fastapi.testclient import TestClient
 

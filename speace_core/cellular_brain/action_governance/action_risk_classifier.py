@@ -1,8 +1,6 @@
 import uuid
 from typing import Optional
 
-from typing import Optional
-
 from speace_core.cellular_brain.action_governance.action_governance_models import (
     ActionRiskAssessment,
     ActionRiskClass,

@@ -460,6 +460,43 @@ class CyberPhysicalSensorArray:
             "event_count": len(events),
         }
 
+    def get_root_filesystem_overview(self) -> Dict[str, Any]:
+        """Monitora la root del computer tramite il link simbolico root_link."""
+        root_link = "C:\\cellular_speace\\root_link"
+        entries: List[Dict[str, Any]] = []
+        if not os.path.exists(root_link):
+            return {"error": "root_link_not_found", "root_link": root_link}
+        try:
+            with os.scandir(root_link) as it:
+                for entry in it:
+                    try:
+                        st = entry.stat(follow_symlinks=False)
+                        entries.append({
+                            "name": entry.name,
+                            "is_file": entry.is_file(follow_symlinks=False),
+                            "is_dir": entry.is_dir(follow_symlinks=False),
+                            "size_bytes": st.st_size,
+                            "modified_at": datetime.fromtimestamp(
+                                st.st_mtime, tz=timezone.utc
+                            ).isoformat(),
+                        })
+                    except (OSError, PermissionError):
+                        entries.append({
+                            "name": entry.name,
+                            "is_file": False,
+                            "is_dir": False,
+                            "size_bytes": 0,
+                            "error": "access_denied",
+                        })
+        except (OSError, PermissionError):
+            pass
+        return {
+            "root_link": root_link,
+            "resolved_root": os.path.realpath(root_link),
+            "entry_count": len(entries),
+            "entries": entries,
+        }
+
     # ------------------------------------------------------------------ #
     # Composite API
     # ------------------------------------------------------------------ #
@@ -476,6 +513,7 @@ class CyberPhysicalSensorArray:
             "power": self.get_power_state(),
             "temperature": self.get_temperature_state(),
             "filesystem": self.get_filesystem_events(),
+            "root_filesystem": self.get_root_filesystem_overview(),
         }
         with self._lock:
             self._history.append(snapshot)

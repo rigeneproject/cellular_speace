@@ -24,6 +24,11 @@ from speace_core.cellular_brain.self_improvement.self_improvement_memory import 
 from speace_core.cellular_brain.self_improvement.self_improvement_loop import (
     SelfImprovementLoop,
 )
+# T169 — Phase 3 closed loop
+from speace_core.cellular_brain.self_improvement.self_modification_cycle import (
+    SelfModificationCycle,
+    SelfModificationCycleResult,
+)
 
 __all__ = [
     "LimitationDetector",
@@ -40,4 +45,6 @@ __all__ = [
     "ProposalLearningRecord",
     "SelfImprovementMemory",
     "SelfImprovementLoop",
+    "SelfModificationCycle",
+    "SelfModificationCycleResult",
 ]

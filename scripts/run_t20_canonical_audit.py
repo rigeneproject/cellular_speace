@@ -15,7 +15,7 @@ async def main():
     # Print concise summary
     s = report.summary
     print(f"\n{'='*60}")
-    print(f"T20 CANONICAL AUDIT REPORT")
+    print("T20 CANONICAL AUDIT REPORT")
     print(f"{'='*60}")
     print(f"Audit ID: {report.audit_id}")
     print(f"Created:  {report.created_at}")
@@ -24,14 +24,14 @@ async def main():
     print(f"Best Config: {s.best_configuration}")
     print(f"Best Cognitive Score: {s.best_cognitive_score}")
     print(f"Best Fitness Score:   {s.best_fitness_score}")
-    print(f"\n--- Deltas (full organism vs baseline) ---")
+    print("\n--- Deltas (full organism vs baseline) ---")
     print(f"  Cognitive Score Delta:   {s.cognitive_score_delta:+.4f}")
     print(f"  Phi Delta:               {s.phi_delta:+.4f}")
     print(f"  Energy Efficiency Delta: {s.energy_efficiency_delta:+.4f}")
     print(f"  Modularity Delta:        {s.modularity_delta:+.4f}")
     print(f"  Confidence Delta:        {s.confidence_delta:+.4f}")
     print(f"  Stability Delta:         {s.stability_delta:+.4f}")
-    print(f"\n--- Results per configuration ---")
+    print("\n--- Results per configuration ---")
     for r in report.results:
         m = r.benchmark_metrics
         fit_str = f"{r.fitness_score:.4f}" if r.fitness_score is not None else "    —"
@@ -45,7 +45,7 @@ async def main():
             f"fit={fit_str:>7s}  "
             f"{'PASS' if r.test_passed else 'FAIL'}"
         )
-    print(f"\n--- Report files ---")
+    print("\n--- Report files ---")
     print(f"JSON: {report.json_report_path}")
     print(f"MD:   {report.markdown_report_path}")
     print(f"{'='*60}\n")

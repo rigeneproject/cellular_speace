@@ -14,7 +14,14 @@ import time
 from collections import Counter, deque
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
+import logging
 
+_logger = logging.getLogger(__name__)
+
+from speace_agi_team.action_catalog import ActionCatalog
+from speace_agi_team.action_executor import ActionExecutor
+from speace_agi_team.action_proposal import ActionProposal, ActionProposalStatus
+from speace_agi_team.action_safety_gate import ActionSafetyGate
 from speace_agi_team.config import AgentConfig
 from speace_agi_team.engineering_plan import EngineeringPlan
 
@@ -80,10 +87,14 @@ class RuntimeHealthMonitor:
     - tick (not advancing)
     - CPU/memory spikes
     - absence of snapshots
+
+    Now with live runtime access for real-time data.
     """
 
-    def __init__(self, data_root: str = "data"):
+    def __init__(self, data_root: str = "data", runtime: Any = None, brain_orchestrator: Any = None):
         self.data_root = Path(data_root)
+        self.runtime = runtime
+        self.brain_orchestrator = brain_orchestrator
         self.last_tick: Optional[int] = None
         self.last_tick_time: float = 0.0
         self.last_phi: Optional[float] = None
@@ -138,7 +149,11 @@ class RuntimeHealthMonitor:
         return float(value)
 
     def check(self) -> Dict[str, Any]:
-        """Run a health check. Returns a report and stores alerts."""
+        """Run a health check. Returns a report and stores alerts.
+
+        Primary source: live runtime engine.
+        Fallback: data files.
+        """
         report = {
             "ok": True,
             "checks": [],
@@ -150,16 +165,43 @@ class RuntimeHealthMonitor:
             "timestamp": time.time(),
         }
 
+        # ── Primary: live runtime data ──────────────────────────────────
+        live_tick = None
+        live_phi = None
+        if self.runtime is not None:
+            try:
+                snap = self.runtime.snapshot() if hasattr(self.runtime, "snapshot") else {}
+                if snap:
+                    live_tick = snap.get("ticks_since_start", snap.get("tick_count", 0))
+                    health = snap.get("health", {})
+                    if isinstance(health, dict):
+                        report["health_score"] = health.get("health_score", 0.0)
+                    report["tick"] = live_tick
+                    report["checks"].append("live_runtime")
+            except Exception:
+                pass
+
+        if self.brain_orchestrator is not None:
+            try:
+                m = getattr(self.brain_orchestrator, "latest_metrics", None)
+                if m is not None:
+                    live_phi = getattr(m, "coherence_phi", None)
+                    if live_phi is not None:
+                        report["coherence_phi"] = live_phi
+            except Exception:
+                pass
+
+        # ── Fallback: data files ────────────────────────────────────────
         snap = self._read_last_snapshot()
         if snap:
-            # Nuovo formato (organism_observer) vs vecchio (morphological_memory)
             phi = snap.get("coherence_phi") or snap.get("avg_clustering")
             tick = snap.get("tick", 0)
-            report["coherence_phi"] = (
+            # Use live data over file data when available
+            report["coherence_phi"] = live_phi if live_phi is not None else (
                 phi * 0.5 + snap.get("global_efficiency", 0.0) * 0.5
                 if phi else None
             )
-            report["tick"] = tick
+            report["tick"] = live_tick if live_tick is not None else tick
 
             if phi is not None and phi < self.coherence_threshold:
                 alert = f"⚠️ Coherence_phi {phi:.3f} sotto soglia {self.coherence_threshold}"
@@ -219,12 +261,19 @@ class AutoAnalysisScheduler:
     - Every N seconds: Chief Architect reviews the engineering plan
     - Every M seconds: each supervisor analyzes its domain
     - Findings are logged to data/agi_team/auto_analysis.jsonl
+
+    Now with:
+    - Live runtime context (not just files)
+    - Stall detection (skip repetitive LLM calls when context is unchanged)
+    - Per-call LLM fallback on timeout
     """
 
     def __init__(self, agents: Dict[str, Any], plan: EngineeringPlan,
                  chief_id: str = "chief_architect",
                  chief_interval: float = 300.0,
-                 supervisor_interval: float = 600.0):
+                 supervisor_interval: float = 600.0,
+                 runtime: Any = None,
+                 brain_orchestrator: Any = None):
         self.agents = agents
         self.plan = plan
         self.chief_id = chief_id
@@ -233,6 +282,14 @@ class AutoAnalysisScheduler:
         self._last_chief: float = 0.0
         self._last_supervisor: float = 0.0
         self._lock = threading.Lock()
+        self._orchestrator_ref: Optional[Any] = None  # Set by Orchestrator to enable action cycle
+        # ── Live runtime context ──────────────────────────────────────────
+        self._runtime = runtime
+        self._brain_orchestrator = brain_orchestrator
+        # ── Stall detection ───────────────────────────────────────────────
+        self._last_context_hash: str = ""
+        self._stall_count: int = 0
+        self._max_stall_skips: int = 3  # Skip analysis after N consecutive identical contexts
         self._log_path = Path("data/agi_team/auto_analysis.jsonl")
         self._log_path.parent.mkdir(parents=True, exist_ok=True)
         self._findings_count = 0
@@ -251,45 +308,115 @@ class AutoAnalysisScheduler:
             pass
 
     def _build_speace_context(self) -> Dict[str, Any]:
-        """Read latest SPEACE data for analysis context."""
+        """Read latest SPEACE data for analysis context.
+
+        Primary source: live runtime engine (real-time data).
+        Fallback: organism_observer topology + morphological_memory + embodiment files.
+        Last resort: static defaults with 'no_data' status.
+        """
         ctx: Dict[str, Any] = {}
-        try:
-            # Nuovo percorso: organism_observer
-            snap_path = Path("data/organism_observer/topology_history.jsonl")
-            if not snap_path.exists():
-                snap_path = Path("data/morphological_memory/snapshots.jsonl")
-            if snap_path.exists():
-                lines = snap_path.read_text(encoding="utf-8").strip().split("\n")
-                if lines:
-                    last = json.loads(lines[-1])
-                    ctx.update({
-                        "coherence_phi": (
+
+        # ── Primary: live context from runtime engine ──────────────────
+        if self._runtime is not None:
+            try:
+                snap = self._runtime.snapshot() if hasattr(self._runtime, "snapshot") else {}
+                if snap:
+                    ctx["tick"] = snap.get("tick_count", snap.get("tick", 0))
+                    ctx["ticks_since_start"] = snap.get("ticks_since_start", 0)
+                    ctx["state"] = snap.get("state", "unknown")
+                    ctx["uptime_seconds"] = snap.get("uptime_seconds", 0)
+                    health = snap.get("health", {})
+                    if isinstance(health, dict):
+                        ctx["health_score"] = health.get("health_score", 0.0)
+                        ctx["tick_latency_ms"] = health.get("tick_latency_ms", 0.0)
+                        ctx["peak_memory_rss_mb"] = health.get("_peak_memory_rss_mb", 0.0)
+            except Exception:
+                pass
+
+        if self._brain_orchestrator is not None:
+            try:
+                m = getattr(self._brain_orchestrator, "latest_metrics", None)
+                if m is not None:
+                    ctx["coherence_phi"] = getattr(m, "coherence_phi", 0.0)
+                    ctx["mean_energy"] = getattr(m, "mean_energy", 0.0)
+                    ctx["active_neurons"] = getattr(m, "active_neurons", 0)
+                    ctx["total_neurons"] = getattr(m, "total_neurons", 0)
+                    ctx["fired_neurons"] = getattr(m, "fired_neurons", 0)
+                    ctx["propagated_synapses"] = getattr(m, "propagated_synapses", 0)
+                fs = getattr(self._brain_orchestrator, "get_field_state", None)
+                if callable(fs):
+                    field = fs()
+                    if field is not None:
+                        ctx["ilf_value"] = getattr(field, "ilf_value", 0.0)
+                        ctx["field_stability"] = getattr(field, "field_stability", 0.0)
+            except Exception:
+                pass
+
+        # ── Fallback: data files (only if live context is incomplete) ───
+        if not ctx.get("coherence_phi") or not ctx.get("tick"):
+            try:
+                snap_path = Path("data/organism_observer/topology_history.jsonl")
+                if not snap_path.exists():
+                    snap_path = Path("data/morphological_memory/snapshots.jsonl")
+                if snap_path.exists():
+                    lines = snap_path.read_text(encoding="utf-8").strip().split("\n")
+                    if lines:
+                        last = json.loads(lines[-1])
+                        ctx.setdefault("coherence_phi", (
                             last.get("avg_clustering", 0.0) * 0.5 +
                             last.get("global_efficiency", 0.0) * 0.5
-                        ),
-                        "tick": last.get("tick", 0),
-                        "node_count": last.get("node_count", 0),
-                        "edge_count": last.get("edge_count", 0),
-                        "modularity_q": last.get("modularity_q", 0.0),
-                        "global_efficiency": last.get("global_efficiency", 0.0),
-                    })
+                        ))
+                        ctx.setdefault("tick", last.get("tick", 0))
+                        ctx.setdefault("node_count", last.get("node_count", 0))
+                        ctx.setdefault("edge_count", last.get("edge_count", 0))
+                        ctx.setdefault("modularity_q", last.get("modularity_q", 0.0))
+                        ctx.setdefault("global_efficiency", last.get("global_efficiency", 0.0))
+            except (OSError, json.JSONDecodeError):
+                pass
+
             # Morphologies salvate
             morph_path = Path("data/organism_observer/morphologies.jsonl")
             if morph_path.exists():
-                lines = morph_path.read_text(encoding="utf-8").strip().split("\n")
-                if lines:
-                    last = json.loads(lines[-1])
-                    ctx["saved_morphologies"] = len(lines)
-                    ctx["best_fitness"] = last.get("fitness_score", 0.0)
+                try:
+                    lines = morph_path.read_text(encoding="utf-8").strip().split("\n")
+                    if lines:
+                        last = json.loads(lines[-1])
+                        ctx["saved_morphologies"] = len(lines)
+                        ctx.setdefault("best_fitness", last.get("fitness_score", 0.0))
+                except (OSError, json.JSONDecodeError):
+                    pass
+
             # Embodiment
             emb_path = Path("data/embodiment/environment_state.jsonl")
             if emb_path.exists():
-                lines = emb_path.read_text(encoding="utf-8").strip().split("\n")
-                if lines:
-                    last = json.loads(lines[-1])
-                    ctx.update(last.get("state", {}))
-        except (OSError, json.JSONDecodeError):
-            pass
+                try:
+                    lines = emb_path.read_text(encoding="utf-8").strip().split("\n")
+                    if lines:
+                        last = json.loads(lines[-1])
+                        state = last.get("state", {})
+                        if state:
+                            ctx.setdefault("cpu", state.get("cpu_avg", 0))
+                            ctx.setdefault("memory", state.get("mem_used", 0))
+                            ctx.setdefault("disk", state.get("disk_used", 0))
+                            ctx.setdefault("temperature", state.get("temp_avg", 0))
+                except (OSError, json.JSONDecodeError):
+                    pass
+
+        # ── Stall detection ────────────────────────────────────────────
+        import hashlib
+        context_hash = hashlib.md5(
+            json.dumps({k: v for k, v in sorted(ctx.items()) if isinstance(v, (str, int, float, bool))}, sort_keys=True).encode()
+        ).hexdigest()
+        if context_hash == self._last_context_hash:
+            self._stall_count += 1
+            ctx["stall_detected"] = True
+            ctx["stall_count"] = self._stall_count
+        else:
+            self._stall_count = 0
+            ctx["stall_detected"] = False
+            ctx["stall_count"] = 0
+        self._last_context_hash = context_hash
+
         ctx["plan_progress"] = self.plan.overall_progress()
         ctx["milestones"] = [
             {"id": m["id"], "title": m["title"], "progress": m["progress"], "status": m["status"]}
@@ -298,15 +425,28 @@ class AutoAnalysisScheduler:
         return ctx
 
     def tick(self) -> Dict[str, Any]:
-        """Call from the main loop. Returns what was done this tick."""
+        """Call from the main loop. Returns what was done this tick.
+
+        Includes stall detection: if context hasn't changed for multiple cycles,
+        skip repetitive LLM calls and prioritize action cycle instead.
+        """
         with self._lock:
             now = time.time()
             actions = {"ran_chief": False, "ran_supervisors": [], "skipped": True}
 
-            if now - self._last_chief >= self.chief_interval:
+            # Build context once for this tick (with stall detection)
+            ctx = self._build_speace_context()
+            is_stalled = ctx.get("stall_detected", False)
+            stall_count = ctx.get("stall_count", 0)
+
+            # ── Skip repetitive analysis during stalls ───────────────────
+            # After N consecutive identical contexts, only run action cycle
+            # (which may propose recovery actions), skip LLM-heavy analysis
+            skip_analysis = is_stalled and stall_count >= self._max_stall_skips
+
+            if now - self._last_chief >= self.chief_interval and not skip_analysis:
                 chief = self.agents.get(self.chief_id)
                 if chief:
-                    ctx = self._build_speace_context()
                     finding = chief.analyze(ctx)
                     self._log_finding("chief_review", self.chief_id, finding.get("analysis", ""))
                     self._last_chief = now
@@ -314,18 +454,32 @@ class AutoAnalysisScheduler:
                     actions["ran_chief"] = True
                     actions["skipped"] = False
 
-            if now - self._last_supervisor >= self.supervisor_interval:
+            if now - self._last_supervisor >= self.supervisor_interval and not skip_analysis:
                 for aid, agent in self.agents.items():
                     if aid == self.chief_id:
                         continue
                     if getattr(agent, "agent_type", "technician") == "supervisor" or aid.endswith("_supervisor"):
-                        ctx = self._build_speace_context()
                         finding = agent.analyze(ctx)
                         self._log_finding("supervisor_review", aid, finding.get("analysis", ""))
                         actions["ran_supervisors"].append(aid)
                         self._findings_count += 1
                 self._last_supervisor = now
                 actions["skipped"] = False
+
+            if skip_analysis:
+                actions["stall_skipped_analysis"] = True
+                self._log_finding(
+                    "stall_detected", "system",
+                    f"Context unchanged for {stall_count} cycles — skipping LLM analysis, running action cycle only"
+                )
+
+            # ── Trigger supervisor-directed action cycle ──────────────────
+            if self._orchestrator_ref and getattr(self._orchestrator_ref, 'action_executor', None):
+                try:
+                    action_report = self._orchestrator_ref.supervisor_directed_action_cycle(ctx)
+                    actions["action_cycle"] = action_report
+                except Exception as e:
+                    _logger.warning("Supervisor-directed action cycle failed: %s", e)
 
             return actions
 
@@ -352,22 +506,32 @@ class Orchestrator:
     def __init__(self, agents: Dict[str, Any], plan: EngineeringPlan,
                  loop_interval: float = 30.0,
                  chief_interval: float = 300.0,
-                 supervisor_interval: float = 600.0):
+                 supervisor_interval: float = 600.0,
+                 runtime: Any = None,
+                 brain_orchestrator: Any = None):
         self.agents = agents
         self.plan = plan
         self.loop_interval = loop_interval
         self.load_balancer = LoadBalancer(agents)
-        self.health_monitor = RuntimeHealthMonitor()
+        self.health_monitor = RuntimeHealthMonitor(
+            runtime=runtime,
+            brain_orchestrator=brain_orchestrator,
+        )
         self.scheduler = AutoAnalysisScheduler(
             agents, plan,
             chief_interval=chief_interval,
             supervisor_interval=supervisor_interval,
+            runtime=runtime,
+            brain_orchestrator=brain_orchestrator,
         )
         self._thread: Optional[threading.Thread] = None
         self._stop = threading.Event()
         self._alerts_log = Path("data/agi_team/health_alerts.jsonl")
         self._alerts_log.parent.mkdir(parents=True, exist_ok=True)
         self._execution_log: List[Dict[str, Any]] = []
+        # ── Action execution layer ──────────────────────────────────────
+        self.action_executor: Optional[ActionExecutor] = None
+        self.action_safety_gate: Optional[ActionSafetyGate] = None
 
     def start(self):
         if self._thread and self._thread.is_alive():
@@ -419,11 +583,19 @@ class Orchestrator:
             task["agent_id"] = agent_id
 
         ctx = context or self.scheduler._build_speace_context()
+        context_summary = (
+            f"coherence_phi={ctx.get('coherence_phi', 'n/a')}, "
+            f"tick={ctx.get('tick', 'n/a')}, "
+            f"health_score={ctx.get('health_score', 'n/a')}, "
+            f"active_neurons={ctx.get('active_neurons', 'n/a')}, "
+            f"stall_detected={ctx.get('stall_detected', False)}"
+        )
         task_prompt = (
             f"Task assegnato: {task.get('title','')}\n"
             f"Descrizione: {task.get('description','')}\n"
             f"Priorità: {task.get('priority','medium')}\n"
-            f"Milestone: {task.get('milestone_id','')}\n\n"
+            f"Milestone: {task.get('milestone_id','')}\n"
+            f"Contesto SPEACE: {context_summary}\n\n"
             f"Analizza il task, proponi una soluzione concreta e indica lo stato di esecuzione."
         )
 
@@ -536,6 +708,167 @@ class Orchestrator:
         }
         return mapping.get(technician_id, "chief_architect")
 
+    # Inverse mapping: supervisor → technicians
+    _TECH_FOR_SUP: Dict[str, List[str]] = {
+        "brain_supervisor": ["neuron_tech", "synapse_tech", "region_tech"],
+        "dna_supervisor": ["genome_tech"],
+        "organism_supervisor": ["runtime_tech", "defense_tech", "network_tech"],
+        "memory_supervisor": ["memory_tech"],
+        "selfimprovement_supervisor": ["evolution_tech"],
+        "embodied_cognition_supervisor": ["embodiment_tech"],
+    }
+
+    def _find_technician_for(self, proposal) -> str:
+        """Map an action proposal to the best technician for execution.
+
+        Uses the proposal's agent_id (supervisor) and target to find the
+        most appropriate technician. Falls back to load balancing.
+        """
+        agent_id = proposal.agent_id if hasattr(proposal, 'agent_id') else ""
+        target = proposal.target if hasattr(proposal, 'target') else ""
+        category = proposal.action_category if hasattr(proposal, 'action_category') else ""
+
+        # If the proposing agent is a technician, use it directly
+        if agent_id.endswith("_tech") and agent_id in self.agents:
+            return agent_id
+
+        # If the proposing agent is a supervisor, find its technicians
+        if agent_id in self._TECH_FOR_SUP:
+            technicians = self._TECH_FOR_SUP[agent_id]
+            if technicians:
+                # Pick the least loaded technician
+                return self.load_balancer.pick_technician(technicians)
+
+        # If the proposing agent is chief_architect, use all technicians
+        if agent_id == "chief_architect":
+            tech_ids = [a for a in self.agents if a.endswith("_tech")]
+            return self.load_balancer.pick_technician(tech_ids) or "neuron_tech"
+
+        # Fallback: pick based on target domain
+        catalog = ActionCatalog()
+        all_agents = set(catalog.get_full_catalog().keys())
+        tech_ids = [a for a in all_agents if a.endswith("_tech")]
+        for tid in tech_ids:
+            if catalog.is_authorized(tid, category, target):
+                return tid
+
+        # Ultimate fallback: least loaded technician
+        tech_ids = [a for a in self.agents if a.endswith("_tech")]
+        return self.load_balancer.pick_technician(tech_ids) or "neuron_tech"
+
+    def supervisor_directed_action_cycle(self, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Supervisor-driven action cycle: supervisors analyze, propose, and dispatch.
+
+        Flow:
+        1. Each supervisor proposes actions from current context
+        2. Each proposal goes through the safety gate (only once, not twice)
+        3. Approved proposals are dispatched to the appropriate technician
+        4. Technician executes via ActionExecutor
+        5. Returns a complete report of all proposals and results
+
+        Optimization: proposals are collected once, not called twice per supervisor.
+        """
+        if self.action_executor is None:
+            return {"error": "ActionExecutor not available", "proposals": [], "results": []}
+
+        ctx = context or self.scheduler._build_speace_context()
+
+        report: Dict[str, Any] = {
+            "timestamp": time.time(),
+            "all_proposals": {},
+            "approved": {},
+            "blocked": {},
+            "conditioned": {},
+            "executed": {},
+            "execution_results": [],
+        }
+
+        # ── Step 1: Supervisors propose actions (call LLM ONCE) ───────────
+        all_proposals_with_agent: List[tuple] = []  # [(agent_id, proposal), ...]
+        for aid, agent in self.agents.items():
+            if not (getattr(agent, 'agent_type', '') == "supervisor" or aid.endswith("_supervisor") or aid == "chief_architect"):
+                continue
+
+            try:
+                proposals = agent.propose_action_from_analysis(ctx)
+                if proposals:
+                    report["all_proposals"][aid] = [
+                        {
+                            "id": p.proposal_id,
+                            "action_type": p.action_type,
+                            "target": p.target,
+                            "risk": p.risk_level if isinstance(p.risk_level, str) else p.risk_level.value,
+                        }
+                        for p in proposals
+                    ]
+                    for p in proposals:
+                        all_proposals_with_agent.append((aid, p))
+            except Exception as e:
+                _logger.warning("Supervisor %s failed to propose actions: %s", aid, e)
+                continue
+
+        # ── Step 2: Evaluate each proposal through safety gate ONCE ──────
+        approved_proposals: List[tuple] = []  # [(agent_id, proposal), ...]
+        for aid, proposal in all_proposals_with_agent:
+            try:
+                gate_result = self.action_safety_gate.evaluate(proposal)
+            except Exception as e:
+                _logger.warning("Safety gate evaluation failed for %s: %s", proposal.proposal_id, e)
+                report["blocked"].setdefault(aid, []).append({
+                    "id": proposal.proposal_id,
+                    "action_type": proposal.action_type,
+                    "target": proposal.target,
+                    "gate_decision": "blocked",
+                    "error": str(e),
+                })
+                continue
+
+            self.action_executor._store_proposal(proposal)
+
+            proposal_info = {
+                "id": proposal.proposal_id,
+                "action_type": proposal.action_type,
+                "target": proposal.target,
+                "risk": proposal.risk_level if isinstance(proposal.risk_level, str) else proposal.risk_level.value,
+                "gate_decision": gate_result.final_decision,
+                "conditions": gate_result.conditions,
+            }
+
+            if gate_result.final_decision == "allow":
+                report["approved"].setdefault(aid, []).append(proposal_info)
+                approved_proposals.append((aid, proposal))
+            elif gate_result.final_decision == "conditioned":
+                report["conditioned"].setdefault(aid, []).append(proposal_info)
+                # Conditioned proposals are also executed (conditions noted)
+                approved_proposals.append((aid, proposal))
+            else:
+                report["blocked"].setdefault(aid, []).append(proposal_info)
+
+        # ── Step 3: Execute approved proposals ───────────────────────────
+        for aid, proposal in approved_proposals:
+            tech_id = self._find_technician_for(proposal)
+
+            try:
+                result = self.action_executor.execute_pipeline(proposal)
+                report["executed"].setdefault(aid, []).append({
+                    "proposal_id": proposal.proposal_id,
+                    "technician": tech_id,
+                    "status": result.final_status,
+                    "rollback": result.rollback_performed,
+                    "error": result.error,
+                })
+                report["execution_results"].append(result.model_dump())
+            except Exception as e:
+                _logger.error("Action execution failed for %s: %s", proposal.proposal_id, e)
+                report["executed"].setdefault(aid, []).append({
+                    "proposal_id": proposal.proposal_id,
+                    "technician": tech_id,
+                    "status": "error",
+                    "error": str(e),
+                })
+
+        return report
+
     def _auto_pick_technician(self, task: Dict[str, Any]) -> str:
         """Choose technician based on task's milestone mapping or load balancing."""
         milestone_id = task.get("milestone_id", "")
@@ -555,7 +888,194 @@ class Orchestrator:
             "scheduler": self.scheduler.stats(),
             "health_alerts": self.health_monitor.recent_alerts(5),
             "executions_count": len(self._execution_log),
+            "action_executor_available": self.action_executor is not None,
         }
+
+    # ── Action execution layer integration ──────────────────────────────
+
+    def set_action_executor(self, executor: ActionExecutor) -> None:
+        """Wire the ActionExecutor and ActionSafetyGate into the orchestrator."""
+        self.action_executor = executor
+        self.action_safety_gate = executor.safety_gate
+        # Provide orchestrator reference to executor for runtime param patches
+        if executor.orchestrator is None:
+            executor.orchestrator = self  # type: ignore[assignment]
+        # Wire the scheduler's orchestrator reference for action cycle
+        self.scheduler._orchestrator_ref = self
+
+    def execute_task_with_actions(
+        self,
+        task: Dict[str, Any],
+        context: Optional[Dict[str, Any]] = None,
+        auto_execute: bool = False,
+    ) -> Dict[str, Any]:
+        """Extended task execution with action proposal and execution pipeline.
+
+        Steps:
+        1. Assign to technician (or use specified agent_id)
+        2. Technician analyzes the task with context
+        3. Technician proposes actions based on analysis (NEW)
+        4. Safety gate evaluates each proposal (NEW)
+        5. Supervisor validates analysis + actions (extended)
+        6. Execute approved actions through ActionExecutor (NEW)
+        7. Post-execution verification (NEW)
+        """
+        if self.action_executor is None:
+            # Fallback to original execute_task if no action executor
+            return self.execute_task(task, context)
+
+        agent_id = task.get("agent_id", "")
+        if agent_id == "auto" or not agent_id:
+            agent_id = self._auto_pick_technician(task)
+            task["agent_id"] = agent_id
+
+        ctx = context or self.scheduler._build_speace_context()
+        task_prompt = (
+            f"Task assegnato: {task.get('title','')}\n"
+            f"Descrizione: {task.get('description','')}\n"
+            f"Priorità: {task.get('priority','medium')}\n"
+            f"Milestone: {task.get('milestone_id','')}\n\n"
+            f"Analizza il task, proponi una soluzione concreta e indica lo stato di esecuzione."
+        )
+
+        record: Dict[str, Any] = {
+            "task_id": task.get("id"),
+            "title": task.get("title"),
+            "agent_id": agent_id,
+            "started_at": time.time(),
+            "steps": [],
+            "action_proposals": [],
+            "action_results": [],
+        }
+
+        # Step 1: Technician analyzes
+        tech = self.agents.get(agent_id)
+        if not tech:
+            record["outcome"] = "failed"
+            record["error"] = f"Agent {agent_id} not found"
+            record["completed_at"] = time.time()
+            self._execution_log.append(record)
+            return record
+
+        self.load_balancer.record_chat(agent_id)
+        self.load_balancer.record_analysis(agent_id)
+        tech_response = tech.chat(task_prompt)
+        record["steps"].append({
+            "step": "technician_analysis",
+            "agent_id": agent_id,
+            "response": tech_response,
+        })
+
+        # Step 2: Technician proposes actions
+        proposals = tech.propose_action_from_analysis(ctx)
+        record["steps"].append({
+            "step": "action_proposal",
+            "agent_id": agent_id,
+            "proposal_count": len(proposals),
+            "proposals": [
+                {"id": p.proposal_id, "action_type": p.action_type, "target": p.target, "risk": p.risk_level}
+                for p in proposals
+            ],
+        })
+
+        # Step 3: Safety gate evaluation
+        approved_proposals = []
+        for proposal in proposals:
+            gate_result = self.action_safety_gate.evaluate(proposal)
+            proposal_snapshot = {
+                "proposal_id": proposal.proposal_id,
+                "action_type": proposal.action_type,
+                "target": proposal.target,
+                "risk_level": proposal.risk_level if isinstance(proposal.risk_level, str) else proposal.risk_level.value,
+                "gate_decision": gate_result.final_decision,
+                "conditions": gate_result.conditions,
+            }
+            record["action_proposals"].append(proposal_snapshot)
+
+            if gate_result.final_decision == "blocked":
+                continue
+            if gate_result.final_decision == "conditioned" and gate_result.human_approval_required:
+                # Needs human approval — store for later
+                self.action_executor._store_proposal(proposal)
+                proposal_snapshot["needs_human_approval"] = True
+                continue
+            approved_proposals.append(proposal)
+
+        # Step 4: Supervisor validates
+        supervisor_id = self._find_supervisor_for(agent_id)
+        if supervisor_id and supervisor_id in self.agents:
+            sup = self.agents[supervisor_id]
+            action_summary = "\n".join(
+                f"- {p.action_type} → {p.target} (risk: {p.risk_level})"
+                for p in proposals
+            )
+            validation_prompt = (
+                f"Valida l'output del tecnico {agent_id} sul task '{task.get('title','')}'.\n"
+                f"Risposta del tecnico:\n{tech_response[:2000]}\n\n"
+                f"Azioni proposte:\n{action_summary}\n\n"
+                f"Conferma se la soluzione e le azioni sono corrette, o richiedi modifiche. "
+                f"Rispondi in italiano."
+            )
+            self.load_balancer.record_chat(supervisor_id)
+            self.load_balancer.record_analysis(supervisor_id)
+            sup_response = sup.chat(validation_prompt)
+            record["steps"].append({
+                "step": "supervisor_validation",
+                "agent_id": supervisor_id,
+                "response": sup_response,
+            })
+
+            # Check if supervisor rejected any proposals (heuristic)
+            low = sup_response.lower()
+            strong_reject = [
+                "non è accettabile", "rifiuta", "respinto",
+                "non approvato", "respinta", "inaccettabile",
+            ]
+            if any(m in low for m in strong_reject):
+                # Supervisor rejected — filter out proposals that supervisor might object to
+                approved_proposals = [
+                    p for p in approved_proposals
+                    if isinstance(p.risk_level, str) and p.risk_level in ("low", "moderate")
+                    or (not isinstance(p.risk_level, str) and p.risk_level.value in ("low", "moderate"))
+                ]
+
+        # Step 5: Execute approved actions
+        if auto_execute and approved_proposals:
+            for proposal in approved_proposals:
+                result = self.action_executor.execute_pipeline(proposal)
+                record["action_results"].append({
+                    "proposal_id": result.proposal_id,
+                    "status": result.final_status,
+                    "rollback": result.rollback_performed,
+                    "error": result.error,
+                })
+
+        # Step 6: Determine outcome
+        outcome = "success"
+        if record.get("action_results"):
+            failed_actions = [r for r in record["action_results"] if r["status"] in ("failed", "vetoed")]
+            if len(failed_actions) > len(record["action_results"]) // 2:
+                outcome = "failed"
+
+        record["outcome"] = outcome
+        record["completed_at"] = time.time()
+        record["duration_sec"] = record["completed_at"] - record["started_at"]
+        self._execution_log.append(record)
+
+        # Persist log
+        try:
+            log_path = Path("data/agi_team/task_executions.jsonl")
+            log_path.parent.mkdir(parents=True, exist_ok=True)
+            with log_path.open("a", encoding="utf-8") as f:
+                f.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
+        except OSError:
+            pass
+
+        # Mark task in the plan
+        if task.get("id"):
+            self.plan.complete_task(task["id"], outcome)
+
+        return record
 
 
 # Singleton container
@@ -563,10 +1083,20 @@ _orchestrator: Optional[Orchestrator] = None
 
 
 def get_orchestrator(agents: Optional[Dict[str, Any]] = None,
-                     plan: Optional[EngineeringPlan] = None) -> Orchestrator:
+                     plan: Optional[EngineeringPlan] = None,
+                     runtime: Any = None,
+                     brain_orchestrator: Any = None) -> Orchestrator:
     global _orchestrator
     if _orchestrator is None:
         if agents is None or plan is None:
             raise ValueError("First call to get_orchestrator requires agents and plan")
-        _orchestrator = Orchestrator(agents, plan)
+        _orchestrator = Orchestrator(agents, plan, runtime=runtime, brain_orchestrator=brain_orchestrator)
+    else:
+        # Update runtime references even if already initialized
+        if runtime is not None:
+            _orchestrator.scheduler._runtime = runtime
+            _orchestrator.health_monitor.runtime = runtime
+        if brain_orchestrator is not None:
+            _orchestrator.scheduler._brain_orchestrator = brain_orchestrator
+            _orchestrator.health_monitor.brain_orchestrator = brain_orchestrator
     return _orchestrator

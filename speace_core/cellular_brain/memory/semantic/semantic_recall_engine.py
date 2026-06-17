@@ -1,5 +1,5 @@
 import math
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from speace_core.cellular_brain.memory.semantic.cell_assembly import (
     AssemblyActivationTrace,
@@ -9,7 +9,9 @@ from speace_core.cellular_brain.memory.semantic.cell_assembly import (
 from speace_core.cellular_brain.memory.semantic.semantic_memory_store import (
     SemanticMemoryStore,
 )
-from speace_core.orchestrator import CellularBrainOrchestrator
+
+if TYPE_CHECKING:
+    from speace_core.orchestrator import CellularBrainOrchestrator
 
 
 class SemanticRecallEngine:
@@ -76,7 +78,7 @@ class SemanticRecallEngine:
         )
 
     def recall_from_current_activation(
-        self, orchestrator: CellularBrainOrchestrator
+        self, orchestrator: "CellularBrainOrchestrator"
     ) -> SemanticRecallResult:
         trace = self._extract_trace_from_orchestrator(orchestrator)
         return self.recall(trace.activation_vector)
@@ -86,7 +88,7 @@ class SemanticRecallEngine:
     # ------------------------------------------------------------------ #
 
     def reactivate_assembly(
-        self, assembly_id: str, orchestrator: CellularBrainOrchestrator
+        self, assembly_id: str, orchestrator: "CellularBrainOrchestrator"
     ) -> bool:
         assembly = self.store.get_by_id(assembly_id)
         if assembly is None or not assembly.active:
@@ -121,7 +123,7 @@ class SemanticRecallEngine:
 
     @staticmethod
     def _extract_trace_from_orchestrator(
-        orchestrator: CellularBrainOrchestrator,
+        orchestrator: "CellularBrainOrchestrator",
     ) -> AssemblyActivationTrace:
         neurons = (
             orchestrator.circuit.input_neurons

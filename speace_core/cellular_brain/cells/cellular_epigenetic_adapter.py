@@ -1,8 +1,10 @@
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
 from speace_core.cellular_brain.cells.digital_neuron import DigitalNeuron
+from speace_core.cellular_brain.cells.cellular_stress import CellularStressState
+from speace_core.cellular_brain.cells.cellular_damage import CellularDamageState
 from speace_core.cellular_brain.circuits.neural_circuit import NeuralCircuit
 from speace_core.cellular_brain.memory.morphological_memory import MorphologicalMemory
 from speace_core.cellular_brain.memory.morphology_events import MorphologyEventType
@@ -31,6 +33,22 @@ class EpigeneticShift(BaseModel):
     trigger: str = ""
     genes_added: List[str] = Field(default_factory=list)
     genes_removed: List[str] = Field(default_factory=list)
+
+
+class NodeTopologyData(BaseModel):
+    """Dati topologici di un nodo nella rete del connettoma.
+
+    Usati da CellularEpigeneticAdapter per modulare l'espressione genica
+    in base alla posizione del nodo nella rete.
+    """
+    centrality: float = 0.0
+    clustering: float = 0.0
+    efficiency: float = 0.0
+    degree: int = 0
+    community_size: int = 0
+    is_hub: bool = False
+    is_bridge: bool = False
+    overload: float = 0.0
 
 
 class CellularEpigeneticResult(BaseModel):
@@ -70,6 +88,7 @@ class CellularEpigeneticAdapter:
         damage_per_cell: Dict[str, "CellularDamageState"],
         current_tick: int,
         memory: MorphologicalMemory | None = None,
+        topology_per_cell: Dict[str, NodeTopologyData] | None = None,
     ) -> CellularEpigeneticResult:
         from speace_core.cellular_brain.cells.cellular_stress import CellularStressState
         from speace_core.cellular_brain.cells.cellular_damage import CellularDamageState
@@ -85,8 +104,9 @@ class CellularEpigeneticAdapter:
         for neuron in all_neurons:
             stress = stress_per_cell.get(neuron.cell_id)
             damage = damage_per_cell.get(neuron.cell_id)
+            topology = (topology_per_cell or {}).get(neuron.cell_id)
             profile, shift = self._adapt_cell(
-                neuron, stress, damage, current_tick
+                neuron, stress, damage, current_tick, topology=topology,
             )
             profiles[neuron.cell_id] = profile
             if shift is not None:
@@ -126,6 +146,7 @@ class CellularEpigeneticAdapter:
         stress: "CellularStressState | None",
         damage: "CellularDamageState | None",
         current_tick: int,
+        topology: NodeTopologyData | None = None,
     ) -> tuple[GeneExpressionProfile, EpigeneticShift | None]:
         stress_score = stress.stress_score if stress else 0.0
         damage_score = damage.damage_score if damage else 0.0
@@ -193,6 +214,42 @@ class CellularEpigeneticAdapter:
         # Differentiation bias: increase when cell is stable and growing
         if stress_score < 0.2 and growth > 0.3:
             diff_bias = min(1.0, prev_diff + 0.05)
+
+        # --- Topology-based expression modulation (Livello 2) ---
+        if topology is not None:
+            # Alta centralita → aumenta plasticita (hub learning)
+            if topology.centrality > 0.6:
+                plasticity = min(1.0, plasticity + 0.1 * topology.centrality)
+                genes_added.append("hub_plasticity_boost")
+            elif topology.centrality < 0.2 and topology.degree > 0:
+                # Isolamento → attivazione geni esplorativi (crescita)
+                growth = min(1.0, growth + 0.1 * (1.0 - topology.centrality))
+                energy_expr = min(1.0, energy_expr + 0.05)
+                genes_added.append("exploratory_growth")
+
+            # Bassa efficienza locale → attivazione geni di ristrutturazione
+            if topology.efficiency < 0.3 and topology.clustering < 0.3:
+                repair = min(1.0, repair + 0.1)
+                plasticity = min(1.0, plasticity + 0.08)
+                genes_added.append("restructuring")
+
+            # Sovraccarico (overload) → attivazione geni di ridondanza
+            if topology.overload > 0.7:
+                repair = min(1.0, repair + 0.1)
+                energy_expr = min(1.0, energy_expr + 0.1)
+                plasticity = max(0.0, plasticity - 0.05)
+                genes_added.append("overload_redundancy")
+
+            # Bridge node → maggiore plasticita' per routing
+            if topology.is_bridge:
+                plasticity = min(1.0, plasticity + 0.08)
+                growth = min(1.0, growth + 0.05)
+                genes_added.append("bridge_plasticity")
+
+            # Hub centrale, comunita' grande → specializzazione
+            if topology.is_hub and topology.community_size > 5:
+                diff_bias = min(1.0, diff_bias + 0.05)
+                genes_added.append("hub_specialization")
 
         shift_occurred = (
             abs(plasticity - prev_plasticity) > 1e-6

@@ -3,6 +3,8 @@ from typing import Dict, List
 from pydantic import BaseModel, Field
 
 from speace_core.cellular_brain.cells.digital_neuron import DigitalNeuron
+from speace_core.cellular_brain.cells.cellular_stress import CellularStressState
+from speace_core.cellular_brain.cells.cellular_damage import CellularDamageState
 from speace_core.cellular_brain.circuits.neural_circuit import NeuralCircuit
 from speace_core.cellular_brain.memory.morphological_memory import MorphologicalMemory
 from speace_core.cellular_brain.memory.morphology_events import MorphologyEventType

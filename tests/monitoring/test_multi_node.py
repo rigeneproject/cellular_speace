@@ -1,5 +1,7 @@
 """Tests for T106 — Multi-node Monitoring Readiness."""
 
+from __future__ import annotations
+
 import pytest
 from fastapi.testclient import TestClient
 

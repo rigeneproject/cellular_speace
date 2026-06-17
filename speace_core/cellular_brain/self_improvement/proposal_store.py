@@ -63,6 +63,28 @@ class ProposalStore:
                     results.append(ArchitectureRewriteProposal(**record))
         return results
 
+    def resave_proposal(self, proposal: ArchitectureRewriteProposal) -> None:
+        record = proposal.model_dump()
+        record["_stored_at"] = datetime.now(timezone.utc).isoformat()
+        lines: List[str] = []
+        found = False
+        if self.proposals_path.exists():
+            with open(self.proposals_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line_stripped = line.strip()
+                    if not line_stripped:
+                        continue
+                    existing = json.loads(line_stripped)
+                    if existing.get("id") == proposal.id:
+                        lines.append(json.dumps(record, ensure_ascii=False))
+                        found = True
+                    else:
+                        lines.append(line.rstrip("\n"))
+        if not found:
+            lines.append(json.dumps(record, ensure_ascii=False))
+        with open(self.proposals_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(lines) + "\n")
+
     # ------------------------------------------------------------------ #
     # Cycle result persistence
     # ------------------------------------------------------------------ #

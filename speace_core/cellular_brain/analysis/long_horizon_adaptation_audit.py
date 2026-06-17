@@ -422,7 +422,8 @@ class LongHorizonAdaptationAuditor:
 
     @staticmethod
     def _compute_recovery_and_stabilization(result: LongHorizonProfileResult) -> None:
-        # Already populated by _track_brainstem_states; nothing extra needed
+        # Intentional no-op: recovery/stabilization metrics are already computed
+        # and stored inside result by _track_brainstem_states during the main loop.
         pass
 
     # ------------------------------------------------------------------ #

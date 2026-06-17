@@ -199,6 +199,52 @@ class RegulationProposalBuilder:
 
         return proposals
 
+    def create_manual_proposal(
+        self,
+        proposed_action: str,
+        current_state: Dict[str, Any],
+        alert_type: str = "manual",
+        severity: str = "warning",
+        message: str = "",
+    ) -> Dict[str, Any]:
+        """Create a proposal manually (e.g. from web runtime control)."""
+        pid = f"RP-{uuid.uuid4().hex[:12]}"
+        ts = time.time()
+        confidence = self._scorer.score(
+            proposed_action=proposed_action,
+            alert_type=alert_type,
+            state=current_state,
+        )
+        snapshot = {
+            "coherence_phi": current_state.get("cognition", {}).get("self_model", {}).get("coherence_phi", 0.0),
+            "chaos_score": current_state.get("dynamics", {}).get("chaos_score", 0.0),
+            "rigidity_score": current_state.get("dynamics", {}).get("rigidity_score", 0.0),
+            "drift": current_state.get("dynamics", {}).get("drift", 0.0),
+            "prediction_error": current_state.get("embodiment", {}).get("prediction_error", 0.0),
+            "health_score": current_state.get("alert_engine", {}).get("health_score", 0.0),
+        }
+        base_risk = 0.3 if severity == "warning" else 0.6
+        risk = base_risk * (1.0 - confidence["confidence"] * 0.5)
+        proposal = {
+            "proposal_id": pid,
+            "status": "pending",
+            "created_at": ts,
+            "updated_at": ts,
+            "alert": {
+                "alert_type": alert_type,
+                "severity": severity,
+                "message": message,
+                "timestamp": ts,
+            },
+            "proposed_action": proposed_action,
+            "reversibility": "tunable_parameter",
+            "snapshot_pre": snapshot,
+            "confidence": confidence,
+            "risk_score": risk,
+        }
+        self._persist(proposal)
+        return proposal
+
     def _create_proposal(
         self,
         alert: Dict[str, Any],
@@ -245,7 +291,7 @@ class RegulationProposalBuilder:
             "proposed_action": action,
             "reversibility": "tunable_parameter",  # we only touch config, not structure
             "snapshot_pre": snapshot,
-            "estimated_risk": round(risk, 4),
+            "risk_score": round(risk, 4),
             "confidence": confidence,
             "reviewer": None,
             "executed_at": None,

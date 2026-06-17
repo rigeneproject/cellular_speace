@@ -1,5 +1,7 @@
 """Tests for T102 — AlertEngine."""
 
+from __future__ import annotations
+
 import json
 import pathlib
 import tempfile

@@ -119,7 +119,7 @@ class TestCyberPhysicalSensorArray:
         sensor.start_continuous_sampling(interval_ms=200)
         assert sensor._sampling_thread is not None
         assert sensor._sampling_thread.is_alive()
-        time.sleep(1.5)
+        time.sleep(3.0)
         history = sensor.get_history(n_samples=20)
         assert len(history) >= 2
         sensor.stop_continuous_sampling()

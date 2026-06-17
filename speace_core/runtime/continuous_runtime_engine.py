@@ -834,16 +834,34 @@ class ContinuousRuntimeEngine:
                 except Exception:
                     logging.getLogger(__name__).warning("Social cognition recording failed", exc_info=True)
 
-                # Orchestrator tick
+                # Orchestrator tick (with timeout guard to prevent loop stall)
                 tick_latency_start = time.time()
+                tick_succeeded = False
                 try:
-                    await self.orchestrator._tick()
-                    self._tick_count_since_start += 1
+                    tick_timeout = max(5.0, self.tick_interval * 5.0)
+                    await asyncio.wait_for(
+                        self.orchestrator._tick(),
+                        timeout=tick_timeout,
+                    )
+                    tick_succeeded = True
+                except asyncio.TimeoutError:
+                    logging.getLogger(__name__).warning(
+                        "Orchestrator tick timed out after %.1fs — recording as exception",
+                        tick_timeout,
+                    )
+                    self.health_monitor.record_exception()
+                except Exception:
+                    self.health_monitor.record_exception()
+
+                # Always advance the tick counter so the health monitor and
+                # supervisors see forward progress even on transient failures.
+                # Without this, consecutive exceptions make the tick counter
+                # appear stuck while the loop keeps spinning.
+                self._tick_count_since_start += 1
+                if tick_succeeded:
                     self.health_monitor.record_tick(
                         latency_ms=(time.time() - tick_latency_start) * 1000.0
                     )
-                except Exception:
-                    self.health_monitor.record_exception()
 
                 # Self-improvement runtime hook: feed substrate metrics
                 # into the SelfImprovementLoop and consolidate the
@@ -923,9 +941,12 @@ class ContinuousRuntimeEngine:
                             if self.topology_events is not None:
                                 ilf_provider = None
                                 if hasattr(self.orchestrator, "get_field_state"):
-                                    ilf_provider = lambda: getattr(
-                                        getattr(self.orchestrator, "get_field_state")(), "ilf_value", 0.5
-                                    )
+                                    def _ilf_provider():
+                                        field_state = getattr(self.orchestrator, "get_field_state")()
+                                        if field_state is None:
+                                            return 0.5
+                                        return getattr(field_state, "ilf_value", 0.5)
+                                    ilf_provider = _ilf_provider
                                 self.topology_events.record_event(
                                     ilf_provider=ilf_provider,
                                     context_label=f"tick_{self._tick_count_since_start}",
@@ -1084,6 +1105,36 @@ class ContinuousRuntimeEngine:
                 # Brainstem state extraction
                 brainstem_state = self._brainstem_state()
 
+                # Coherence recovery: if phi drops critically low, inject
+                # energy into neurons to break the zero-activation death spiral.
+                # Without this, low phi → disabled global_workspace → even
+                # lower phi → emergency halt.
+                try:
+                    metrics = getattr(self.orchestrator, "_last_metrics", None)
+                    if metrics is not None and metrics.coherence_phi < 0.2:
+                        all_neurons = (
+                            self.orchestrator.circuit.input_neurons
+                            + self.orchestrator.circuit.hidden_neurons
+                            + self.orchestrator.circuit.output_neurons
+                        )
+                        active_count = sum(1 for n in all_neurons if n.activation > 0.1)
+                        # Only inject if most neurons are inactive (stall condition)
+                        if active_count < len(all_neurons) * 0.2:
+                            import random as _rng
+                            for n in all_neurons:
+                                if n.activation < 0.05:
+                                    n.energy = max(n.energy, 0.3)
+                                    n.activation = 0.05 + _rng.random() * 0.15
+                            logging.getLogger(__name__).info(
+                                "Coherence recovery: injected energy into %d stalled neurons (phi=%.4f, active=%d/%d)",
+                                len(all_neurons) - active_count,
+                                metrics.coherence_phi,
+                                active_count,
+                                len(all_neurons),
+                            )
+                except Exception:
+                    logging.getLogger(__name__).warning("Coherence recovery injection failed", exc_info=True)
+
                 # Emergency halt evaluation
                 halt_reason = self.halt_gate.evaluate(
                     runtime_health=self.health_monitor.snapshot(),
@@ -1103,6 +1154,7 @@ class ContinuousRuntimeEngine:
                         runtime_health=self.health_monitor.snapshot(),
                         brainstem_state=brainstem_state,
                         orchestrator=self.orchestrator,
+                        runtime_engine=self,
                     )
 
                 # Periodic checkpoint

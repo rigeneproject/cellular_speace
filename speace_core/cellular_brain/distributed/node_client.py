@@ -4,6 +4,7 @@ Caches remote state in memory with configurable TTL.
 """
 
 import asyncio
+import logging
 from typing import Any, Dict, Optional
 
 
@@ -62,7 +63,7 @@ class NodeClient:
                 if r.status_code == 200:
                     return r.json()
         except Exception:
-            pass
+            logging.getLogger(__name__).warning("Node client operation failed for httpx fetch", exc_info=True)
         return None
 
     async def _fetch_with_aiohttp(self, url: str) -> Optional[Dict[str, Any]]:
@@ -74,7 +75,7 @@ class NodeClient:
                     if resp.status == 200:
                         return await resp.json()
         except Exception:
-            pass
+            logging.getLogger(__name__).warning("Node client operation failed for aiohttp fetch", exc_info=True)
         return None
 
     def invalidate(self, host: str, port: int) -> None:

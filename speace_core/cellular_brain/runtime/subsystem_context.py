@@ -1,5 +1,6 @@
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any
 
 
 @dataclass
@@ -10,6 +11,7 @@ class TickState:
     last_confidence_state: Any = None
     last_routing_result: Any = None
     negative_feedback_count: int = 0
+    last_global_salience: float = 0.0
 
 
 @dataclass

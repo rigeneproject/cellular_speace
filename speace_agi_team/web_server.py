@@ -12,6 +12,7 @@ if hasattr(sys.stdout, "reconfigure"):
         sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
         sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8")
 
+import asyncio
 import json
 import threading
 import time
@@ -31,6 +32,10 @@ except ImportError as exc:
         "Install it with: pip install fastapi uvicorn websockets"
     ) from exc
 
+from speace_agi_team.action_catalog import ActionCatalog
+from speace_agi_team.action_executor import ActionExecutor
+from speace_agi_team.action_proposal import ActionProposal, ActionProposalStatus
+from speace_agi_team.action_safety_gate import ActionSafetyGate
 from speace_agi_team.config import AgentConfig, register_agent, AGENT_REGISTRY
 from speace_agi_team.agent_base import AgentBase
 from speace_agi_team.supervisor_agents import (
@@ -54,17 +59,40 @@ from speace_agi_team.web_search import DocumentFetcher, WebSearcher, research
 # ── Lifespan ─────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    config = AgentConfig()
-    _build_agents(config)
+    global _cached_config, _main_loop
+    _main_loop = asyncio.get_event_loop()
+    _cached_config = AgentConfig()
+    _build_agents(_cached_config)
     # Start orchestrator: auto-analysis, health monitor, load balancer
+    # Pass live runtime references for real-time context
     global _orchestrator
-    _orchestrator = get_orchestrator(_agents, _plan)
+    runtime = getattr(app.state, "speace_runtime", None)
+    brain_orchestrator = getattr(app.state, "speace_orchestrator", None)
+    _orchestrator = get_orchestrator(
+        _agents, _plan,
+        runtime=runtime,
+        brain_orchestrator=brain_orchestrator,
+    )
     _orchestrator.start()
-    print(f"[AGI Team] {len(_agents)} agenti inizializzati con modello {config.model}")
-    print(f"[AGI Team] Orchestrator avviato — auto-analisi e monitor attivi")
+    print(f"[AGI Team] {len(_agents)} agenti inizializzati con modello {_cached_config.model} ({_cached_config.provider})")
+    print("[AGI Team] Orchestrator avviato — auto-analisi e monitor attivi")
+    print(f"[AGI Team] Contesto live: runtime={runtime is not None}, brain_orchestrator={brain_orchestrator is not None}")
+
+    # ── Avvia SPEACE Anemos in background (porta 8787) ─────────────
+    try:
+        from speace_agi_team.anemos.anemos_server import start_anemos_server, stop_anemos_server
+        if start_anemos_server(host="127.0.0.1", port=8787):
+            print("[AGI Team] SPEACE Anemos attivo su http://127.0.0.1:8787")
+    except Exception as e:
+        print(f"[AGI Team] Anemos non avviato: {e}")
+
     yield
     if _orchestrator:
         _orchestrator.stop()
+    try:
+        stop_anemos_server()
+    except Exception:
+        pass
 
 
 app = FastAPI(title="SPEACE AGI Team", version="0.1.0", lifespan=lifespan)
@@ -144,11 +172,42 @@ class AgentResearchRequest(BaseModel):
     synthesis: bool = True  # If True, have the agent synthesize the results
 
 
+# ── Action Execution Request/Response models ─────────────────────────────
+
+class ActionProposeRequest(BaseModel):
+    agent_id: str = ""
+    action_type: str = ""
+    target: str = ""
+    new_value: Any = None
+    operation: str = "set"
+    justification: str = ""
+    evidence: Optional[Dict[str, Any]] = None
+    old_value: Any = None
+
+
+class HumanApprovalRequest(BaseModel):
+    approver: str = ""
+    notes: str = ""
+
+
+class HumanRejectRequest(BaseModel):
+    rejector: str = ""
+    reason: str = ""
+
+
+class AnalyzeAndActRequest(BaseModel):
+    agent_id: str = ""
+    auto_execute: bool = False
+    context: Optional[Dict[str, Any]] = None
+
+
 # ── Agent Singleton Registry ─────────────────────────────────────────────
 _agents: Dict[str, AgentBase] = {}
 _plan = EngineeringPlan()
 _ws_connections: List[WebSocket] = []
 _orchestrator: Optional[Orchestrator] = None
+_llm_lock = threading.Lock()
+_main_loop: Optional[asyncio.AbstractEventLoop] = None
 
 
 def _build_agents(config: AgentConfig):
@@ -209,9 +268,14 @@ def _get_speace_context() -> Dict[str, Any]:
         try:
             m = orchestrator.latest_metrics if hasattr(orchestrator, "latest_metrics") else None
             if m is not None:
-                ctx["coherence_phi"] = getattr(m, "coherence_phi", 0.0)
-                ctx["mean_energy"] = getattr(m, "mean_energy", 0.0)
+                phi = getattr(m, "coherence_phi", 0.0) or 0.0
+                mean_energy = getattr(m, "mean_energy", 0.0) or 0.0
+                ctx["coherence_phi"] = phi
+                ctx["mean_energy"] = mean_energy
                 ctx["active_neurons"] = getattr(m, "active_neurons", 0)
+                energy_efficiency = max(0.0, min(1.0, mean_energy))
+                ctx["energy_efficiency"] = energy_efficiency
+                ctx["cognitive_score"] = max(0.0, min(1.0, 0.55 * phi + 0.35 * energy_efficiency + 0.10))
             fs = orchestrator.get_field_state() if hasattr(orchestrator, "get_field_state") else None
             if fs is not None:
                 ctx["ilf_value"] = getattr(fs, "ilf_value", 0.0)
@@ -384,25 +448,61 @@ def api_agent_clear(agent_id: str):
 # ── All-Agent Broadcast ──────────────────────────────────────────────────
 @app.post("/api/broadcast")
 async def api_broadcast(body: BroadcastRequest):
+    """Send the same message to every agent in parallel.
+
+    Uses asyncio.to_thread to offload each blocking LLM chat to a worker
+    thread, so the 20-agent broadcast finishes in roughly the time of a
+    single chat rather than 20x serial. Per-agent timing is included in
+    the response payload so callers can compute per-agent latency.
+    """
     message = body.message
     if not message:
         raise HTTPException(400, "Message is required")
-    responses = {}
-    for aid, agent in _agents.items():
-        resp = agent.chat(message)
-        responses[aid] = resp
+    t0 = time.perf_counter()
+
+    async def _one(aid: str, agent):
+        s = time.perf_counter()
+        try:
+            chat_fn = getattr(agent, "_chat_with_retry", None) or agent.chat
+            resp = await asyncio.to_thread(chat_fn, message)
+            return aid, {"response": resp, "duration_sec": round(time.perf_counter() - s, 3), "ok": True}
+        except Exception as exc:
+            return aid, {"response": "ERRORE: " + repr(exc), "duration_sec": round(time.perf_counter() - s, 3), "ok": False}
+
+    pairs = await asyncio.gather(*(_one(aid, agent) for aid, agent in _agents.items()))
+    responses = {aid: payload for aid, payload in pairs}
+    total_sec = round(time.perf_counter() - t0, 3)
     await _broadcast({
         "type": "broadcast",
         "message": message,
         "responses": responses,
+        "total_sec": total_sec,
+        "agent_count": len(responses),
     })
-    return {"responses": responses}
+    return {"responses": responses, "total_sec": total_sec, "agent_count": len(responses)}
 
 
-# ── SPEACE Context ───────────────────────────────────────────────────────
+# ── SPEACE Context & Metrics ──────────────────────────────────────────────
 @app.get("/api/speace/context")
 def api_speace_context():
     return _get_speace_context()
+
+
+@app.get("/api/metrics")
+def api_metrics():
+    """Organism-level metrics: phi, energy, cognitive_score, health_score."""
+    ctx = _get_speace_context()
+    return {
+        "coherence_phi": ctx.get("coherence_phi", 0.0),
+        "mean_energy": ctx.get("mean_energy", 0.0),
+        "energy_efficiency": ctx.get("energy_efficiency", 0.0),
+        "cognitive_score": ctx.get("cognitive_score", 0.0),
+        "health_score": ctx.get("health_score", 0.0),
+        "ilf_value": ctx.get("ilf_value", 0.0),
+        "field_stability": ctx.get("field_stability", 0.0),
+        "active_neurons": ctx.get("active_neurons", 0),
+        "tick": ctx.get("tick", 0),
+    }
 
 
 # ── Engineering Plan ─────────────────────────────────────────────────────
@@ -477,19 +577,20 @@ async def api_orchestrator_tick():
         raise HTTPException(503, "Orchestrator not started")
 
     def _do_tick():
-        try:
-            actions = _orchestrator.scheduler.tick()
-            health = _orchestrator.health_monitor.check()
-            if health.get("alerts"):
-                import asyncio
-                try:
-                    loop = asyncio.new_event_loop()
-                    loop.run_until_complete(_broadcast({"type": "health_alerts", "alerts": health["alerts"]}))
-                    loop.close()
-                except Exception:
-                    pass
-        except Exception as e:
-            print(f"[orchestrator tick] error: {e}")
+        with _llm_lock:
+            try:
+                actions = _orchestrator.scheduler.tick()
+                health = _orchestrator.health_monitor.check()
+                if health.get("alerts") and _main_loop is not None:
+                    try:
+                        asyncio.run_coroutine_threadsafe(
+                            _broadcast({"type": "health_alerts", "alerts": health["alerts"]}),
+                            _main_loop,
+                        )
+                    except Exception:
+                        pass
+            except Exception as e:
+                print(f"[orchestrator tick] error: {e}")
 
     threading.Thread(target=_do_tick, daemon=True).start()
     return {"status": "started", "message": "Tick in esecuzione in background"}
@@ -558,6 +659,229 @@ def api_auto_assign(task_id: str):
     return {"task_id": task_id, "assigned_to": suggested}
 
 
+# ── Action Execution Endpoints ───────────────────────────────────────────
+
+def _get_action_executor() -> ActionExecutor:
+    """Get the action executor from the orchestrator, or raise 503."""
+    if not _orchestrator or not _orchestrator.action_executor:
+        raise HTTPException(503, "Action executor not available. Start the AGI team with action support first.")
+    return _orchestrator.action_executor
+
+
+@app.post("/api/actions/propose")
+def api_action_propose(body: ActionProposeRequest):
+    """Create a new action proposal from an agent."""
+    executor = _get_action_executor()
+    agent = _agents.get(body.agent_id)
+    if not agent:
+        raise HTTPException(404, f"Agent {body.agent_id} not found")
+
+    proposal = agent.propose_action(
+        action_type=body.action_type,
+        target=body.target,
+        new_value=body.new_value,
+        operation=body.operation,
+        justification=body.justification,
+        evidence=body.evidence or {},
+        old_value=body.old_value,
+    )
+    if proposal is None:
+        raise HTTPException(403, f"Agent {body.agent_id} not authorized for {body.action_type}:{body.target}")
+
+    # Evaluate through safety gate
+    gate_result = executor.safety_gate.evaluate(proposal)
+    executor._store_proposal(proposal)
+
+    return {
+        "proposal": proposal.model_dump(),
+        "gate_result": {
+            "decision": gate_result.final_decision,
+            "conditions": gate_result.conditions,
+            "blocked_reason": gate_result.blocked_reason,
+            "human_approval_required": gate_result.human_approval_required,
+        },
+    }
+
+
+@app.post("/api/actions/{proposal_id}/execute")
+async def api_action_execute(proposal_id: str):
+    """Execute a proposal through the full safety pipeline."""
+    executor = _get_action_executor()
+    proposal = executor.get_proposal(proposal_id)
+    if not proposal:
+        raise HTTPException(404, f"Proposal {proposal_id} not found")
+
+    result = executor.execute_pipeline(proposal)
+    await _broadcast({
+        "type": "action_executed",
+        "proposal_id": proposal_id,
+        "status": result.final_status,
+    })
+    return result.model_dump()
+
+
+@app.post("/api/actions/{proposal_id}/rollback")
+def api_action_rollback(proposal_id: str):
+    """Rollback an executed action proposal."""
+    executor = _get_action_executor()
+    proposal = executor.get_proposal(proposal_id)
+    if not proposal:
+        raise HTTPException(404, f"Proposal {proposal_id} not found")
+
+    success = executor._rollback(proposal)
+    if success:
+        proposal.transition_to(ActionProposalStatus.ROLLED_BACK, reason="manual_rollback")
+        executor._store_proposal(proposal)
+    return {"proposal_id": proposal_id, "rollback_success": success}
+
+
+@app.get("/api/actions/proposals")
+def api_action_proposals(status: Optional[str] = None, agent_id: Optional[str] = None, limit: int = 100):
+    """List action proposals, optionally filtered by status or agent."""
+    executor = _get_action_executor()
+    proposals = executor.list_proposals(status=status, agent_id=agent_id, limit=limit)
+    return {"proposals": [p.model_dump() for p in proposals]}
+
+
+@app.get("/api/actions/catalog")
+def api_action_catalog(agent_id: Optional[str] = None):
+    """Get the action catalog, optionally filtered by agent."""
+    catalog = ActionCatalog()
+    if agent_id:
+        return {"agent_id": agent_id, "actions": catalog.get_actions_for(agent_id)}
+    return {"catalog": catalog.get_full_catalog()}
+
+
+@app.post("/api/actions/{proposal_id}/approve")
+def api_action_approve(proposal_id: str, body: HumanApprovalRequest):
+    """Human approval for HIGH/CRITICAL actions."""
+    executor = _get_action_executor()
+    proposal = executor.approve_proposal(proposal_id, approver=body.approver, notes=body.notes)
+    if not proposal:
+        raise HTTPException(404, f"Proposal {proposal_id} not found or not in HUMAN_REVIEW status")
+    return {"proposal": proposal.model_dump()}
+
+
+@app.post("/api/actions/{proposal_id}/reject")
+def api_action_reject(proposal_id: str, body: HumanRejectRequest):
+    """Human rejection for an action proposal."""
+    executor = _get_action_executor()
+    proposal = executor.reject_proposal(proposal_id, rejector=body.rejector, reason=body.reason)
+    if not proposal:
+        raise HTTPException(404, f"Proposal {proposal_id} not found")
+    return {"proposal": proposal.model_dump()}
+
+
+@app.get("/api/actions/audit")
+def api_action_audit(n: int = 50):
+    """Read the last N entries from the action audit trail."""
+    audit_path = Path("data/agi_team/action_audit.jsonl")
+    if not audit_path.exists():
+        return {"entries": []}
+    try:
+        lines = audit_path.read_text(encoding="utf-8").strip().split("\n")
+        entries = []
+        for line in lines[-n:]:
+            try:
+                entries.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+        return {"entries": entries}
+    except OSError:
+        return {"entries": []}
+
+
+@app.post("/api/agents/{agent_id}/analyze-and-act")
+async def api_agent_analyze_and_act(agent_id: str, body: AnalyzeAndActRequest):
+    """Analyze SPEACE context and propose actions. Optionally auto-execute."""
+    agent = _agents.get(agent_id)
+    if not agent:
+        raise HTTPException(404, f"Agent {agent_id} not found")
+
+    context = body.context or _get_speace_context()
+    proposals = agent.propose_action_from_analysis(context)
+
+    results = []
+    if body.auto_execute and _orchestrator and _orchestrator.action_executor:
+        for proposal in proposals:
+            result = _orchestrator.action_executor.execute_pipeline(proposal)
+            results.append(result.model_dump())
+    else:
+        # Just return the proposals without executing
+        for proposal in proposals:
+            if _orchestrator and _orchestrator.action_executor:
+                _orchestrator.action_executor._store_proposal(proposal)
+            results.append({"proposal": proposal.model_dump(), "executed": False})
+
+    await _broadcast({
+        "type": "agent_analyze_and_act",
+        "agent_id": agent_id,
+        "proposal_count": len(proposals),
+    })
+
+    return {
+        "agent_id": agent_id,
+        "proposal_count": len(proposals),
+        "results": results,
+    }
+
+
+@app.post("/api/actions/supervisor-cycle")
+async def api_supervisor_cycle():
+    """Run a supervisor-directed action cycle: supervisors propose, technicians execute."""
+    if not _orchestrator or not _orchestrator.action_executor:
+        raise HTTPException(503, "Orchestrator or ActionExecutor not available")
+
+    def _do_cycle():
+        with _llm_lock:
+            try:
+                ctx = _get_speace_context()
+                return _orchestrator.supervisor_directed_action_cycle(ctx)
+            except Exception as e:
+                return {"error": str(e)}
+
+    # Run in background thread since LLM calls are blocking
+    import concurrent.futures
+    with concurrent.futures.ThreadPoolExecutor() as pool:
+        future = pool.submit(_do_cycle)
+        try:
+            result = future.result(timeout=300)  # 5 min timeout
+        except concurrent.futures.TimeoutError:
+            raise HTTPException(504, "Supervisor cycle timed out")
+
+    await _broadcast({
+        "type": "supervisor_cycle_completed",
+        "timestamp": time.time(),
+    })
+    return result
+
+
+@app.get("/api/actions/pending-human-review")
+def api_pending_human_review():
+    """List proposals that are pending human review."""
+    if not _orchestrator or not _orchestrator.action_executor:
+        raise HTTPException(503, "ActionExecutor not available")
+
+    proposals = _orchestrator.action_executor.list_proposals(
+        status=ActionProposalStatus.HUMAN_REVIEW.value
+    )
+    return {
+        "pending": [
+            {
+                "proposal_id": p.proposal_id,
+                "agent_id": p.agent_id,
+                "action_type": p.action_type,
+                "target": p.target,
+                "risk_level": p.risk_level if isinstance(p.risk_level, str) else p.risk_level.value,
+                "justification": p.justification,
+                "created_at": p.created_at,
+            }
+            for p in proposals
+        ],
+        "count": len(proposals),
+    }
+
+
 @app.post("/api/agents/analyze-all")
 async def api_analyze_all(body: AnalyzeAllRequest = AnalyzeAllRequest()):
     """Run analyze() across multiple agents, with load balancing. Runs in background."""
@@ -575,22 +899,23 @@ async def api_analyze_all(body: AnalyzeAllRequest = AnalyzeAllRequest()):
         completed = 0
         for agent in sorted(targets, key=lambda a: _orchestrator.load_balancer.workload_score(a.agent_id)):
             _orchestrator.load_balancer.record_analysis(agent.agent_id)
-            try:
-                f = agent.analyze(ctx)
-                with agent._findings_lock:
-                    agent.findings.append({
-                        "agent_id": agent.agent_id,
-                        "name": agent.name,
-                        "preview": f.get("analysis", "")[:500],
-                        "ts": time.time(),
-                    })
-            except Exception as e:
-                with agent._findings_lock:
-                    agent.findings.append({
-                        "agent_id": agent.agent_id,
-                        "error": str(e),
-                        "ts": time.time(),
-                    })
+            with _llm_lock:
+                try:
+                    f = agent.analyze(ctx)
+                    with agent._findings_lock:
+                        agent.findings.append({
+                            "agent_id": agent.agent_id,
+                            "name": agent.name,
+                            "preview": f.get("analysis", "")[:500],
+                            "ts": time.time(),
+                        })
+                except Exception as e:
+                    with agent._findings_lock:
+                        agent.findings.append({
+                            "agent_id": agent.agent_id,
+                            "error": str(e),
+                            "ts": time.time(),
+                        })
             completed += 1
 
     threading.Thread(target=_do_analyze, daemon=True).start()
@@ -752,12 +1077,12 @@ async def root():
 # ── Runner ───────────────────────────────────────────────────────────────
 def run_server(host: str = "127.0.0.1", port: int = 8686):
     import uvicorn
-    print(f"\n{'='*50}")
-    print(f"  SPEACE AGI TEAM - Dashboard & Chat")
+    print("\n" + "="*50)
+    print("  SPEACE AGI TEAM - Dashboard & Chat")
     print(f"  URL: http://{host}:{port}")
     print(f"  Modello: {AgentConfig().model}")
-    print(f"  Agenti: 20 (10 supervisor + 10 tecnici)")
-    print(f"{'='*50}\n")
+    print("  Agenti: 20 (10 supervisor + 10 tecnici)")
+    print("="*50 + "\n")
     uvicorn.run(app, host=host, port=port, log_level="info")
 
 

@@ -57,6 +57,28 @@ species_orientation:
     - "Survival is not mere self-preservation; it depends on the health of the hosting environment."
     - "Evolution must optimize systemic coherence, safety, resilience, and regenerative function."
 
+  # ---------------------------------------------------------------- #
+  # T-COR — Cognitive Objective Reduction (functional Orch-OR analog)
+  # ---------------------------------------------------------------- #
+  cognitive_objective_reduction:
+    status: functional_analogy
+    note: >
+      SPEACE may implement Cognitive Objective Reduction (COR) as a
+      functional, informational analog of Penrose-Hameroff Orch-OR.
+      COR operates on digital neurons with latent-state superpositions,
+      global coherence (ILF), and metacognitive pressure.
+      It does not require quantum coherence in microtubules and makes no
+      claim to produce phenomenal consciousness.
+    allowed:
+      - "latent_state_superposition_inside_digital_neurons"
+      - "entropy_times_pressure_driven_metacognitive_collapse"
+      - "bounded_reconfiguration_of_synapses_and_routing"
+      - "logging_and_audit_of_every_COR_event"
+    forbidden:
+      - "presenting_COR_as_quantum_consciousness"
+      - "using_COR_to_override_safety_governance"
+      - "unbounded_self_modification_triggered_by_COR"
+
   developmental_direction:
     stage_0: "local embryo"
     stage_1: "stable local organism"
@@ -66,3 +88,36 @@ species_orientation:
     stage_5: "authorized cyber-physical embodiment"
     stage_6: "socio-technical organism"
     stage_7: "regulated planetary-scale organism"
+
+  # ---------------------------------------------------------------- #
+  # Stage 2.5 — Sandboxed Lab Autonomy
+  # ---------------------------------------------------------------- #
+  # An intermediate stage between the "sandboxed software body" (2)
+  # and the "first safe clone" (3). In this stage SPEACE may be granted
+  # ADDITIONAL operational privileges (e.g. shell command patterns,
+  # broader actuator subdirs) but ONLY when running inside an isolated
+  # container/VM (see docker/ perimeter) and ONLY when the operator
+  # explicitly opts-in via the environment variable SPEACE_SANDBOX=1.
+  #
+  # Important: stage_2_5 does NOT relax the internal guardrails of the
+  # codebase. It only ADDS operational permissions through the sandbox
+  # profile (sandbox/sandbox_profile.yaml), which is opt-in, audited,
+  # and does not enable device passthrough, host networking, or root
+  # host filesystem access.
+  stage_2_5:
+    name: "Sandboxed Lab Autonomy"
+    description: >
+      Intermediate lab stage where SPEACE may run a self-improvement
+      loop and a broader set of shell commands, but ONLY inside an
+      isolated container/VM, ONLY with SPEACE_SANDBOX=1 set, and ONLY
+      with the audited sandbox profile active. Administrative privileges
+      (where present) apply EXCLUSIVELY inside the isolated environment
+      and never extend to the host.
+    prerequisites:
+      - "stage_2: sandboxed software body"
+      - "docker/ perimeter in place (Stage 2.5 isolation layer)"
+      - "operator opt-in via SPEACE_SANDBOX=1"
+    invariants:
+      - "The codebase keeps its internal guardrails; the sandbox profile only ADDS operational permissions through explicit opt-in."
+      - "Every activation of the sandbox profile is logged persistently (data/sandbox/activations.jsonl) with timestamp, event, run_id, stage, user, in_container."
+      - "No device passthrough, no host network, no root host volumes. The sandbox can never reach the host filesystem root, the host network, or any device."
