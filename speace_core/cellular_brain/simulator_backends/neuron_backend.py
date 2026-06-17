@@ -63,7 +63,7 @@ class NEURONBackend(SimulatorBackend):
             all_neurons.extend(pop.neurons)
         for spec in all_neurons:
             soma = h.Section(name=f"soma_{spec.neuron_id}")
-            soma.insert(h.hh)
+            soma.insert("hh")
             soma.L = 100.0
             soma.diam = 10.0
             # Create a VecStim-like stimulus; here we only model a passive
@@ -98,7 +98,10 @@ class NEURONBackend(SimulatorBackend):
         h.finitialize(-65)
         h.run()
         spikes: Dict[str, List[float]] = {nid: [] for nid in self._cells if "_syn_" not in nid}
-        return SimulationResult(spikes=spikes, runtime_ms=float(h.tstop))
+        state: Dict[str, List[float]] = {
+            nid: [] for nid in self._cells if "_syn_" not in nid
+        }
+        return SimulationResult(spikes=spikes, state=state, runtime_ms=float(h.tstop))
 
     def reset(self) -> None:
         # Without a full re-instantiation, NEURON can be reset by

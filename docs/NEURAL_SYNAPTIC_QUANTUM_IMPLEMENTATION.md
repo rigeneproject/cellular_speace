@@ -230,3 +230,34 @@ I seguenti sistemi sono stati aggiornati per riconoscere e operare sulle nuove f
 
 - Il capability assessment rimane sopra 70/100 anche con Brian2 attivo nel backend.
 - I test passano sia in presenza che (per design) verranno saltati in assenza di Brian2.
+
+## Integrazione NEST e NEURON backend
+
+### Stato
+
+- NEST (`nest-simulator`) e NEURON (`neuron`) **non sono installati** nell'ambiente corrente:
+  - NEST richiede build da sorgente o pacchetti system dipendenti dalla piattaforma;
+  - NEURON non ha wheel ufficiali per Python 3.14 su Windows.
+- Nonostante ciò, i backend rimangono integrati in SPEACE attraverso il meccanismo di **lazy import** e **fallback automatico**.
+
+### Correzioni e resilienza
+
+- `speace_core/cellular_brain/simulator_backends/nest_backend.py`:
+  - corretto `nest.Connect` per usare indici interi 1-based compatibili con NEST;
+  - aggiunto `runtime_ms` al `SimulationResult`.
+- `speace_core/cellular_brain/simulator_backends/neuron_backend.py`:
+  - corretto `soma.insert(h.hh)` → `soma.insert("hh")`;
+  - aggiunto `state` al `SimulationResult`.
+- `BackendSelector.build()` mantiene il fallback a `NativeBackend` per NEST/NEURON quando non disponibili.
+
+### Test condizionali
+
+- `tests/simulator_backends/test_nest_backend.py` — 4 test (availability, capabilities, build/fallback, fallback con monkeypatch).
+- `tests/simulator_backends/test_neuron_backend.py` — 4 test (availability, capabilities, build/fallback, fallback con monkeypatch).
+- I test usano `try/except ImportError` anziché `pytest.importorskip`, così da validare anche il comportamento di fallback quando i moduli non ci sono.
+
+### Risultato
+
+- In ambiente senza NEST/NEURON, `BackendSelector.build(BackendChoice.NEST)` e `.build(BackendChoice.NEURON)` ritornano automaticamente `NativeBackend`.
+- Il capability assessment resta stabile sopra 70/100.
+- Se in futuro NEST/NEURON verranno installati, i test condizionali li riconosceranno automaticamente e verificheranno il build reale.

@@ -79,10 +79,12 @@ class NESTBackend(SimulatorBackend):
         for proj in projections:
             for c in proj.connections:
                 if c.source_id in self._neurons and c.target_id in self._neurons:
+                    src_id = int(self._neurons[c.source_id]) + 1
+                    tgt_id = int(self._neurons[c.target_id]) + 1
                     nest.Connect(
-                        [self._nest_pop[self._neurons[c.source_id]]],
-                        [self._nest_pop[self._neurons[c.target_id]]],
-                        syn_spec={"weight": c.weight, "delay": c.delay_ms},
+                        self._nest_pop[src_id - 1],
+                        self._nest_pop[tgt_id - 1],
+                        syn_spec={"weight": float(c.weight), "delay": float(c.delay_ms)},
                     )
         self._projections = projections
 
@@ -102,7 +104,7 @@ class NESTBackend(SimulatorBackend):
                 if idx == int(s) - 1:
                     spikes[nid].append(float(t))
                     break
-        return SimulationResult(spikes=spikes)
+        return SimulationResult(spikes=spikes, runtime_ms=float(duration_ms))
 
     def reset(self) -> None:
         if self._nest is not None:
