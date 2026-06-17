@@ -128,3 +128,14 @@ Interpretation: SPEACE demonstrates functional intelligence for its architecture
 `
 
 Questo non è un test di intelligenza generale umana, ma una valutazione ingegneristica delle capacità bio-ispirate del sistema.
+
+## Sistemi periferici allineati al nuovo cervello
+
+I seguenti sistemi sono stati aggiornati per riconoscere e operare sulle nuove funzionalita di SPEACE:
+
+- **speace_agi_team/action_catalog.py** — aggiunti flag/parametri: `cor_enabled`, `simulator_backend_enabled`, `cor_phi_threshold_factor`, `simulator_backend_interval_ticks`; aggiunta categoria `RUN_EXTERNAL_TASK` per `capability_assessment`, `associative_recall`, `cognitive_prediction`, `grid_navigation`.
+- **speace_agi_team/action_executor.py** — implementata esecuzione dei task esterni tramite `EnvironmentAdapter` e `IntelligenceAssessment`.
+- **speace_agi_team/orchestrator.py** — `RuntimeHealthMonitor` legge `coherence_phi`, `mean_energy`, `active_neurons`, `cor_collapses`, `simulator_backend_log_size` e i report `reports/assessment/` e `reports/environment/`.
+- **speace_agi_team/anemos/prompts/tools.md** — Anemos puo leggere i report di assessment, environment e COR per diagnosticare l'organismo.
+- **ispettore_manutentore_neurologico_organismico_di_speace/ispettore_agent.py** — include assessment/environment report nel contesto di scansione e nel prompt LLM.
+- **ispettore.../manutenzione/preventiva/checklist_preventiva.ps1** — nuova sezione "Capacita e meccanismi avanzati" con controlli su assessment score, environment report, log COR e DNA COR genes.

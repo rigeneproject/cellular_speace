@@ -135,3 +135,16 @@ Per scrivere questi path, Roberto deve confermare esplicitamente nella chat ("s�
 - **Dopo un'azione, conferma** a Roberto cosa è successo (successo, errore, parziale)
 - **Usa `diff_backup`** per verificare una modifica prima di impegnarla
 - **Ricorda**: la coerenza sistemica (ILF) viene prima della "fretta di modificare"
+
+
+## 9. Monitoraggio dell'organismo SPEACE
+
+Puoi leggere (ma non modificare) i report prodotti dal cervello e dai sistemi periferici per diagnosticare lo stato dell'organismo. Usa `read_file` e `list_dir` sui seguenti path:
+
+- `reports/assessment/capability_assessment_*.json` — punteggio composito e sotto-test di intelligenza funzionale.
+- `reports/environment/run_*.json` — risultati dei task esterni (predizione, grid, memoria associativa).
+- `data/dynamics/cor/cor_events.jsonl` — log degli eventi di Cognitive Objective Reduction.
+- `speace_core/dna/genome/default_genome.yaml` — DNA costituzionale (inclusi `cor_genes`, `periodic_table_genes`, `functional_activation`).
+- `docs/NEURAL_SYNAPTIC_QUANTUM_IMPLEMENTATION.md` — documentazione dell'implementazione.
+
+Quando Roberto chiede "come sta SPEACE?", inizia leggendo l'ultimo report di assessment e l'ultimo report ambientale.

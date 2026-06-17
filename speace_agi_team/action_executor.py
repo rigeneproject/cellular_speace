@@ -232,12 +232,58 @@ class ActionExecutor:
             elif category == ActionCategory.TRIGGER_SUBSYSTEM_RESTART.value:
                 return self._execute_subsystem_restart(proposal)
 
+            elif category == ActionCategory.RUN_EXTERNAL_TASK.value:
+                return self._execute_external_task(proposal)
+
             else:
                 return {"error": f"Unknown action category: {category}", "success": False}
 
         except Exception as e:
             _logger.exception("Action execution error for %s: %s", proposal.proposal_id, e)
             return {"error": str(e), "success": False}
+
+    def _execute_external_task(self, proposal: ActionProposal) -> Dict[str, Any]:
+        """Run an external task/assessment via SPEACE environment adapters."""
+        target = proposal.target
+        start = time.time()
+        try:
+            from speace_core.environment.environment_adapter import EnvironmentAdapter
+
+            if target == "capability_assessment":
+                from run_speace_intelligence_assessment import IntelligenceAssessment
+                adapter = EnvironmentAdapter(enable_simulator_backend=False)
+                assessment = IntelligenceAssessment(adapter)
+                report = assessment.run()
+                return {
+                    "success": True,
+                    "task": target,
+                    "composite_score": report.composite_score,
+                    "interpretation": report.interpretation,
+                    "elapsed_seconds": report.elapsed_seconds,
+                    "report_path": None,
+                }
+
+            adapter = EnvironmentAdapter(enable_simulator_backend=False)
+            if target == "associative_recall":
+                result = adapter.run_associative_recall_episode(
+                    num_pairs=3, study_repetitions=2, test_length=5
+                )
+            elif target == "cognitive_prediction":
+                from speace_core.environment.cognitive_prediction_environment import SequenceMode
+                result = adapter.run_prediction_episode(mode=SequenceMode.PERIODIC, steps=20)
+            elif target == "grid_navigation":
+                result = adapter.run_grid_episode(dimensions=1, size=5)
+            else:
+                return {"success": False, "error": f"Unknown external task: {target}"}
+
+            return {
+                "success": True,
+                "task": target,
+                "result": result,
+                "elapsed_seconds": time.time() - start,
+            }
+        except Exception as exc:
+            return {"success": False, "task": target, "error": str(exc)}
 
     def _execute_runtime_param(self, proposal: ActionProposal) -> Dict[str, Any]:
         """Execute a runtime parameter change via ArchitecturePatchExecutor."""

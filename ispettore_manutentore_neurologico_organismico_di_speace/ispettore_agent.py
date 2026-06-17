@@ -173,6 +173,9 @@ SCAN_TARGETS = [
     {"path": PROJECT_ROOT / "docs", "label": "Documentazione", "patterns": ["*.md", "*.txt"]},
     {"path": PROJECT_ROOT / "reports", "label": "Reports", "patterns": ["*.md", "*.json", "*.txt"]},
     {"path": PROJECT_ROOT / "evolution_daemon", "label": "Evolution Daemon", "patterns": ["*.py", "*.json"]},
+    {"path": PROJECT_ROOT / "reports" / "assessment", "label": "Capability Assessment", "patterns": ["*.json"]},
+    {"path": PROJECT_ROOT / "reports" / "environment", "label": "Environment Reports", "patterns": ["*.json"]},
+    {"path": PROJECT_ROOT / "speace_core" / "environment", "label": "External Environments", "patterns": ["*.py"]},
 ]
 
 
@@ -386,6 +389,34 @@ def _build_markdown_report(scan_data: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _read_latest_json_in_dir(dir_path: Path, pattern: str = "*.json", max_chars: int = 20000) -> Optional[Dict[str, Any]]:
+    """Read the most recent JSON file matching a pattern in a directory."""
+    if not dir_path.exists():
+        return None
+    try:
+        files = sorted(
+            [f for f in dir_path.iterdir() if f.is_file() and f.match(pattern)],
+            key=lambda f: f.stat().st_mtime,
+            reverse=True,
+        )
+        if not files:
+            return None
+        content = files[0].read_text(encoding="utf-8", errors="ignore")
+        if len(content) > max_chars:
+            content = content[:max_chars] + "\n\n[...TRONCATO...]"
+        return json.loads(content)
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def _read_latest_assessment_report() -> Optional[Dict[str, Any]]:
+    return _read_latest_json_in_dir(PROJECT_ROOT / "reports" / "assessment", "capability_assessment_*.json")
+
+
+def _read_latest_environment_report() -> Optional[Dict[str, Any]]:
+    return _read_latest_json_in_dir(PROJECT_ROOT / "reports" / "environment", "run_*.json")
+
+
 class IspettoreAgent:
     def __init__(self, mode: str = "local", scan_interval: int = 60, auto_fix: bool = True,
                  enable_web: bool = True, use_llm: bool = False, use_subagents: bool = False):
@@ -471,6 +502,8 @@ class IspettoreAgent:
             "fixes": all_fixes,
             "llm_analysis": llm_analysis,
             "web_research": web_info,
+            "capability_assessment": assessment_report,
+            "environment_report": environment_report,
         }
 
         report_path = save_report(scan_data)

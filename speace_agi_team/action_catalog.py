@@ -26,6 +26,7 @@ class ActionCategory(str, Enum):
     TRIGGER_RECOVERY = "trigger_recovery"
     TRIGGER_SELF_MOD = "trigger_self_mod"
     TRIGGER_SUBSYSTEM_RESTART = "trigger_subsystem_restart"
+    RUN_EXTERNAL_TASK = "run_external_task"
 
 
 class ActionRiskLevel(str, Enum):
@@ -45,6 +46,12 @@ ALLOWED_FLAGS: Set[str] = {
     "brainstem_controller_enabled",
     "region_stability_controller_enabled",
     "architecture_patch_execution_enabled",
+    # T-COR / simulator / lazy-activation / quantum / periodic-table flags
+    "cor_enabled",
+    "simulator_backend_enabled",
+    "functional_activation_enabled",
+    "quantum_genes_enabled",
+    "periodic_table_genes_enabled",
 }
 
 ALLOWED_PROFILES: Set[str] = {
@@ -63,6 +70,14 @@ ALLOWED_NUMERIC: Set[str] = {
     "inhibition_decay",
     "semantic_similarity_threshold",
     "assembly_consolidation_threshold",
+    # T-COR / simulator tunables
+    "cor_phi_threshold_factor",
+    "cor_min_latent_states",
+    "cor_max_hypotheses",
+    "cor_collapse_refractory_ticks",
+    "simulator_backend_interval_ticks",
+    "simulator_backend_duration_ms",
+    "quantum_gate_noise",
 }
 
 # ── YAML file allowlist (expanded to all 19 genome files) ────────────
@@ -127,6 +142,12 @@ ALLOWED_DATA_PREFIXES: Set[str] = {
     "data/agi_team/",
     "data/self_improvement/",
     "data/runtime/",
+    # COR / quantum / neuroperiodic / assessment / environments
+    "data/dynamics/",
+    "data/quantum/",
+    "data/neuroperiodic/",
+    "data/assessment/",
+    "data/environment/",
     # Regulation & evolution
     "data/regulation/",
     "data/evolution/",
@@ -170,6 +191,15 @@ ALLOWED_DATA_PREFIXES: Set[str] = {
     "data/node_identity/",
 }
 
+# ── Allowed external task names (run via environment adapters) ────────
+
+ALLOWED_EXTERNAL_TASKS: Set[str] = {
+    "capability_assessment",
+    "associative_recall",
+    "cognitive_prediction",
+    "grid_navigation",
+}
+
 # ── Hard blocks: paths and patterns that are NEVER allowed ──────────────
 # NOTE: .py is NO LONGER a hard block — it's handled via ALLOWED_PY_PATHS
 # with mandatory sandbox verification. Only truly forbidden patterns remain.
@@ -199,6 +229,9 @@ _TECHNICIAN_ACTIONS: Dict[str, List[tuple]] = {
         ("adjust_neuron_threshold", ActionCategory.ADJUST_RUNTIME_PARAM, {"plasticity_rate"}, ActionRiskLevel.LOW),
         ("adjust_plasticity_rate", ActionCategory.SCALE_NUMERIC, {"plasticity_rate"}, ActionRiskLevel.LOW),
         ("trigger_neurogenesis", ActionCategory.TOGGLE_FLAG, {"architecture_patch_execution_enabled"}, ActionRiskLevel.MODERATE),
+        ("toggle_cor", ActionCategory.TOGGLE_FLAG, {"cor_enabled"}, ActionRiskLevel.MODERATE),
+        ("adjust_cor_threshold", ActionCategory.SCALE_NUMERIC, {"cor_phi_threshold_factor"}, ActionRiskLevel.MODERATE),
+        ("run_capability_assessment", ActionCategory.RUN_EXTERNAL_TASK, ALLOWED_EXTERNAL_TASKS, ActionRiskLevel.LOW),
         ("write_neuron_diagnostic", ActionCategory.WRITE_DATA_FILE, ALLOWED_DATA_PREFIXES, ActionRiskLevel.LOW),
         ("modify_cell_types_yaml", ActionCategory.MODIFY_YAML_FILE, {"speace_core/dna/genome/morphology/allowed_cell_types.yaml"}, ActionRiskLevel.HIGH),
         ("modify_cell_expression_yaml", ActionCategory.MODIFY_YAML_FILE, {"speace_core/dna/genome/differentiation/cell_expression_rules.yaml"}, ActionRiskLevel.HIGH),
@@ -209,6 +242,9 @@ _TECHNICIAN_ACTIONS: Dict[str, List[tuple]] = {
         ("adjust_decay_rate", ActionCategory.SCALE_NUMERIC, {"decay_rate"}, ActionRiskLevel.LOW),
         ("adjust_routing_gain", ActionCategory.SCALE_NUMERIC, {"routing_gain"}, ActionRiskLevel.LOW),
         ("toggle_stdp", ActionCategory.TOGGLE_FLAG, {"semantic_memory_enabled"}, ActionRiskLevel.LOW),
+        ("toggle_simulator_backend", ActionCategory.TOGGLE_FLAG, {"simulator_backend_enabled"}, ActionRiskLevel.MODERATE),
+        ("adjust_simulator_interval", ActionCategory.SCALE_NUMERIC, {"simulator_backend_interval_ticks"}, ActionRiskLevel.LOW),
+        ("run_associative_recall_task", ActionCategory.RUN_EXTERNAL_TASK, ALLOWED_EXTERNAL_TASKS, ActionRiskLevel.LOW),
         ("write_synapse_diagnostic", ActionCategory.WRITE_DATA_FILE, ALLOWED_DATA_PREFIXES, ActionRiskLevel.LOW),
         ("modify_dynamics_substrate_yaml", ActionCategory.MODIFY_YAML_FILE, {"speace_core/dna/genome/morphology/dynamics_substrate.yaml"}, ActionRiskLevel.HIGH),
         ("modify_cell_module", ActionCategory.MODIFY_PY_FILE, {"speace_core/cellular_brain/cells/"}, ActionRiskLevel.HIGH),
@@ -496,6 +532,9 @@ class ActionCatalog:
         # Data files
         if target.startswith("data/"):
             return ActionCategory.WRITE_DATA_FILE.value
+        # External tasks
+        if action_type.startswith("run_") or action_type in ALLOWED_EXTERNAL_TASKS:
+            return ActionCategory.RUN_EXTERNAL_TASK.value
         # Triggers
         if "recovery" in action_type.lower():
             return ActionCategory.TRIGGER_RECOVERY.value

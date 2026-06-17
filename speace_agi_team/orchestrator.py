@@ -102,6 +102,28 @@ class RuntimeHealthMonitor:
         self.coherence_threshold = 0.3
         self.tick_stall_seconds = 60.0
 
+    def _read_last_report(self, report_dir: Path, prefix: str = "") -> Optional[Dict[str, Any]]:
+        """Read the most recent JSON report from a reports directory."""
+        if not report_dir.exists():
+            return None
+        try:
+            files = sorted(
+                [f for f in report_dir.iterdir() if f.is_file() and f.suffix == ".json" and (not prefix or f.name.startswith(prefix))],
+                key=lambda f: f.stat().st_mtime,
+                reverse=True,
+            )
+            if not files:
+                return None
+            return json.loads(files[0].read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return None
+
+    def _read_last_assessment_report(self) -> Optional[Dict[str, Any]]:
+        return self._read_last_report(Path("reports/assessment"), "capability_assessment_")
+
+    def _read_last_environment_report(self) -> Optional[Dict[str, Any]]:
+        return self._read_last_report(Path("reports/environment"), "run_")
+
     def _read_last_snapshot(self) -> Optional[Dict[str, Any]]:
         # Nuovo percorso: organism_observer/topology_history.jsonl
         snap_path = self.data_root / "organism_observer" / "topology_history.jsonl"
@@ -159,9 +181,16 @@ class RuntimeHealthMonitor:
             "checks": [],
             "alerts": [],
             "coherence_phi": None,
+            "mean_energy": None,
+            "active_neurons": None,
             "tick": None,
             "cpu": None,
             "memory": None,
+            "cor_enabled": None,
+            "cor_collapses": None,
+            "simulator_backend_enabled": None,
+            "simulator_backend_log_size": None,
+            "capability_score": None,
             "timestamp": time.time(),
         }
 
@@ -188,6 +217,15 @@ class RuntimeHealthMonitor:
                     live_phi = getattr(m, "coherence_phi", None)
                     if live_phi is not None:
                         report["coherence_phi"] = live_phi
+                    report["mean_energy"] = getattr(m, "mean_energy", None)
+                    report["active_neurons"] = getattr(m, "active_neurons", None)
+                    report["cor_enabled"] = getattr(self.brain_orchestrator, "cor_enabled", None)
+                    report["simulator_backend_enabled"] = getattr(self.brain_orchestrator, "simulator_backend_enabled", None)
+                    report["simulator_backend_log_size"] = len(getattr(self.brain_orchestrator, "_simulator_backend_log", []))
+                    cor_engine = getattr(self.brain_orchestrator, "_cor_engine", None)
+                    if cor_engine is not None:
+                        history = getattr(cor_engine, "_history", [])
+                        report["cor_collapses"] = sum(1 for r in history if getattr(r, "collapsed", False))
             except Exception:
                 pass
 
@@ -246,6 +284,27 @@ class RuntimeHealthMonitor:
             report["checks"].append("embodiment_state")
         else:
             report["checks"].append("embodiment_state:missing")
+
+        # ── Assessment / environment reports ─────────────────────────────
+        assessment = self._read_last_assessment_report()
+        if assessment:
+            report["capability_score"] = assessment.get("composite_score")
+            report["checks"].append("assessment_report")
+            score = report["capability_score"]
+            if score is not None and score < 30:
+                alert = f"⚠️ Capability assessment score basso: {score:.1f}/100"
+                report["alerts"].append(alert)
+                report["ok"] = False
+                self.alerts.append({"ts": time.time(), "msg": alert})
+        else:
+            report["checks"].append("assessment_report:missing")
+
+        env_report = self._read_last_environment_report()
+        if env_report:
+            report["last_env_kind"] = env_report.get("env_kind")
+            report["checks"].append("environment_report")
+        else:
+            report["checks"].append("environment_report:missing")
 
         return report
 

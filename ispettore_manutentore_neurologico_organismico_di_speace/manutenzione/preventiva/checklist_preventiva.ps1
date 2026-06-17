@@ -243,6 +243,64 @@ if ($Livello -eq "completo") {
     }
 }
 
+# 6. CAPACITÀ E MEccanismi AVANZATI
+if ($Livello -in @("esteso", "completo")) {
+    Write-Host "--- CAPACITÀ E MEccanismi AVANZATI ---" -ForegroundColor Magenta
+    try {
+        $assessmentDir = Join-Path $ProjectRoot "reports\assessment"
+        if (Test-Path $assessmentDir) {
+            $assessmentFiles = Get-ChildItem -LiteralPath $assessmentDir -Filter "capability_assessment_*.json" -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending
+            if ($assessmentFiles.Count -gt 0) {
+                $latest = $assessmentFiles[0]
+                $ageMin = [math]::Round(((Get-Date) - $latest.LastWriteTime).TotalMinutes, 1)
+                $assessment = Get-Content $latest.FullName -Raw | ConvertFrom-Json
+                $score = $assessment.composite_score
+                Add-CheckResult -Category "Capacita" -Name "Assessment report" -Status $(if ($score -ge 30) { "OK" } else { "WARN" }) -Detail "Score: $score/100 (eta ${ageMin}min)"
+            } else {
+                Add-CheckResult -Category "Capacita" -Name "Assessment report" -Status "WARN" -Detail "Nessun report di assessment trovato"
+            }
+        } else {
+            Add-CheckResult -Category "Capacita" -Name "Assessment report" -Status "WARN" -Detail "Directory reports/assessment non trovata"
+        }
+
+        $envDir = Join-Path $ProjectRoot "reports\environment"
+        if (Test-Path $envDir) {
+            $envFiles = Get-ChildItem -LiteralPath $envDir -Filter "run_*.json" -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending
+            if ($envFiles.Count -gt 0) {
+                $latestEnv = $envFiles[0]
+                $envAge = [math]::Round(((Get-Date) - $latestEnv.LastWriteTime).TotalMinutes, 1)
+                $envReport = Get-Content $latestEnv.FullName -Raw | ConvertFrom-Json
+                $kind = $envReport.env_kind
+                Add-CheckResult -Category "Capacita" -Name "Environment report" -Status "OK" -Detail "Ultimo: $kind (eta ${envAge}min)"
+            } else {
+                Add-CheckResult -Category "Capacita" -Name "Environment report" -Status "WARN" -Detail "Nessun report environment trovato"
+            }
+        } else {
+            Add-CheckResult -Category "Capacita" -Name "Environment report" -Status "WARN" -Detail "Directory reports/environment non trovata"
+        }
+
+        $corPath = Join-Path $ProjectRoot "data\dynamics\cor\cor_events.jsonl"
+        if (Test-Path $corPath) {
+            $corLines = Get-Content $corPath -Tail 10 -ErrorAction SilentlyContinue
+            $collapses = ($corLines | Where-Object { $_ -match '"collapsed":true' }).Count
+            Add-CheckResult -Category "COR" -Name "COR events" -Status "OK" -Detail "$collapses collassi negli ultimi 10 eventi"
+        } else {
+            Add-CheckResult -Category "COR" -Name "COR events" -Status "INFO" -Detail "Log COR non trovato"
+        }
+
+        $dnaPath = Join-Path $ProjectRoot "speace_core\dna\genome\default_genome.yaml"
+        if (Test-Path $dnaPath) {
+            $dnaText = Get-Content $dnaPath -Raw
+            $corEnabled = $dnaText -match "cor_genes:\s*\n\s*enabled:\s*true"
+            Add-CheckResult -Category "DNA" -Name "COR genes abilitati" -Status $(if ($corEnabled) { "OK" } else { "WARN" }) -Detail $(if ($corEnabled) { "cor_genes.enabled = true" } else { "cor_genes non abilitato" })
+        } else {
+            Add-CheckResult -Category "DNA" -Name "Default genome" -Status "FAIL" -Detail "default_genome.yaml non trovato"
+        }
+    } catch {
+        Add-CheckResult -Category "Capacita" -Name "CapacitaCheck" -Status "WARN" -Detail $_.Exception.Message
+    }
+}
+
 # === REPORT ===
 $elapsed = [math]::Round(((Get-Date) - $startTime).TotalSeconds, 1)
 Write-Host ""
