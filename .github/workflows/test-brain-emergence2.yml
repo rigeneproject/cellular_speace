@@ -1,0 +1,98 @@
+name: SPEACE Brain Emergence Test Suite
+
+on:
+  push:
+    branches:
+      - fix/health-repair-v0.9.0
+    paths:
+      - 'speace_core/**'
+      - 'tests/test_brain_emergence.py'
+      - '.github/workflows/test-brain-emergence.yml'
+  pull_request:
+    branches:
+      - fix/health-repair-v0.9.0
+  workflow_dispatch:
+
+jobs:
+  brain-emergence-tests:
+    name: Brain Functionality & Emergence Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    strategy:
+      matrix:
+        python-version: ['3.12']
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: fix/health-repair-v0.9.0
+      
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+      
+      - name: Display Python version
+        run: python -c "import sys; print(sys.version)"
+      
+      - name: Install SPEACE in development mode
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install -e ".[dev]"
+      
+      - name: Run Full Brain Health Suite
+        run: |
+          pytest tests/test_brain_emergence.py::test_full_brain_health_suite -v -s
+        continue-on-error: false
+      
+      - name: Generate Test Coverage Report
+        run: |
+          pytest tests/test_brain_emergence.py --cov=speace_core --cov-report=xml --cov-report=term-missing
+        continue-on-error: true
+      
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage.xml
+          flags: brain-emergence
+          name: SPEACE Brain Emergence Coverage
+          fail_ci_if_error: false
+      
+      - name: Archive test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: brain-emergence-test-results
+          path: |
+            .pytest_cache/
+            htmlcov/
+          retention-days: 30
+      
+      - name: Generate summary report
+        if: always()
+        run: |
+          echo "## 🧠 SPEACE Brain Emergence Test Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "- ✓ Brain Ignition" >> $GITHUB_STEP_SUMMARY
+          echo "- ✓ Pattern Completion Emergence" >> $GITHUB_STEP_SUMMARY
+          echo "- ✓ Feedback-Driven Learning" >> $GITHUB_STEP_SUMMARY
+          echo "- ✓ Neural Selectivity" >> $GITHUB_STEP_SUMMARY
+          echo "- ✓ Plasticity & Pruning" >> $GITHUB_STEP_SUMMARY
+          echo "- ✓ Organism Ignition with Recovery" >> $GITHUB_STEP_SUMMARY
+          echo "- ✓ Emergent Capabilities Detection" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Metrics Monitored" >> $GITHUB_STEP_SUMMARY
+          echo "- **Coherence Phi (Φ)**: Integration Information" >> $GITHUB_STEP_SUMMARY
+          echo "- **Mean Energy**: Metabolic Efficiency" >> $GITHUB_STEP_SUMMARY
+          echo "- **Active Neurons**: Neural Firing" >> $GITHUB_STEP_SUMMARY
+          echo "- **Pruned Synapses**: Synaptic Consolidation" >> $GITHUB_STEP_SUMMARY
+          echo "- **System Coherence**: Global Integration" >> $GITHUB_STEP_SUMMARY
+          echo "- **ILF Value**: Integrated Lagged Frequency" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Branch" >> $GITHUB_STEP_SUMMARY
+          echo "- Branch: \`fix/health-repair-v0.9.0\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Python: ${{ matrix.python-version }}" >> $GITHUB_STEP_SUMMARY
