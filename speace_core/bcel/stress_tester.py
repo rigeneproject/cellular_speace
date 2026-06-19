@@ -126,12 +126,17 @@ class ConstraintStressTester:
         )
 
     async def _stimulate_and_run(self, orch: Any, ticks: int) -> None:
-        """Inject a high-energy pattern before running to stress the circuit."""
-        if hasattr(orch, "inject"):
-            pattern = [0.0] * 10
-            pattern[0] = 0.9
+        """Inject a high-energy pattern repeatedly while running to stress the circuit."""
+        if not hasattr(orch, "inject"):
+            await _run_ticks(orch, ticks)
+            return
+
+        pattern = [0.0] * 10
+        pattern[0] = 0.9
+        # Re-inject on every tick to sustain activity and expose runaway gain.
+        for _ in range(ticks):
             orch.inject(pattern)
-        await _run_ticks(orch, ticks)
+            await _run_ticks(orch, 1)
 
     def _relative_change(self, baseline: float, perturbed: float) -> float:
         """Return how many times larger the perturbed value is vs baseline."""

@@ -1,27 +1,22 @@
 """Operational stress tests for BCEL functional constraints."""
 
 import asyncio
-import pathlib
 
 import pytest
 
 from speace_core.bcel import ConstraintStressTester, FunctionalConstraint
-from speace_core.dna.parser import load_genome
-from speace_core.orchestrator import CellularBrainOrchestrator
+from speace_core.bcel.stress_circuit import make_minimal_builder
 
 
-def _default_genome():
-    root = pathlib.Path(__file__).resolve().parent.parent
-    return load_genome(root / "speace_core" / "dna" / "genome" / "default_genome.yaml")
-
-
-def _build_orchestrator():
-    return CellularBrainOrchestrator.build_mvp(_default_genome())
+def _build_minimal_orchestrator(constraint_name: str):
+    return make_minimal_builder(constraint_name)()
 
 
 @pytest.mark.asyncio
 async def test_rate_limiter_constraint_is_protective():
-    tester = ConstraintStressTester(build_orchestrator=_build_orchestrator)
+    tester = ConstraintStressTester(
+        build_orchestrator=lambda: _build_minimal_orchestrator("rate_limiter")
+    )
     constraint = FunctionalConstraint(
         name="rate_limiter",
         invariant="coherence_preservation",
@@ -30,17 +25,16 @@ async def test_rate_limiter_constraint_is_protective():
         parameters={"min_inter_spike_ticks": 2},
         stability_test="firing_rate_stays_bounded",
     )
-    result = await tester.run(constraint, metric="max_activation", ticks=10)
-    assert result is not None
-    assert result.metric_name == "max_activation"
-    # We expect at least some measurable difference, not necessarily passing
-    # the 2x threshold on every stochastic run.
-    assert result.perturbed_value >= 0.0
+    result = await tester.run(constraint, metric="total_spikes", ticks=20)
+    assert result.passed, result.interpretation
+    assert result.relative_change >= 2.0
 
 
 @pytest.mark.asyncio
 async def test_short_term_depression_constraint_is_protective():
-    tester = ConstraintStressTester(build_orchestrator=_build_orchestrator)
+    tester = ConstraintStressTester(
+        build_orchestrator=lambda: _build_minimal_orchestrator("short_term_depression")
+    )
     constraint = FunctionalConstraint(
         name="short_term_depression",
         invariant="destructive_entropy_reduction",
@@ -49,9 +43,27 @@ async def test_short_term_depression_constraint_is_protective():
         parameters={"decay_per_spike": 0.05, "recovery_tau": 10.0},
         stability_test="prevents_runaway_excitation",
     )
-    result = await tester.run(constraint, metric="coherence_variance", ticks=10)
-    assert result is not None
-    assert result.metric_name == "coherence_variance"
+    result = await tester.run(constraint, metric="max_activation", ticks=20)
+    assert result.passed, result.interpretation
+    assert result.relative_change >= 2.0
+
+
+@pytest.mark.asyncio
+async def test_delay_as_lowpass_filter_constraint_is_protective():
+    tester = ConstraintStressTester(
+        build_orchestrator=lambda: _build_minimal_orchestrator("delay_as_lowpass_filter")
+    )
+    constraint = FunctionalConstraint(
+        name="delay_as_lowpass_filter",
+        invariant="coherence_preservation",
+        biological_form="1-2 ms synaptic delay",
+        mathematical_form="leaky integrator + rate limiter",
+        parameters={"tau_ms": 5.0, "max_rate_hz": 100.0},
+        stability_test="network_does_not_oscillate_when_delay_removed",
+    )
+    result = await tester.run(constraint, metric="max_activation", ticks=20)
+    assert result.passed, result.interpretation
+    assert result.relative_change >= 2.0
 
 
 def test_stress_tester_without_builder_returns_placeholder():

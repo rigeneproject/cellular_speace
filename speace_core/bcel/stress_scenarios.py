@@ -104,21 +104,31 @@ def _collect_metrics(orch: Any) -> StabilityMetrics:
 
     coherence = [getattr(m, "coherence_phi", 0.5) for m in log]
     energy = [getattr(m, "mean_energy", 0.5) for m in log]
-    activations: List[float] = []
-    spikes = 0
 
+    # If the orchestrator records per-tick spike counts / peak activations,
+    # aggregate them for a much more sensitive signal than a single snapshot.
+    total_spikes = 0
+    max_activation = 0.0
+    if log and hasattr(log[0], "spike_count"):
+        total_spikes = sum(getattr(m, "spike_count", 0) for m in log)
+        max_activation = max((getattr(m, "max_activation", 0.0) for m in log), default=0.0)
+
+    # Fallback: read the live circuit state when per-tick history is unavailable.
     circuit = getattr(orch, "circuit", None)
-    if circuit is not None:
+    if circuit is not None and (total_spikes == 0 or max_activation == 0.0):
         neurons = (
             getattr(circuit, "input_neurons", [])
             + getattr(circuit, "hidden_neurons", [])
             + getattr(circuit, "output_neurons", [])
         )
+        activations: List[float] = []
         for n in neurons:
             act = getattr(n, "activation", 0.0)
             activations.append(act)
             if getattr(n, "fired", False) or act > 0.9:
-                spikes += 1
+                total_spikes += 1
+        if activations:
+            max_activation = max(max_activation, max(activations))
 
     def mean(values: List[float]) -> float:
         return sum(values) / len(values) if values else 0.0
@@ -134,8 +144,8 @@ def _collect_metrics(orch: Any) -> StabilityMetrics:
         coherence_variance=variance(coherence),
         energy_mean=mean(energy),
         energy_variance=variance(energy),
-        max_activation=max(activations) if activations else 0.0,
-        total_spikes=spikes,
+        max_activation=max_activation,
+        total_spikes=total_spikes,
     )
 
 

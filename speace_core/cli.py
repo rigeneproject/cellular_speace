@@ -715,8 +715,19 @@ def bcel_stress_test(
         typer.echo(f"Constraint '{constraint_name}' not found in BCEL catalog.")
         raise typer.Exit(1)
 
-    def builder():
-        return CellularBrainOrchestrator.build_mvp(genome)
+    from speace_core.bcel.stress_circuit import make_minimal_builder
+
+    known_circuit_constraints = {
+        "rate_limiter",
+        "short_term_depression",
+        "delay_as_lowpass_filter",
+        "synaptic_delay_lowpass",
+    }
+    if constraint.name in known_circuit_constraints:
+        builder = make_minimal_builder(constraint.name)
+    else:
+        def builder():
+            return CellularBrainOrchestrator.build_mvp(genome)
 
     tester = ConstraintStressTester(build_orchestrator=builder)
     result = asyncio.run(tester.run(constraint, metric=metric, ticks=ticks))
