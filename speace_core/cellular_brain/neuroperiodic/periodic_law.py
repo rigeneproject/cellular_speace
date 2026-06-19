@@ -496,3 +496,49 @@ class PeriodicLaw(BaseModel):
                     except ValueError:
                         pass
         return BondType.COVALENT
+
+
+# ------------------------------------------------------------------
+# BCEL extension: functional constraints
+# ------------------------------------------------------------------
+
+try:
+    from speace_core.cellular_brain.neuroperiodic.functional_constraint_law import (
+        FunctionalConstraintLaw,
+        FunctionalConstraintRegistry,
+    )
+except Exception:  # pragma: no cover
+    FunctionalConstraintLaw = None  # type: ignore[misc,assignment]
+    FunctionalConstraintRegistry = None  # type: ignore[misc,assignment]
+
+
+def _patch_periodic_law() -> None:
+    """Attach functional-constraint support to PeriodicLaw if not present."""
+    if not hasattr(PeriodicLaw, "add_functional_constraint"):
+
+        def add_functional_constraint(self, data: dict) -> None:
+            """Add a functional constraint law from a dictionary payload."""
+            if FunctionalConstraintLaw is None:
+                return
+            law = FunctionalConstraintLaw(**data)
+            reg = getattr(self, "_functional_constraints", None)
+            if reg is None:
+                reg = FunctionalConstraintRegistry()
+                self._functional_constraints = reg
+            reg.register(law)
+
+        PeriodicLaw.add_functional_constraint = add_functional_constraint
+
+    if not hasattr(PeriodicLaw, "functional_constraints"):
+
+        @property
+        def functional_constraints(self) -> list:
+            reg = getattr(self, "_functional_constraints", None)
+            if reg is None:
+                return []
+            return list(reg.laws.values())
+
+        PeriodicLaw.functional_constraints = functional_constraints
+
+
+_patch_periodic_law()

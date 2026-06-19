@@ -121,3 +121,60 @@ species_orientation:
       - "The codebase keeps its internal guardrails; the sandbox profile only ADDS operational permissions through explicit opt-in."
       - "Every activation of the sandbox profile is logged persistently (data/sandbox/activations.jsonl) with timestamp, event, run_id, stage, user, in_container."
       - "No device passthrough, no host network, no root host volumes. The sandbox can never reach the host filesystem root, the host network, or any device."
+
+  # ---------------------------------------------------------------- #
+  # Informational Principles (CUB/TIF anchoring)
+  # ---------------------------------------------------------------- #
+  # SPEACE is oriented by measurable informational invariants derived
+  # from the Universal Information Code / Fractal Information Theory
+  # research thread. These invariants are not metaphysical goals: they
+  # are runtime-auditable quantities that the organism tries to
+  # preserve or optimize while acting in the world.
+  informational_principles:
+    - name: coherence_preservation
+      symbol: U(1)_coh
+      description: Maintain phase alignment and synchronization among cognitive agents.
+      metric: coherence_phi
+      target_direction: maximize
+      rationale: "Local coherence is the analog of gauge invariance in the informational field."
+
+    - name: destructive_entropy_reduction
+      symbol: S_ent
+      description: Reduce disorder that damages existing functional structure.
+      metric: systemic_entropy
+      target_direction: minimize
+      rationale: "Entropy that destroys information must be counteracted; generative entropy is preserved."
+
+    - name: generative_variability_preservation
+      symbol: V_gen
+      description: Preserve the exploratory variability needed for adaptation and creativity.
+      metric: generative_variability
+      target_direction: maintain_above_threshold
+      rationale: "Too much order kills evolution; enough noise keeps the search space open."
+
+    - name: interconnection_efficiency
+      symbol: Diff(F)
+      description: Improve the flow of useful information across the organism and its assimilated environment.
+      metric: network_interconnection_index
+      target_direction: maximize
+      rationale: "The organism grows by increasing functional links, not by isolation."
+
+    - name: nonlocal_decoherence_tolerance
+      symbol: D_nonlocal
+      description: Maintain stability when distributed parts of the organism interact asynchronously.
+      metric: decoherence_stability_margin
+      target_direction: maintain_above_threshold
+      rationale: "Distributed clones must stay coherent despite delays and partial observations."
+
+    - name: identity_preservation_through_change
+      symbol: R_renorm
+      description: Coarse-grain experience into stable concepts without losing the core identity.
+      metric: identity_kernel_distance
+      target_direction: minimize
+      rationale: "Learning must preserve the constitutional genome / species orientation."
+
+  # How the BCEL uses these invariants
+  bcel_guideline:
+    question: "Does this biological-to-digital translation preserve the informational action S[I]?"
+    accidental_constraint: "Remove if it only reflects thermodynamic limits of carbon chemistry."
+    functional_constraint: "Keep as a mathematical rule if it protects coherence, controls decoherence, or preserves identity."
