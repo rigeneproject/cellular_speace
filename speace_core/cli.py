@@ -8,6 +8,7 @@ import typer
 from speace_core.dna.parser import load_genome
 from speace_core.orchestrator import CellularBrainOrchestrator
 from speace_core.bcel import BCELCatalog, CyberneticSynthesizer, BiologicalComponent
+from speace_core.bcel import ConstraintStressTester
 from speace_core.digital_rna.transcriptor import DigitalTranscriptor
 from speace_core.epigenetics.epigenetic_tags import EpigeneticTagsManager
 
@@ -683,6 +684,50 @@ def transcriptome(
         for fc in t.functional_constraints:
             typer.echo(f"  {fc.get('name', 'unknown')}: {fc.get('mathematical_form', 'n/a')}")
 
+
+
+@app.command()
+def bcel_stress_test(
+    constraint_name: str = typer.Argument(..., help="Name of the functional constraint to stress test"),
+    metric: str = typer.Option("coherence_variance", "--metric", "-m", help="Metric to compare"),
+    ticks: int = typer.Option(20, "--ticks", "-t", help="Ticks per condition"),
+    genome_path: Optional[pathlib.Path] = typer.Option(None, "--genome", "-g", help="Path to genome YAML"),
+) -> None:
+    """Stress-test a functional constraint by relaxing it in the circuit."""
+    if genome_path is None:
+        genome_path = _default_genome_path()
+    genome = load_genome(genome_path)
+
+    from speace_core.bcel.catalog import BCELCatalog
+    catalog = BCELCatalog()
+    constraint = None
+    for eq in [catalog.get(n) for n in catalog.list_components()]:
+        if eq is None:
+            continue
+        for fc in eq.kept_constraints:
+            if fc.name == constraint_name:
+                constraint = fc
+                break
+        if constraint is not None:
+            break
+
+    if constraint is None:
+        typer.echo(f"Constraint '{constraint_name}' not found in BCEL catalog.")
+        raise typer.Exit(1)
+
+    def builder():
+        return CellularBrainOrchestrator.build_mvp(genome)
+
+    tester = ConstraintStressTester(build_orchestrator=builder)
+    result = asyncio.run(tester.run(constraint, metric=metric, ticks=ticks))
+
+    typer.echo(f"=== Stress Test: {constraint_name} ===")
+    typer.echo(f"Metric: {result.metric_name}")
+    typer.echo(f"Baseline:   {result.baseline_value:.6f}")
+    typer.echo(f"Perturbed:  {result.perturbed_value:.6f}")
+    typer.echo(f"Change:     {result.relative_change:.2f}x")
+    typer.echo(f"Passed:     {result.passed}")
+    typer.echo(f"Interpretation: {result.interpretation}")
 
 if __name__ == "__main__":
     app()

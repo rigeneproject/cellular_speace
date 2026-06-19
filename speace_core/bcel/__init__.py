@@ -15,7 +15,12 @@ from speace_core.bcel.models import (
 from speace_core.bcel.catalog import BCELCatalog, default_catalog
 from speace_core.bcel.classifier import ConstraintClassifier
 from speace_core.bcel.synthesizer import CyberneticSynthesizer
-from speace_core.bcel.stress_tester import ConstraintStressTester
+from speace_core.bcel.stress_tester import ConstraintStressTester, StressTestResult
+from speace_core.bcel.stress_scenarios import (
+    CircuitProxy,
+    StressScenarioRegistry,
+    StabilityMetrics,
+)
 
 __all__ = [
     "BiologicalComponent",
@@ -27,4 +32,8 @@ __all__ = [
     "ConstraintClassifier",
     "CyberneticSynthesizer",
     "ConstraintStressTester",
+    "StressTestResult",
+    "CircuitProxy",
+    "StressScenarioRegistry",
+    "StabilityMetrics",
 ]

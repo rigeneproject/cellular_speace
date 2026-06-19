@@ -65,7 +65,8 @@ from speace_core.bcel.stress_tester import ConstraintStressTester, StressTestRes
 from speace_core.bcel.models import FunctionalConstraint
 
 
-def test_stress_tester_default_placeholder():
+@pytest.mark.asyncio
+async def test_stress_tester_default_placeholder():
     tester = ConstraintStressTester()
     fc = FunctionalConstraint(
         name="test_constraint",
@@ -73,8 +74,8 @@ def test_stress_tester_default_placeholder():
         biological_form="placeholder",
         mathematical_form="placeholder",
     )
-    result = tester.run(fc)
+    result = await tester.run(fc)
     assert isinstance(result, StressTestResult)
-    assert result.test_name == "default_test_constraint"
-    assert result.passed is True
+    assert "placeholder" in result.test_name
+    assert "could not be executed" in result.interpretation
 
