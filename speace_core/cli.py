@@ -7,6 +7,10 @@ import typer
 
 from speace_core.dna.parser import load_genome
 from speace_core.orchestrator import CellularBrainOrchestrator
+from speace_core.bcel import BCELCatalog, CyberneticSynthesizer, BiologicalComponent
+from speace_core.digital_rna.transcriptor import DigitalTranscriptor
+from speace_core.epigenetics.epigenetic_tags import EpigeneticTagsManager
+
 
 app = typer.Typer(name="speace", help="SPEACE Cellular Brain CLI")
 
@@ -555,6 +559,7 @@ def observe(
         try:
             # Tenta di agganciarsi all'organismo in esecuzione
             from speace_core.orchestrator import CellularBrainOrchestrator
+
             from speace_core.cellular_brain.organism.organism_bus import OrganismBus
 
             typer.echo(f"Ascolto live per {seconds}s...")
@@ -606,6 +611,77 @@ def observe(
     typer.echo("  Hub (top):")
     for h in report.get("hubs", {}).get("broadcasters", [])[:3]:
         typer.echo(f"    > {h['node']}: out={h['score']:.3f}")
+
+
+
+@app.command()
+def bcel_catalog() -> None:
+    """List known biological-digital equivalences."""
+    catalog = BCELCatalog()
+    typer.echo("=== BCEL Catalog ===")
+    for name in catalog.list_components():
+        eq = catalog.get(name)
+        if eq is None:
+            continue
+        typer.echo(f"  {name}")
+        typer.echo(f"    function: {eq.preserved_function}")
+        typer.echo(f"    digital:  {eq.digital_implementation}")
+        kept = [c.name for c in eq.kept_constraints]
+        removed = eq.removed_constraints
+        typer.echo(f"    kept constraints:    {', '.join(kept) if kept else 'none'}")
+        typer.echo(f"    removed constraints: {', '.join(removed) if removed else 'none'}")
+
+
+@app.command()
+def bcel_synthesize(
+    component_name: str = typer.Argument(..., help="Biological component name to analyze"),
+    function: str = typer.Option("", "--function", "-f", help="Functional description"),
+    constraints: list[str] = typer.Option([], "--constraint", "-c", help="Biological constraints"),
+) -> None:
+    """Run the BCEL synthesizer on a biological component."""
+    catalog = BCELCatalog()
+    synthesizer = CyberneticSynthesizer(catalog=catalog)
+    component = BiologicalComponent(
+        name=component_name,
+        function=function or "unknown",
+        biological_constraints=constraints,
+    )
+    eq = synthesizer.synthesize(component)
+    typer.echo(f"Component: {eq.component_name}")
+    typer.echo(f"Preserved function: {eq.preserved_function}")
+    typer.echo(f"Digital implementation: {eq.digital_implementation}")
+    for c in eq.kept_constraints:
+        typer.echo(f"  KEEP (functional): {c.name} -> {c.mathematical_form}")
+    for c in eq.removed_constraints:
+        typer.echo(f"  DROP (accidental): {c}")
+
+
+@app.command()
+def transcriptome(
+    context: str = typer.Option("default", "--context", "-c", help="Operational context key"),
+    stress: float = typer.Option(0.5, "--stress", "-s", help="Stress/noise level"),
+    energy: float = typer.Option(0.5, "--energy", "-e", help="Energy level"),
+    coherence: float = typer.Option(0.5, "--coherence", "-p", help="Coherence phi"),
+    genome_path: Optional[pathlib.Path] = typer.Option(None, "--genome", "-g", help="Path to genome YAML"),
+) -> None:
+    """Generate and display the volatile Digital RNA transcriptome."""
+    if genome_path is None:
+        genome_path = _default_genome_path()
+    genome = load_genome(genome_path)
+    tags = EpigeneticTagsManager()
+    transcriptor = DigitalTranscriptor(genome, tags)
+    context_state = {"stress": stress, "energy": energy, "coherence": coherence}
+    t = transcriptor.transcribe(context, context_state)
+    typer.echo("=== Digital RNA Transcriptome ===")
+    typer.echo(f"Context: {t.context_key}")
+    typer.echo(f"Lambda (coherence vs entropy): {t.lambda_coherence_entropy:.3f}")
+    typer.echo("Expressed genes:")
+    for profile in t.expression_profiles.values():
+        typer.echo(f"  {profile.gene_name}: {profile.expression:.3f} ({profile.source})")
+    if t.functional_constraints:
+        typer.echo("Functional constraints carried:")
+        for fc in t.functional_constraints:
+            typer.echo(f"  {fc.get('name', 'unknown')}: {fc.get('mathematical_form', 'n/a')}")
 
 
 if __name__ == "__main__":

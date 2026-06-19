@@ -71,6 +71,133 @@ def _synapse_equivalent() -> CyberneticEquivalent:
     )
 
 
+
+
+def _homeostasis_equivalent() -> CyberneticEquivalent:
+    return CyberneticEquivalent(
+        component_name="biological homeostasis",
+        preserved_function="maintain stable internal state despite perturbations",
+        removed_constraints=[
+            "slow hormonal diffusion through bloodstream",
+            "limited sensor coverage of the body",
+            "allostatic wear and tear",
+        ],
+        kept_constraints=[
+            FunctionalConstraint(
+                name="negative_feedback_loop",
+                invariant="coherence_preservation",
+                biological_form="homeostatic set-points with negative feedback",
+                mathematical_form="target tracking PID / error-correcting controller",
+                parameters={"set_point": 0.5, "gain": 0.1, "decay": 0.9},
+                stability_test="system_returns_to_set_point_after_perturbation",
+            )
+        ],
+        digital_implementation="HomeostasisEngine with target tracking",
+        configuration={"feedback_type": "negative"},
+    )
+
+
+def _immune_response_equivalent() -> CyberneticEquivalent:
+    return CyberneticEquivalent(
+        component_name="immune response",
+        preserved_function="detect and neutralize threats while preserving self",
+        removed_constraints=[
+            "physical cell migration through tissue",
+            "antibody production latency",
+            "inflammation side-effects",
+        ],
+        kept_constraints=[
+            FunctionalConstraint(
+                name="self_nonself_discrimination",
+                invariant="identity_preservation_through_change",
+                biological_form="immune system distinguishes self from non-self",
+                mathematical_form="allow-list / signature-based anomaly detection",
+                parameters={"tolerance_threshold": 0.1, "quarantine_after_errors": 10},
+                stability_test="does_not_attack_legitimate_components",
+            ),
+            FunctionalConstraint(
+                name="controlled_inflammation",
+                invariant="destructive_entropy_reduction",
+                biological_form="localized inflammation isolates damage",
+                mathematical_form="quarantine + resource throttling for misbehaving agents",
+                parameters={"quarantine_duration_ticks": 50},
+            ),
+        ],
+        digital_implementation="ImmuneEngine + quarantine policies",
+        configuration={"detection": "signature_and_anomaly"},
+    )
+
+
+def _metabolism_equivalent() -> CyberneticEquivalent:
+    return CyberneticEquivalent(
+        component_name="cellular metabolism",
+        preserved_function="allocate energy and resources to functions that need them",
+        removed_constraints=[
+            "ATP synthesis bottleneck",
+            "mitochondrial spatial distribution",
+            "limited substrate diffusion",
+        ],
+        kept_constraints=[
+            FunctionalConstraint(
+                name="resource_allocation_by_demand",
+                invariant="interconnection_efficiency",
+                biological_form="metabolism preferentially fuels active tissues",
+                mathematical_form="energy budget allocator weighted by activity and coherence",
+                parameters={"baseline_budget": 0.3, "activity_weight": 0.5, "coherence_weight": 0.2},
+                stability_test="active_modules_receive_resources_without_starvation",
+            )
+        ],
+        digital_implementation="MetabolismCoordinator / EnergyControlAgent",
+        configuration={"allocator": "demand_weighted"},
+    )
+
+
+def _apoptosis_equivalent() -> CyberneticEquivalent:
+    return CyberneticEquivalent(
+        component_name="apoptosis",
+        preserved_function="remove damaged or unnecessary components safely",
+        removed_constraints=[
+            "lysosomal enzyme cascade",
+            "phagocyte cleanup latency",
+            "irreversibility of cell death",
+        ],
+        kept_constraints=[
+            FunctionalConstraint(
+                name="programmed_removal_threshold",
+                invariant="destructive_entropy_reduction",
+                biological_form="cells self-destruct when damage exceeds a threshold",
+                mathematical_form="prune components when error rate > threshold with audit trail",
+                parameters={"damage_threshold": 0.8, "grace_period_ticks": 20},
+                stability_test="removal_reduces_instead_of_creating_entropy",
+            )
+        ],
+        digital_implementation="ApoptosisEngine with rollback-capable pruning",
+        configuration={"rollback_enabled": True},
+    )
+
+
+def _refractory_period_equivalent() -> CyberneticEquivalent:
+    return CyberneticEquivalent(
+        component_name="neural refractory period",
+        preserved_function="limit firing rate to prevent runaway excitation",
+        removed_constraints=[
+            "ion-channel recovery time",
+            "sodium-potassium pump refractoriness",
+        ],
+        kept_constraints=[
+            FunctionalConstraint(
+                name="rate_limiter",
+                invariant="coherence_preservation",
+                biological_form="neuron cannot fire again immediately after a spike",
+                mathematical_form="digital neuron enforces minimum inter-spike interval",
+                parameters={"min_inter_spike_ticks": 2},
+                stability_test="firing_rate_stays_bounded",
+            )
+        ],
+        digital_implementation="DigitalNeuron refractory counter",
+        configuration={"refractory_ticks": 2},
+    )
+
 def _memory_consolidation_equivalent() -> CyberneticEquivalent:
     return CyberneticEquivalent(
         component_name="slow long-term memory consolidation",
@@ -102,7 +229,16 @@ class BCELCatalog:
         self._register_defaults()
 
     def _register_defaults(self) -> None:
-        for eq in (_dna_rna_equivalent(), _synapse_equivalent(), _memory_consolidation_equivalent()):
+        for eq in (
+            _dna_rna_equivalent(),
+            _synapse_equivalent(),
+            _memory_consolidation_equivalent(),
+            _homeostasis_equivalent(),
+            _immune_response_equivalent(),
+            _metabolism_equivalent(),
+            _apoptosis_equivalent(),
+            _refractory_period_equivalent(),
+        ):
             self._entries[eq.component_name] = eq
 
     def register(self, equivalent: CyberneticEquivalent) -> None:

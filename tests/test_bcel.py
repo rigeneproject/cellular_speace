@@ -54,3 +54,27 @@ def test_synthesizer_drops_accidental_keeps_functional():
     assert "neurotransmitter diffusion delay" in eq.removed_constraints
     assert "thermal noise in ion channels" in eq.removed_constraints
     assert any("synaptic delay" in fc.biological_form for fc in eq.kept_constraints)
+
+
+
+def test_catalog_contains_expanded_entries():
+    catalog = BCELCatalog()
+    for name in ["biological homeostasis", "immune response", "cellular metabolism", "apoptosis", "neural refractory period"]:
+        assert catalog.get(name) is not None, f"missing {name}"
+from speace_core.bcel.stress_tester import ConstraintStressTester, StressTestResult
+from speace_core.bcel.models import FunctionalConstraint
+
+
+def test_stress_tester_default_placeholder():
+    tester = ConstraintStressTester()
+    fc = FunctionalConstraint(
+        name="test_constraint",
+        invariant="coherence_preservation",
+        biological_form="placeholder",
+        mathematical_form="placeholder",
+    )
+    result = tester.run(fc)
+    assert isinstance(result, StressTestResult)
+    assert result.test_name == "default_test_constraint"
+    assert result.passed is True
+

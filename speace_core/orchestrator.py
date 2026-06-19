@@ -4,7 +4,7 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 from speace_core.cellular_brain.embodiment.cyber_physical_sensor_array import (
     CyberPhysicalSensorArray,
@@ -61,6 +61,10 @@ from speace_core.cellular_brain.dynamics.stdp_engine import STDPEngine
 from speace_core.cellular_brain.neuroperiodic.neuroperiodic_integrator import (
     NeuroPeriodicIntegrator,
 )
+from speace_core.digital_rna.transcriptor import DigitalTranscriptor
+from speace_core.digital_rna.workspace_adapter import WorkspaceAdapter
+from speace_core.digital_rna.periodic_table_adapter import PeriodicTableAdapter
+from speace_core.cellular_brain.neuroperiodic.functional_constraint_law import FunctionalConstraintRegistry
 from speace_core.cellular_brain.regions.region_registry import RegionRegistry
 from speace_core.cellular_brain.regions.region_factory import RegionFactory
 from speace_core.cellular_brain.regions.inter_region_plasticity import InterRegionPlasticityEngine
@@ -310,6 +314,14 @@ class CellularBrainOrchestrator(FieldAwareMixin, BaseModel):
     _global_workspace: GlobalWorkspace | None = None
     _last_global_workspace_step_result: dict | None = None
 
+    # T-BCEL — Digital RNA layer
+    digital_rna_enabled: bool = Field(default=False, description="Enable volatile Digital RNA transcriptome step")
+    _digital_transcriptor: Any = PrivateAttr(default=None)
+    _workspace_adapter: Any = PrivateAttr(default=None)
+    _periodic_table_adapter: Any = PrivateAttr(default=None)
+    _functional_constraint_registry: Any = PrivateAttr(default=None)
+    _transcriptome: Any = PrivateAttr(default=None)
+    _periodic_integrator: Any = PrivateAttr(default=None)
     # Continuous dynamics modules (disabled by default)
     temporal_dynamics_enabled: bool = False
     neural_oscillator_enabled: bool = False
@@ -949,8 +961,50 @@ class CellularBrainOrchestrator(FieldAwareMixin, BaseModel):
             if self.tick_interval > 0:
                 await asyncio.sleep(self.tick_interval)
 
+
+    # ------------------------------------------------------------------ #
+    # T-BCEL — Digital RNA step
+    # ------------------------------------------------------------------ #
+    def _step_digital_rna(self) -> None:
+        """Generate and apply the volatile transcriptome for this tick."""
+        if not self.digital_rna_enabled or self.genome is None:
+            return
+
+        if self._digital_transcriptor is None:
+            from speace_core.epigenetics.epigenetic_tags import EpigeneticTagsManager
+            self._digital_transcriptor = DigitalTranscriptor(
+                self.genome, EpigeneticTagsManager()
+            )
+
+        # Derive context from the last known metrics.
+        metrics = self.latest_metrics
+        context_state = {
+            "stress": getattr(metrics, "noise_level", 0.5) if metrics else 0.5,
+            "energy": getattr(metrics, "mean_energy", 0.5) if metrics else 0.5,
+            "coherence": getattr(metrics, "coherence_phi", 0.5) if metrics else 0.5,
+        }
+        context_key = "exploratory" if context_state["stress"] < 0.3 else "executive"
+
+        self._transcriptome = self._digital_transcriptor.transcribe(context_key, context_state)
+
+        # Apply transcriptome to the global workspace if available.
+        if self.global_workspace_enabled and self._global_workspace is not None:
+            if self._workspace_adapter is None:
+                self._workspace_adapter = WorkspaceAdapter(self._global_workspace)
+            self._workspace_adapter.apply(self._transcriptome)
+
+        # Apply functional constraints to the periodic table if available.
+        periodic_law = getattr(self, "_periodic_integrator", None)
+        if periodic_law is not None:
+            if self._periodic_table_adapter is None:
+                self._periodic_table_adapter = PeriodicTableAdapter(periodic_law)
+            self._periodic_table_adapter.apply(self._transcriptome)
     async def _tick(self) -> None:
         self.current_tick += 1
+
+        # T-BCEL — update the volatile transcriptome from Digital DNA
+        self._step_digital_rna()
+
 
         # Neuro-OS scheduling decision (beginning of cycle)
         neuro_os_decision: Any = None
@@ -3367,7 +3421,12 @@ class CellularBrainOrchestrator(FieldAwareMixin, BaseModel):
             kwargs.setdefault("cor_max_hypotheses", cor_genes.max_hypotheses)
             kwargs.setdefault("cor_collapse_refractory_ticks", cor_genes.collapse_refractory_ticks)
 
-        return cls(genome=genome, circuit=circuit, **kwargs)
+        # T-BCEL — enable Digital RNA by default in MVP builds
+        kwargs.setdefault("digital_rna_enabled", True)
+
+        instance = cls(genome=genome, circuit=circuit, **kwargs)
+        instance._periodic_integrator = periodic_integrator
+        return instance
 
 
 # --------------------------------------------------------------------------- #
