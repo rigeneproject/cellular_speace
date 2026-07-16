@@ -1,8 +1,11 @@
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from speace_core.cellular_brain.memory.morphological_memory import MorphologicalMemory
 from speace_core.cellular_brain.memory.morphology_events import MorphologyEventType
 from speace_core.cellular_brain.regions.region_registry import RegionRegistry
+
+if TYPE_CHECKING:
+    from speace_core.dna.models import ConnectomeGeneSet
 
 
 class DeepRegionSpecialization:
@@ -42,8 +45,18 @@ class DeepRegionSpecialization:
     ]
 
     @classmethod
-    def extend_region_connectome(cls, registry: RegionRegistry) -> int:
+    def extend_region_connectome(
+        cls,
+        registry: RegionRegistry,
+        connectome_genes: Optional["ConnectomeGeneSet"] = None,
+    ) -> int:
         """Add deep-region pathways to an existing connectome.
+
+        If connectome_genes are provided, they modulate connection parameters:
+        - connectivity_density → piu'/meno connessioni aggiunte
+        - hub_formation → forza delle connessioni hub
+        - plasticity → abilita/disabilita plasticita'
+        - long_range_connections → favorisce path-away non standard
 
         Returns the number of new connections added.
         """
@@ -56,20 +69,62 @@ class DeepRegionSpecialization:
             for c in registry.connectome.connections
         }
 
+        # Applica geni connettoma alla forza e plasticita' delle pathway standard
+        strength_mod = 1.0
+        plasticity = True
+        if connectome_genes:
+            strength_mod = 0.5 + connectome_genes.connectivity_density * 0.5
+            plasticity = connectome_genes.plasticity > 0.3
+
         for src, tgt, conn_type in cls.DEEP_PATHWAYS:
             if (src, tgt) in existing_pairs:
                 continue
             if src not in registry.regions or tgt not in registry.regions:
                 continue
+            base_strength = 0.5
+
+            # Hub formation boost: se il gene e' alto, rinforza connessioni verso regioni hub
+            if connectome_genes and connectome_genes.hub_formation > 0.6:
+                if tgt in ("prefrontal", "limbic", "hippocampus"):
+                    base_strength += 0.15
+
+            # Long-range boost: favorisce pathway non-lineari
+            if connectome_genes and connectome_genes.long_range_connections > 0.5:
+                if conn_type in ("consolidation", "reflection", "prediction"):
+                    base_strength += 0.1
+
             registry.connectome.add_connection(
                 source_region_id=src,
                 target_region_id=tgt,
                 connection_type=conn_type,
-                strength=0.5,
-                plasticity_enabled=True,
+                strength=min(1.0, base_strength * strength_mod),
+                plasticity_enabled=plasticity,
                 inhibitory=False,
             )
             added += 1
+
+        # Se exploration e' alto, aggiungi pathway non-standard (oltre DEEP_PATHWAYS)
+        if connectome_genes and connectome_genes.exploration > 0.6 and len(registry.regions) >= 4:
+            import random
+
+            region_ids = list(registry.regions.keys())
+            extra_paths = int(connectome_genes.exploration * 3)
+            for _ in range(extra_paths):
+                src = random.choice(region_ids)
+                tgt = random.choice(region_ids)
+                if src == tgt:
+                    continue
+                if (src, tgt) in existing_pairs:
+                    continue
+                registry.connectome.add_connection(
+                    source_region_id=src,
+                    target_region_id=tgt,
+                    connection_type="exploratory",
+                    strength=0.3,
+                    plasticity_enabled=True,
+                    inhibitory=False,
+                )
+                added += 1
 
         return added
 
@@ -78,12 +133,13 @@ class DeepRegionSpecialization:
         cls,
         registry: RegionRegistry,
         memory: Optional[MorphologicalMemory] = None,
+        connectome_genes: Optional["ConnectomeGeneSet"] = None,
     ) -> Dict[str, Any]:
         """Apply full deep-region specialization to a registry.
 
         Extends connectome and records events. Returns summary dict.
         """
-        added = cls.extend_region_connectome(registry)
+        added = cls.extend_region_connectome(registry, connectome_genes=connectome_genes)
 
         # Backward connections from all regions to brainstem
         brainstem = "brainstem_homeostatic"
@@ -240,7 +296,7 @@ class DeepRegionSpecialization:
             return min(1.0, n_neurons / 10.0) * connectivity
 
         return {
-            "deep_region_count": len(registry.regions),
+            "deep_region_count": sum(1 for r in registry.regions if r in cls.DEEP_REGION_ROLES),
             "limbic_salience_score": _region_score("limbic"),
             "cerebellar_error_correction_score": _region_score("cerebellar"),
             "default_mode_consolidation_score": _region_score("default_mode"),

@@ -12,6 +12,12 @@ from speace_core.cellular_brain.postnatal_learning.linguistic_curriculum import 
     LinguisticCurriculum,
     LinguisticStage,
 )
+from speace_core.cellular_brain.postnatal_learning.linguistic_curriculum_engine import (
+    LinguisticCurriculumEngine,
+)
+from speace_core.cellular_brain.postnatal_learning.guided_infant_learning_protocol import (
+    GuidedInfantLearningProtocol,
+)
 
 __all__ = [
     "PostnatalLearningAudit",
@@ -23,5 +29,7 @@ __all__ = [
     "PostnatalLearningProfileResult",
     "PostnatalLearningSuiteResult",
     "LinguisticCurriculum",
+    "LinguisticCurriculumEngine",
     "LinguisticStage",
+    "GuidedInfantLearningProtocol",
 ]

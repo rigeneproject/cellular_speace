@@ -339,8 +339,11 @@ def test_couple_oscillations_overwrite():
 def test_missing_neuron_raises():
     n1 = make_neuron("n1")
     engine = TemporalDynamicsEngine(neurons=[n1], synapses=[])
-    with pytest.raises(KeyError):
-        engine.get_neuron_state("missing")
+    # T156-fix: late-added neurons are now auto-registered with a=0,
+    # not raised as KeyError. Verify the new contract: a previously
+    # unseen neuron_id becomes queryable with activation 0.0.
+    assert engine.get_neuron_state("missing") == 0.0
+    assert "missing" in engine.neuron_id_to_idx
 
 
 def test_missing_synapse_raises():

@@ -10,13 +10,15 @@ from speace_core.dna.models import SharedGenome
 
 def _make_orch(t42_enabled: bool = True):
     genome = SharedGenome(genome_id="test", version="1")
-    orch = CellularBrainOrchestrator.build_mvp(genome)
     if t42_enabled:
-        orch.cellular_adaptive_defense_enabled = True
-        orch.cellular_repair_enabled = True
-        orch.cellular_epigenetics_enabled = True
-        # Re-run post-init to spin up T42 engines
-        orch.model_post_init(None)
+        orch = CellularBrainOrchestrator.build_mvp(
+            genome,
+            cellular_adaptive_defense_enabled=True,
+            cellular_repair_enabled=True,
+            cellular_epigenetics_enabled=True,
+        )
+    else:
+        orch = CellularBrainOrchestrator.build_mvp(genome)
     return orch
 
 

@@ -1,5 +1,7 @@
 """Tests for T103 — Observer Report Generator."""
 
+from __future__ import annotations
+
 import json
 import time
 

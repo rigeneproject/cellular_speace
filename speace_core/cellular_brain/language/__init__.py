@@ -3,5 +3,13 @@ from speace_core.cellular_brain.language.wernicke_area import DigitalWernickeAre
 from speace_core.cellular_brain.language.symbolic_grounding_engine import (
     SymbolicGroundingEngine,
 )
+from speace_core.cellular_brain.language.linguistic_inhibition_controller import (
+    LinguisticInhibitionController,
+)
 
-__all__ = ["DigitalBrocaArea", "DigitalWernickeArea", "SymbolicGroundingEngine"]
+__all__ = [
+    "DigitalBrocaArea",
+    "DigitalWernickeArea",
+    "SymbolicGroundingEngine",
+    "LinguisticInhibitionController",
+]

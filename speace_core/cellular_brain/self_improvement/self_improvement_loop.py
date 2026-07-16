@@ -1,4 +1,5 @@
 import json
+import logging
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -68,6 +69,7 @@ class SelfImprovementLoop:
         counterfactual_sandbox=None,
         architecture_patch_execution_enabled: bool = False,
         architecture_patch_executor=None,
+        mmapr_router=None,
     ):
         self.orchestrator = orchestrator
         self.detector = detector or LimitationDetector()
@@ -85,6 +87,8 @@ class SelfImprovementLoop:
         self.counterfactual_sandbox = counterfactual_sandbox
         self.architecture_patch_execution_enabled = architecture_patch_execution_enabled
         self.architecture_patch_executor = architecture_patch_executor
+        # T-Phase 8C — MM-APR Hard Veto Router (opt-in)
+        self.mmapr_router = mmapr_router
 
     # ------------------------------------------------------------------ #
     # Detection cycle
@@ -158,7 +162,12 @@ class SelfImprovementLoop:
             and self.architecture_patch_executor is not None
             and counterfactual_best is not None
         ):
-            best_proposal_id = counterfactual_best.get("proposal_id")
+            # counterfactual_best may be a Pydantic model (CounterfactualResult)
+            # or a plain dict (depending on caller). Use a defensive getter.
+            best_proposal_id = getattr(
+                counterfactual_best, "proposal_id",
+                counterfactual_best.get("proposal_id") if isinstance(counterfactual_best, dict) else None,
+            )
             target_proposal = None
             for p in proposals:
                 if p.id == best_proposal_id:
@@ -186,6 +195,8 @@ class SelfImprovementLoop:
             if verdict == "accept":
                 accepted.append(proposal.id)
                 proposal.status = "accepted"
+                proposal.outcome = "pending"
+                self.proposal_store.resave_proposal(proposal)
                 self._log_event(MorphologyEventType.ARCHITECTURE_PROPOSAL_ACCEPTED, {
                     "cycle_id": cycle_id,
                     "proposal_id": proposal.id,
@@ -194,6 +205,7 @@ class SelfImprovementLoop:
             elif verdict == "reject":
                 rejected.append(proposal.id)
                 proposal.status = "rejected"
+                self.proposal_store.resave_proposal(proposal)
                 self._log_event(MorphologyEventType.ARCHITECTURE_PROPOSAL_REJECTED, {
                     "cycle_id": cycle_id,
                     "proposal_id": proposal.id,
@@ -201,6 +213,7 @@ class SelfImprovementLoop:
                 })
             else:
                 proposal.status = "simulated"
+                self.proposal_store.resave_proposal(proposal)
 
         # 5. Determine final verdict
         if not signals:
@@ -213,6 +226,59 @@ class SelfImprovementLoop:
             final_verdict = "REGRESSION_BLOCKED"
         else:
             final_verdict = "SAFE_PROPOSAL_GENERATED"
+
+        # 5b. T-Phase 8C — MM-APR Hard Veto Router hook point
+        mmapr_veto_dict: Optional[Dict[str, Any]] = None
+        mmapr_audit_path: Optional[str] = None
+        if self.mmapr_router is not None and proposals:
+            try:
+                mmapr_veto_dict, mmapr_audit_path = self._apply_mmapr_veto(
+                    proposals=proposals,
+                    simulations=simulations,
+                    counterfactual_best=counterfactual_best,
+                    patch_execution_result=patch_execution_result,
+                    cycle_id=cycle_id,
+                    final_verdict=final_verdict,
+                )
+                if mmapr_veto_dict is not None:
+                    self._log_event(
+                        MorphologyEventType.MMAPR_VETO_GATE_TRIGGERED,
+                        {
+                            "cycle_id": cycle_id,
+                            "final_status": mmapr_veto_dict.get("final_status"),
+                            "hard_blocked_by": mmapr_veto_dict.get("hard_blocked_by", []),
+                            "soft_flagged_by": mmapr_veto_dict.get("soft_flagged_by", []),
+                        },
+                    )
+                    if mmapr_veto_dict.get("final_status") == "hard_blocked":
+                        # Hard veto: downgrade to LIMITATION_DETECTED_NO_SAFE_PATCH
+                        # and move all accepted to rejected. This is the
+                        # conservative, non-breaking path agreed in the
+                        # MM-APR Phase 8C plan (no new verdict value).
+                        final_verdict = "LIMITATION_DETECTED_NO_SAFE_PATCH"
+                        rejected.extend(accepted)
+                        accepted.clear()
+                        self._log_event(
+                            MorphologyEventType.MMAPR_VETO_HARD_BLOCKED,
+                            {
+                                "cycle_id": cycle_id,
+                                "hard_blocked_by": mmapr_veto_dict.get("hard_blocked_by", []),
+                            },
+                        )
+                    elif mmapr_veto_dict.get("final_status") == "soft_flagged":
+                        self._log_event(
+                            MorphologyEventType.MMAPR_VETO_SOFT_FLAGGED,
+                            {
+                                "cycle_id": cycle_id,
+                                "flaggers": mmapr_veto_dict.get("soft_flagged_by", []),
+                            },
+                        )
+            except Exception as exc:  # pragma: no cover - defensive
+                logging.getLogger(__name__).warning(
+                    "MMAPR veto step failed: %s", exc, exc_info=True
+                )
+                mmapr_veto_dict = None
+                mmapr_audit_path = None
 
         result = SelfImprovementCycleResult(
             cycle_id=cycle_id,
@@ -230,6 +296,8 @@ class SelfImprovementLoop:
             counterfactual_verdict=counterfactual_verdict,
             patch_execution_result=patch_execution_result.model_dump() if patch_execution_result is not None else None,
             patch_verdict=patch_verdict if patch_verdict else None,
+            mmapr_veto_verdict=mmapr_veto_dict,
+            mmapr_audit_trail_path=mmapr_audit_path,
         )
 
         self.proposal_store.save_cycle_result(result)
@@ -298,7 +366,12 @@ class SelfImprovementLoop:
             and self.architecture_patch_executor is not None
             and counterfactual_best is not None
         ):
-            best_proposal_id = counterfactual_best.get("proposal_id")
+            # counterfactual_best may be a Pydantic model (CounterfactualResult)
+            # or a plain dict (depending on caller). Use a defensive getter.
+            best_proposal_id = getattr(
+                counterfactual_best, "proposal_id",
+                counterfactual_best.get("proposal_id") if isinstance(counterfactual_best, dict) else None,
+            )
             target_proposal = None
             for p in proposals:
                 if p.id == best_proposal_id:
@@ -316,11 +389,14 @@ class SelfImprovementLoop:
             if verdict == "accept":
                 accepted.append(proposal.id)
                 proposal.status = "accepted"
+                self.proposal_store.resave_proposal(proposal)
             elif verdict == "reject":
                 rejected.append(proposal.id)
                 proposal.status = "rejected"
+                self.proposal_store.resave_proposal(proposal)
             else:
                 proposal.status = "simulated"
+                self.proposal_store.resave_proposal(proposal)
 
         if not signals:
             final_verdict = "NO_LIMITATION_DETECTED"
@@ -332,6 +408,55 @@ class SelfImprovementLoop:
             final_verdict = "REGRESSION_BLOCKED"
         else:
             final_verdict = "SAFE_PROPOSAL_GENERATED"
+
+        # 5b. T-Phase 8C — MM-APR Hard Veto Router hook point
+        mmapr_veto_dict: Optional[Dict[str, Any]] = None
+        mmapr_audit_path: Optional[str] = None
+        if self.mmapr_router is not None and proposals:
+            try:
+                mmapr_veto_dict, mmapr_audit_path = self._apply_mmapr_veto(
+                    proposals=proposals,
+                    simulations=simulations,
+                    counterfactual_best=counterfactual_best,
+                    patch_execution_result=patch_execution_result,
+                    cycle_id=cycle_id,
+                    final_verdict=final_verdict,
+                )
+                if mmapr_veto_dict is not None:
+                    self._log_event(
+                        MorphologyEventType.MMAPR_VETO_GATE_TRIGGERED,
+                        {
+                            "cycle_id": cycle_id,
+                            "final_status": mmapr_veto_dict.get("final_status"),
+                            "hard_blocked_by": mmapr_veto_dict.get("hard_blocked_by", []),
+                            "soft_flagged_by": mmapr_veto_dict.get("soft_flagged_by", []),
+                        },
+                    )
+                    if mmapr_veto_dict.get("final_status") == "hard_blocked":
+                        final_verdict = "LIMITATION_DETECTED_NO_SAFE_PATCH"
+                        rejected.extend(accepted)
+                        accepted.clear()
+                        self._log_event(
+                            MorphologyEventType.MMAPR_VETO_HARD_BLOCKED,
+                            {
+                                "cycle_id": cycle_id,
+                                "hard_blocked_by": mmapr_veto_dict.get("hard_blocked_by", []),
+                            },
+                        )
+                    elif mmapr_veto_dict.get("final_status") == "soft_flagged":
+                        self._log_event(
+                            MorphologyEventType.MMAPR_VETO_SOFT_FLAGGED,
+                            {
+                                "cycle_id": cycle_id,
+                                "flaggers": mmapr_veto_dict.get("soft_flagged_by", []),
+                            },
+                        )
+            except Exception as exc:  # pragma: no cover - defensive
+                logging.getLogger(__name__).warning(
+                    "MMAPR veto step failed: %s", exc, exc_info=True
+                )
+                mmapr_veto_dict = None
+                mmapr_audit_path = None
 
         result = SelfImprovementCycleResult(
             cycle_id=cycle_id,
@@ -349,6 +474,8 @@ class SelfImprovementLoop:
             counterfactual_verdict=counterfactual_verdict,
             patch_execution_result=patch_execution_result.model_dump() if patch_execution_result is not None else None,
             patch_verdict=patch_verdict if patch_verdict else None,
+            mmapr_veto_verdict=mmapr_veto_dict,
+            mmapr_audit_trail_path=mmapr_audit_path,
         )
         self.proposal_store.save_cycle_result(result)
         return result
@@ -654,6 +781,94 @@ class SelfImprovementLoop:
     # Helpers
     # ------------------------------------------------------------------ #
 
+    def _apply_mmapr_veto(
+        self,
+        proposals: List[ArchitectureRewriteProposal],
+        simulations: List[RewriteSimulationResult],
+        counterfactual_best: Optional[CounterfactualResult],
+        patch_execution_result: Optional[PatchExecutionResult],
+        cycle_id: str,
+        final_verdict: str,
+    ) -> tuple[Optional[Dict[str, Any]], Optional[str]]:
+        """T-Phase 8C — Run the MM-APR Hard Veto Router on all proposals.
+
+        Routes every proposal through the four epistemic classes (A/B/C/D)
+        and returns a serialisable summary plus the audit path. The hook
+        point in ``run_detection_cycle``/``run_from_audit_report`` uses
+        ``final_status == "hard_blocked"`` to downgrade the cycle's
+        ``final_verdict`` to ``LIMITATION_DETECTED_NO_SAFE_PATCH``.
+
+        The router is invoked once per *cycle* with the best
+        counterfactual scenario and the patch execution result (when
+        available). The router currently treats the *worst* verdict
+        across the proposals as the cycle-level verdict, so even a
+        single hard_block downgrades the whole cycle.
+        """
+        from speace_core.cellular_brain.self_improvement.mmapr_veto_router import (
+            VetoVerdict,
+        )
+
+        # Pick the worst per-proposal verdict for the cycle-level view.
+        worst: Optional[VetoVerdict] = None
+        # Build proposal -> simulation lookup for the router signature
+        sim_by_id: Dict[str, RewriteSimulationResult] = {
+            s.proposal_id: s for s in (simulations or [])
+        }
+        for proposal in proposals:
+            sim = sim_by_id.get(proposal.id)
+            verdict = self.mmapr_router.route(  # type: ignore[union-attr]
+                proposal=proposal,
+                simulation=sim,
+                counterfactual=counterfactual_best,
+                patch_result=patch_execution_result,
+                cycle_id=cycle_id,
+            )
+            if worst is None:
+                worst = verdict
+            else:
+                # Promote "hard_blocked" above "soft_flagged" above "admit"
+                rank = {"hard_blocked": 2, "soft_flagged": 1, "bypassed": 1, "admit": 0}
+                if rank.get(verdict.final_status, 0) > rank.get(worst.final_status, 0):
+                    worst = verdict
+
+        if worst is None:
+            return None, None
+
+        # Build the serialisable summary
+        verdict_dict = worst.model_dump()
+        audit_path: Optional[str] = None
+        try:
+            path = self.mmapr_router.audit_path_for(worst.verdict_id)  # type: ignore[union-attr]
+            if path is not None:
+                # Phase 8D: persist the full envelope (proposal +
+                # verdict + checkpoints) to disk for audit / replay.
+                from speace_core.cellular_brain.self_improvement.mmapr_proposal_envelope import (
+                    MMAPRAuditTrail,
+                    build_envelope,
+                )
+                # Find the proposal for the worst verdict
+                worst_proposal = None
+                for p in proposals:
+                    if p.id == worst.proposal_id:
+                        worst_proposal = p
+                        break
+                env = build_envelope(
+                    proposal=worst_proposal,
+                    simulation=sim_by_id.get(worst.proposal_id) if worst_proposal else None,
+                    counterfactual=counterfactual_best,
+                    patch_result=patch_execution_result,
+                    veto_verdict=worst,
+                    cycle_id=cycle_id,
+                )
+                trail = MMAPRAuditTrail(path)
+                trail.append(env)
+                audit_path = str(path)
+        except Exception as exc:  # pragma: no cover - defensive
+            _logger = logging.getLogger(__name__)
+            _logger.debug("MMAPR audit persistence failed: %s", exc)
+            audit_path = None
+        return verdict_dict, audit_path
+
     def _log_event(
         self,
         event_type: MorphologyEventType,
@@ -670,4 +885,4 @@ class SelfImprovementLoop:
             )
             self.memory.log_event(event)
         except Exception:
-            pass
+            logging.getLogger(__name__).warning("Self-improvement loop step failed", exc_info=True)

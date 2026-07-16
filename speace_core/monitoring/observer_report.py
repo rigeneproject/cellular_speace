@@ -76,7 +76,7 @@ class ObserverReport(BaseModel):
         """Render a human-readable Markdown report."""
         lines: List[str] = []
         m = self.meta
-        lines.append(f"# SPEACE Observer Report")
+        lines.append("# SPEACE Observer Report")
         lines.append(f"**Version:** {m.speace_version}  ")
         lines.append(f"**Generated:** {m.timestamp}  ")
         lines.append(f"**Lookback:** {m.lookback_window_hours}h  ")

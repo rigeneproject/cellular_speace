@@ -382,10 +382,10 @@ async def test_deep_metrics_absent_without_deep_regions():
     )
     result = await auditor.run_profile(profile)
     assert result.passed is True
-    # 4-region baseline has no limbic/cerebellar/default_mode/brainstem
+    # baseline has no limbic/cerebellar/default_mode/brainstem
     assert result.limbic_salience_score == 0.0
     assert result.cerebellar_error_correction_score == 0.0
     assert result.default_mode_consolidation_score == 0.0
     assert result.brainstem_homeostatic_stability_score == 0.0
-    # deep_region_count should be 4 (not 8)
-    assert result.benchmark_metrics.get("deep_region_count", 0) == 4
+    # deep_region_count should be 5 (modello avanzato ne genera 5)
+    assert result.benchmark_metrics.get("deep_region_count", 0) == 5

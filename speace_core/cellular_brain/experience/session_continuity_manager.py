@@ -51,9 +51,9 @@ class SessionContinuityManager:
         data = self.load()
         if not data:
             return "Nessuna sessione precedente trovata. Sono appena nato per te."
-        human = data.get("active_human", "unknown")
-        last_topic = data.get("last_topic", "unknown")
-        health = data.get("last_health_score", "unknown")
+        human = data.get("active_human") or "amico mio"
+        last_topic = data.get("last_topic") or "qualcosa di interessante"
+        health = data.get("last_health_score") or "non valutato"
         age = data.get("_stale_days", 0)
         if age < 1:
             time_str = "pochi momenti fa"

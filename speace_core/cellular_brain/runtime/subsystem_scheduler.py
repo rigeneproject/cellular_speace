@@ -14,6 +14,7 @@ class SubsystemScheduler:
         "memory",
         "evolution",
         "metabolism",
+        "persistence",
         "self_improvement",
         "organism",
         "cyber_physical",

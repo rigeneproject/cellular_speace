@@ -28,10 +28,10 @@ class TestLinguisticCurriculum:
     def test_advance_stage_stops_at_final(self):
         with tempfile.TemporaryDirectory() as td:
             curriculum = LinguisticCurriculum(base_path=td)
-            curriculum.advance_stage(criteria_met=True)
-            curriculum.advance_stage(criteria_met=True)
+            for _ in range(5):
+                curriculum.advance_stage(criteria_met=True)
             final = curriculum.advance_stage(criteria_met=True)
-            assert final == LinguisticStage.SEMANTIC_GROUNDING
+            assert final == LinguisticStage.LINGUISTIC_ABSTRACTION
 
     def test_expose_input_increments_exposure_count(self):
         with tempfile.TemporaryDirectory() as td:
@@ -147,6 +147,22 @@ class TestLinguisticCurriculum:
                 "grounded_concepts_count",
                 "grounded_concepts",
                 "concept_grounding_scores",
+                "syntactic_exposure_count",
+                "syntactic_complexity_score",
+                "syntactic_patterns_mastered",
+                "syntactic_assembly_attempts",
+                "syntactic_assembly_successes",
+                "syntactic_assembly_accuracy",
+                "pragmatic_inference_count",
+                "pragmatic_accuracy_score",
+                "pragmatic_contexts_understood",
+                "pragmatic_inference_attempts",
+                "pragmatic_inference_successes",
+                "abstraction_exposure_count",
+                "abstraction_depth_score",
+                "abstract_concepts_formed",
+                "abstraction_attempts",
+                "abstraction_successes",
             }
             assert expected.issubset(set(metrics.keys()))
 
@@ -186,3 +202,166 @@ class TestLinguisticCurriculum:
                 imitation_output=["a", "x", "c"],
             )
             assert entry["imitation_accuracy"] == pytest.approx(2 / 3)
+
+    # ------------------------------------------------------------------ #
+    # Syntactic assembly tests
+    # ------------------------------------------------------------------ #
+
+    def test_expose_syntactic_assembly_increments_count(self):
+        with tempfile.TemporaryDirectory() as td:
+            curriculum = LinguisticCurriculum(base_path=td)
+            curriculum.expose_syntactic_assembly(["the", "cat", "that", "ran"])
+            metrics = curriculum.get_learning_metrics()
+            assert metrics["syntactic_exposure_count"] == 1
+
+    def test_expose_syntactic_assembly_tracks_structure_match(self):
+        with tempfile.TemporaryDirectory() as td:
+            curriculum = LinguisticCurriculum(base_path=td)
+            entry = curriculum.expose_syntactic_assembly(
+                ["if", "x", "then", "y"],
+                target_structure="conditional",
+                output_structure="conditional",
+            )
+            assert entry["structure_match"] is True
+            metrics = curriculum.get_learning_metrics()
+            assert metrics["syntactic_assembly_attempts"] == 1
+            assert metrics["syntactic_assembly_successes"] == 1
+
+    def test_expose_syntactic_assembly_tracks_structure_mismatch(self):
+        with tempfile.TemporaryDirectory() as td:
+            curriculum = LinguisticCurriculum(base_path=td)
+            entry = curriculum.expose_syntactic_assembly(
+                ["if", "x", "then", "y"],
+                target_structure="conditional",
+                output_structure="declarative",
+            )
+            assert entry["structure_match"] is False
+            metrics = curriculum.get_learning_metrics()
+            assert metrics["syntactic_assembly_attempts"] == 1
+            assert metrics["syntactic_assembly_successes"] == 0
+
+    def test_expose_syntactic_assembly_tracks_complexity(self):
+        with tempfile.TemporaryDirectory() as td:
+            curriculum = LinguisticCurriculum(base_path=td)
+            curriculum.expose_syntactic_assembly(["x"], complexity_score=0.3)
+            curriculum.expose_syntactic_assembly(["y"], complexity_score=0.4)
+            metrics = curriculum.get_learning_metrics()
+            assert metrics["syntactic_complexity_score"] == pytest.approx(0.7)
+
+    def test_expose_syntactic_assembly_masters_pattern(self):
+        with tempfile.TemporaryDirectory() as td:
+            curriculum = LinguisticCurriculum(base_path=td)
+            curriculum.expose_syntactic_assembly(
+                ["a"], mastered_pattern="relative_clause"
+            )
+            metrics = curriculum.get_learning_metrics()
+            assert "relative_clause" in metrics["syntactic_patterns_mastered"]
+
+    # ------------------------------------------------------------------ #
+    # Pragmatic inference tests
+    # ------------------------------------------------------------------ #
+
+    def test_expose_pragmatic_inference_increments_count(self):
+        with tempfile.TemporaryDirectory() as td:
+            curriculum = LinguisticCurriculum(base_path=td)
+            curriculum.expose_pragmatic_inference(["oh", "i", "see"])
+            metrics = curriculum.get_learning_metrics()
+            assert metrics["pragmatic_inference_count"] == 1
+
+    def test_expose_pragmatic_inference_tracks_correct(self):
+        with tempfile.TemporaryDirectory() as td:
+            curriculum = LinguisticCurriculum(base_path=td)
+            entry = curriculum.expose_pragmatic_inference(
+                ["sure", "you", "did"],
+                inference_correct=True,
+            )
+            assert entry["inference_correct"] is True
+            metrics = curriculum.get_learning_metrics()
+            assert metrics["pragmatic_inference_attempts"] == 1
+            assert metrics["pragmatic_inference_successes"] == 1
+            assert metrics["pragmatic_accuracy_score"] == pytest.approx(1.0)
+
+    def test_expose_pragmatic_inference_tracks_incorrect(self):
+        with tempfile.TemporaryDirectory() as td:
+            curriculum = LinguisticCurriculum(base_path=td)
+            entry = curriculum.expose_pragmatic_inference(
+                ["sure", "you", "did"],
+                inference_correct=False,
+            )
+            assert entry["inference_correct"] is False
+            metrics = curriculum.get_learning_metrics()
+            assert metrics["pragmatic_inference_attempts"] == 1
+            assert metrics["pragmatic_inference_successes"] == 0
+            assert metrics["pragmatic_accuracy_score"] == pytest.approx(0.0)
+
+    def test_expose_pragmatic_understands_context(self):
+        with tempfile.TemporaryDirectory() as td:
+            curriculum = LinguisticCurriculum(base_path=td)
+            curriculum.expose_pragmatic_inference(
+                ["right", "..."], understood_context="irony"
+            )
+            metrics = curriculum.get_learning_metrics()
+            assert "irony" in metrics["pragmatic_contexts_understood"]
+
+    # ------------------------------------------------------------------ #
+    # Linguistic abstraction tests
+    # ------------------------------------------------------------------ #
+
+    def test_expose_linguistic_abstraction_increments_count(self):
+        with tempfile.TemporaryDirectory() as td:
+            curriculum = LinguisticCurriculum(base_path=td)
+            curriculum.expose_linguistic_abstraction(["time", "flows"])
+            metrics = curriculum.get_learning_metrics()
+            assert metrics["abstraction_exposure_count"] == 1
+
+    def test_expose_linguistic_abstraction_tracks_success(self):
+        with tempfile.TemporaryDirectory() as td:
+            curriculum = LinguisticCurriculum(base_path=td)
+            entry = curriculum.expose_linguistic_abstraction(
+                ["cause", "and", "effect"],
+                abstraction_success=True,
+            )
+            assert entry["abstraction_success"] is True
+            metrics = curriculum.get_learning_metrics()
+            assert metrics["abstraction_attempts"] == 1
+            assert metrics["abstraction_successes"] == 1
+
+    def test_expose_linguistic_abstraction_tracks_depth(self):
+        with tempfile.TemporaryDirectory() as td:
+            curriculum = LinguisticCurriculum(base_path=td)
+            curriculum.expose_linguistic_abstraction(
+                ["justice"], depth_score=0.5
+            )
+            curriculum.expose_linguistic_abstraction(
+                ["infinity"], depth_score=0.3
+            )
+            metrics = curriculum.get_learning_metrics()
+            assert metrics["abstraction_depth_score"] == pytest.approx(0.8)
+
+    def test_expose_linguistic_abstraction_forms_concept(self):
+        with tempfile.TemporaryDirectory() as td:
+            curriculum = LinguisticCurriculum(base_path=td)
+            curriculum.expose_linguistic_abstraction(
+                ["causality"], abstract_concept="causality"
+            )
+            metrics = curriculum.get_learning_metrics()
+            assert "causality" in metrics["abstract_concepts_formed"]
+
+    def test_persistence_of_advanced_stages(self):
+        with tempfile.TemporaryDirectory() as td:
+            c1 = LinguisticCurriculum(base_path=td)
+            c1.expose_syntactic_assembly(
+                ["if"], mastered_pattern="conditional",
+            )
+            c1.expose_pragmatic_inference(
+                ["oh"], understood_context="implication",
+            )
+            c1.expose_linguistic_abstraction(
+                ["truth"], abstract_concept="truth",
+            )
+
+            c2 = LinguisticCurriculum(base_path=td)
+            metrics = c2.get_learning_metrics()
+            assert "conditional" in metrics["syntactic_patterns_mastered"]
+            assert "implication" in metrics["pragmatic_contexts_understood"]
+            assert "truth" in metrics["abstract_concepts_formed"]

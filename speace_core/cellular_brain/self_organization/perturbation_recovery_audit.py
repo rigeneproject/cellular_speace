@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -8,7 +8,9 @@ from speace_core.cellular_brain.memory.morphology_events import (
     MorphologyEvent,
     MorphologyEventType,
 )
-from speace_core.orchestrator import CellularBrainOrchestrator
+
+if TYPE_CHECKING:
+    from speace_core.orchestrator import CellularBrainOrchestrator
 
 
 class PerturbationKind(str, Enum):
@@ -82,7 +84,7 @@ class PerturbationRecoveryResult(BaseModel):
 class ControlledPerturbationRecoveryAudit:
     """Audit that subjects SPEACE to controlled perturbations and measures recovery."""
 
-    def __init__(self, orchestrator: CellularBrainOrchestrator, seed: int = 42):
+    def __init__(self, orchestrator: "CellularBrainOrchestrator", seed: int = 42):
         self.orch = orchestrator
         self.seed = seed
         self._results: List[PerturbationRecoveryResult] = []

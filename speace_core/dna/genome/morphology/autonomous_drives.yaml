@@ -2,43 +2,43 @@
 # Long-term motivational core that keeps the organism alive and adaptive.
 
 autonomous_drives:
-  enabled: false
+  enabled: true
   description: "Seven core drives: self-preservation, energy conservation, resource acquisition, information exploration, homeostatic equilibrium, adaptive exploration, coherence maintenance"
   parameters:
     drives:
       self_preservation:
-        setpoint: 0.9
-        weight: 1.5
+        setpoint: 0.7
+        weight: 1.2
         activation_threshold: 0.15
         action: "repair"
       energy_conservation:
-        setpoint: 0.7
-        weight: 1.2
+        setpoint: 0.5
+        weight: 1.0
         activation_threshold: 0.1
         action: "conserve"
       resource_acquisition:
-        setpoint: 0.5
-        weight: 1.0
+        setpoint: 0.4
+        weight: 0.8
         activation_threshold: 0.1
         action: "acquire"
       information_exploration:
-        setpoint: 0.5
-        weight: 1.0
-        activation_threshold: 0.1
+        setpoint: 0.3
+        weight: 0.7
+        activation_threshold: 0.15
         action: "explore"
       homeostatic_equilibrium:
-        setpoint: 0.8
-        weight: 1.3
+        setpoint: 0.7
+        weight: 1.1
         activation_threshold: 0.1
         action: "stabilize"
       adaptive_exploration:
-        setpoint: 0.4
-        weight: 1.1
-        activation_threshold: 0.1
+        setpoint: 0.3
+        weight: 0.6
+        activation_threshold: 0.15
         action: "adapt"
       coherence_maintenance:
-        setpoint: 0.85
-        weight: 1.4
+        setpoint: 0.8
+        weight: 1.2
         activation_threshold: 0.1
         action: "integrate"
     suppression:

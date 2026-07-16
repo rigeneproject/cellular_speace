@@ -73,6 +73,7 @@ class AutonomousDriveEngine:
         "strategy_failure_rate": "adaptive_exploration",
         "internal_variance": "homeostatic_equilibrium",
         "idle_ratio": "energy_conservation",
+        "novelty_boost": "information_exploration",
     }
 
     def __init__(

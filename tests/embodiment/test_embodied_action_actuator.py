@@ -325,6 +325,18 @@ class TestEmbodiedActionActuator:
         assert res["success"] is False
         assert "invalid_signal_type" in res["error"]
 
+    def test_audit_log_written(self, actuator):
+        import json
+        path = os.path.join(str(actuator.project_root), "data", "audit.txt")
+        actuator.execute_action("write_text_file", {"path": path, "content": "audit"})
+        audit_path = actuator._audit_path
+        assert audit_path.exists()
+        lines = audit_path.read_text(encoding="utf-8").strip().split("\n")
+        assert len(lines) >= 1
+        record = json.loads(lines[0])
+        assert "timestamp" in record
+        assert "action_id" in record
+
     # ------------------------------------------------------------------ #
     # Proposal / approval flow
     # ------------------------------------------------------------------ #

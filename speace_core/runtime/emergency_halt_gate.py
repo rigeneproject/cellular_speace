@@ -5,6 +5,7 @@ Does NOT kill the process; leaves dashboard/API active in read-only mode.
 Requires human command to resume.
 """
 
+import logging
 import time
 from typing import Any, Dict, Optional
 
@@ -15,7 +16,7 @@ class EmergencyHaltGate:
     def __init__(
         self,
         brainstem_emergency_ticks: int = 5,
-        health_score_threshold: float = 0.1,
+        health_score_threshold: float = 0.15,
         memory_rss_critical_mb: float = 4096.0,
         checkpoint_manager: Any = None,
         narrative_engine: Any = None,
@@ -95,7 +96,7 @@ class EmergencyHaltGate:
                     emergency=True,
                 )
             except Exception:
-                pass
+                logging.getLogger(__name__).warning("Emergency checkpoint save failed", exc_info=True)
 
         # Log narrative event
         if self.narrative_engine is not None:
@@ -111,7 +112,7 @@ class EmergencyHaltGate:
                     },
                 )
             except Exception:
-                pass
+                logging.getLogger(__name__).warning("Narrative record failed during emergency halt", exc_info=True)
 
         return reason
 

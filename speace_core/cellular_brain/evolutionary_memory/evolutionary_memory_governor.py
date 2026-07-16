@@ -52,11 +52,87 @@ class EvolutionaryMemoryGovernor:
 
     def ingest_cycle_result(self, result: EvolutionaryMemoryRecord) -> ConsolidationDecision:
         self.store.add_record(result)
+        # T-Phase 8E — MM-APR integration: if the cycle was
+        # hard_blocked by the MM-APR veto router, the record is
+        # forcibly demoted to ``probationary`` regardless of the
+        # consolidation policy's verdict. The veto info is mirrored
+        # into the record's metadata so it survives subsequent
+        # governance cycles.
+        mmapr_hard_blocked = False
+        try:
+            veto = (result.metadata or {}).get("mmapr_veto_verdict")
+            if isinstance(veto, dict) and veto.get("final_status") == "hard_blocked":
+                # Hard-blocked records are kept for audit but cannot
+                # be promoted to STABLE.
+                result.metadata = dict(result.metadata or {})
+                result.metadata["mmapr_hard_blocked"] = True
+                result.metadata["mmapr_hard_blocked_by"] = veto.get("hard_blocked_by", [])
+                mmapr_hard_blocked = True
+        except Exception as exc:  # pragma: no cover - defensive
+            import logging
+            logging.getLogger(__name__).debug(
+                "MMAPR veto integration failed on %s: %s",
+                getattr(result, "record_id", "?"), exc,
+            )
+
         decision = self.consolidation.evaluate(result)
+        # MM-APR override: a hard-blocked record cannot reach STABLE
+        if mmapr_hard_blocked and decision.new_status == EvolutionaryMemoryStatus.STABLE.value:
+            self.store.update_status(
+                result.record_id,
+                EvolutionaryMemoryStatus.PROBATIONARY.value,
+                "mmapr_hard_blocked: demoted to probationary by MM-APR veto",
+            )
+            return ConsolidationDecision(
+                record_id=result.record_id,
+                previous_status=EvolutionaryMemoryStatus.VOLATILE.value,
+                new_status=EvolutionaryMemoryStatus.PROBATIONARY.value,
+                reason="mmapr_hard_blocked: demoted to probationary by MM-APR veto",
+                confidence_delta=decision.confidence_delta,
+                governance_verdict="mmapr_veto_override",
+                requires_human_review=True,
+            )
         if decision.previous_status != decision.new_status:
             self.store.update_status(result.record_id, decision.new_status, decision.reason)
         self._log_event(MorphologyEventType.EVOLUTIONARY_MEMORY_RECORD_INGESTED, result.record_id, decision.new_status)
         return decision
+
+    def adopt_self_modification(
+        self,
+        cycle_result: Any,
+        source_cycle_id: str = "self_modification_cycle",
+    ) -> ConsolidationDecision:
+        """T169 — Promote a ``SelfModificationCycleResult`` into the
+        evolutionary memory store.
+
+        Builds a valid ``EvolutionaryMemoryRecord`` from the cycle's
+        observed scores and post-patch deltas, then runs the standard
+        consolidation policy to decide its status.
+        """
+        observed = getattr(cycle_result, "observed", {}) or {}
+        # Build record from cycle result
+        record = EvolutionaryMemoryRecord(
+            record_id=getattr(cycle_result, "cycle_id", f"smc-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"),
+            source_cycle_id=source_cycle_id,
+            source_task="self_modification",
+            source_profile="t169_phase3",
+            fitness_delta=float(getattr(cycle_result, "delta_score", 0.0) or 0.0),
+            phi_delta=float(observed.get("coherence_phi", 0.0) or 0.0),
+            energy_delta=float(observed.get("mean_energy", 0.0) or 0.0),
+            cognitive_delta=float(getattr(cycle_result, "delta_score", 0.0) or 0.0),
+            regression_score=float(getattr(cycle_result, "regression_score", 0.0) or 0.0),
+            safety_score=float(getattr(cycle_result, "safety_score", 0.5) or 0.5),
+            confidence=float(getattr(cycle_result, "confidence", 0.0) or 0.0),
+            reuse_count=1,  # adopted via closed loop
+            status=EvolutionaryMemoryStatus.VOLATILE.value,
+            metadata={
+                "passed_steps": list(getattr(cycle_result, "passed_steps", []) or []),
+                "adoption": getattr(cycle_result, "adoption", None),
+                "limitations": list(getattr(cycle_result, "limitations", []) or []),
+                "mutations": list(getattr(cycle_result, "mutations", []) or []),
+            },
+        )
+        return self.ingest_cycle_result(record)
 
     def ingest_multi_cycle_audit_result(self, verdict: T56BAggregateVerdict) -> List[ConsolidationDecision]:
         decisions: List[ConsolidationDecision] = []

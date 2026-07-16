@@ -1,5 +1,7 @@
 """Tests for T101 — SPEACE Local Organism Monitor API and WebSocket."""
 
+from __future__ import annotations
+
 import pytest
 from fastapi.testclient import TestClient
 

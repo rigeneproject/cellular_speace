@@ -50,3 +50,16 @@ class DigitalImmuneController:
 
         self.immune_state["active_alerts"] = len(report.anomalies)
         self.immune_state["last_action_count"] = len(actions)
+
+    def get_load(self, gut_inflammation: float = 0.0) -> float:
+        """Return the current immune system load in [0, 1].
+
+        Combines internal anomaly alerts with gut-derived inflammation
+        (gut-brain axis contribution).  The orchestrator may also set
+        ``_last_gut_inflammation`` before calling this method.
+        """
+        gi = max(0.0, gut_inflammation)
+        if gi == 0.0 and hasattr(self, "_last_gut_inflammation"):
+            gi = max(0.0, getattr(self, "_last_gut_inflammation", 0.0))
+        internal_load = min(1.0, self.immune_state.get("active_alerts", 0) / 10.0)
+        return min(1.0, internal_load * 0.7 + gi * 0.3)

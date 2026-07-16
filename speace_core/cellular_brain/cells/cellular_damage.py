@@ -3,6 +3,7 @@ from typing import Dict, List, Literal
 from pydantic import BaseModel, Field
 
 from speace_core.cellular_brain.cells.digital_neuron import DigitalNeuron
+from speace_core.cellular_brain.cells.cellular_stress import CellularStressResult
 from speace_core.cellular_brain.circuits.neural_circuit import NeuralCircuit
 
 

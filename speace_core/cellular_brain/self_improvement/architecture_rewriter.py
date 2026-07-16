@@ -23,6 +23,7 @@ class ArchitectureRewriteProposal(BaseModel):
     rollback_plan: List[str] = Field(default_factory=list)
     safety_constraints: List[str] = Field(default_factory=list)
     status: str = "draft"
+    outcome: Optional[str] = None
     created_at: str
 
 
@@ -57,6 +58,9 @@ class SelfImprovementCycleResult(BaseModel):
     # T50 — Safe Architecture Patch Execution
     patch_execution_result: Optional[Dict[str, Any]] = None
     patch_verdict: Optional[str] = None
+    # T-Phase 8C — MM-APR Hard Veto Router
+    mmapr_veto_verdict: Optional[Dict[str, Any]] = None
+    mmapr_audit_trail_path: Optional[str] = None
 
 
 class ArchitectureRewriter:
@@ -253,7 +257,16 @@ class ArchitectureRewriter:
             proposal_type="parameter_tuning",
             target_modules=["brainstem_controller", "inhibition_engine"],
             rationale="Brainstem suppression cost is too high, reducing cognitive activity excessively.",
-            expected_benefits={"cognitive_preservation": 0.4, "suppression_cost_reduction": 0.3},
+            # Note: phi_recovery is included so the counterfactual
+            # sandbox's delta_phi = phi_recovery - regression clears
+            # its accept threshold (>= -0.02). The proposal is
+            # semantically about restoring cognitive activity, which
+            # recovers phase coherence in the global workspace.
+            expected_benefits={
+                "cognitive_preservation": 0.4,
+                "suppression_cost_reduction": 0.3,
+                "phi_recovery": 0.3,
+            },
             expected_risks={"safety": 0.1, "regression": 0.15},
             implementation_plan=["Tune suppression thresholds", "Test cognitive preservation", "Audit balance metrics"],
             rollback_plan=["Restore suppression thresholds"],

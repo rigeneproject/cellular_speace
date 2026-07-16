@@ -2,7 +2,7 @@ import copy
 import random
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -19,7 +19,8 @@ from speace_core.cellular_brain.memory.morphological_memory import Morphological
 from speace_core.cellular_brain.memory.morphology_events import MorphologyEventType
 from speace_core.dna.models import SharedGenome
 from speace_core.dna.parser import load_genome
-from speace_core.orchestrator import CellularBrainOrchestrator
+if TYPE_CHECKING:
+    from speace_core.orchestrator import CellularBrainOrchestrator
 
 
 class FitnessResult(BaseModel):
@@ -374,6 +375,8 @@ class EvolutionEngine:
         n_ticks: int = 3,
     ) -> BenchmarkResult:
         """Build an orchestrator from a genome and run a benchmark case."""
+        from speace_core.orchestrator import CellularBrainOrchestrator
+
         # Load genome dict into SharedGenome
         genome = SharedGenome(**genome_record.genome)
         orch = CellularBrainOrchestrator.build_mvp(genome)

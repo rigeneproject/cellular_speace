@@ -50,3 +50,63 @@ linguistic_curriculum:
         min_grounded_concepts: 10
         min_grounding_score: 0.7
         concept_consolidation_cycles: 3
+
+    syntactic_assembly:
+      order: 4
+      description: "Complex sentence structure, grammar rules, subordinate clauses"
+      simulated_only: true
+      estimated_safety: 0.9
+      requires_human_review: true
+      min_exposures_before_advance: 400
+      advance_criteria:
+        - syntactic_complexity_threshold
+        - pattern_mastery_count
+      parameters:
+        min_syntactic_complexity: 0.6
+        min_patterns_mastered: 2
+        target_patterns:
+          - relative_clause
+          - passive_voice
+          - conditional
+          - subordinate_clause
+          - compound_sentence
+
+    pragmatic_inference:
+      order: 5
+      description: "Context-dependent meaning, implicature, deixis, sarcasm"
+      simulated_only: true
+      estimated_safety: 0.85
+      requires_human_review: true
+      min_exposures_before_advance: 400
+      advance_criteria:
+        - pragmatic_accuracy_threshold
+        - context_mastery_count
+      parameters:
+        min_pragmatic_accuracy: 0.6
+        min_contexts_understood: 2
+        target_contexts:
+          - irony
+          - implication
+          - deixis
+          - presupposition
+          - implicature
+
+    linguistic_abstraction:
+      order: 6
+      description: "Metaphors, abstract concepts, recursion, conceptual blending"
+      simulated_only: true
+      estimated_safety: 0.8
+      requires_human_review: true
+      min_exposures_before_advance: 500
+      advance_criteria:
+        - abstraction_depth_threshold
+        - abstract_concept_count
+      parameters:
+        min_abstraction_depth: 0.6
+        min_abstract_concepts: 2
+        target_abstract_concepts:
+          - causality
+          - recursion
+          - justice
+          - consciousness
+          - infinity

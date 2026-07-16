@@ -40,7 +40,16 @@ class EventBus:
             *(self._safe_dispatch(h, signal) for h in handlers),
             return_exceptions=True,
         )
-        return [r if isinstance(r, EventDispatchResult) else r for r in results]
+        return [
+            r if isinstance(r, EventDispatchResult)
+            else EventDispatchResult(
+                success=False,
+                handler_name="unknown",
+                error=str(r) if r is not None else "unknown error",
+                duration_ms=0.0,
+            )
+            for r in results
+        ]
 
     async def _safe_dispatch(
         self, handler: Callable[[DigitalSignal], None], signal: DigitalSignal

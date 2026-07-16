@@ -86,6 +86,78 @@ class GlobalWorkspace:
             {"module_id": module_id, "queue_length": len(self._broadcast_queue)},
         )
 
+    def broadcast_with_phase_gain(
+        self,
+        module_id: str,
+        representation: List[float],
+        phase: Optional[float] = None,
+        gain_amplitude: float = 0.5,
+    ) -> None:
+        """T-PBGW — phase-gated broadcast.
+
+        The representation is multiplied by ``1 + gain_amplitude * sin(phase)``
+        before being queued, so the workspace sees a temporally-modulated
+        copy. ``phase`` is in radians (e.g. the gamma-band phase from a
+        :class:`NeuralOscillatorBank`). When ``phase`` is ``None`` the call
+        behaves exactly like :meth:`broadcast`.
+        """
+        import math
+
+        if phase is None:
+            self.broadcast(module_id, representation)
+            return
+        gain = 1.0 + float(gain_amplitude) * math.sin(float(phase))
+        gated = [float(v) * gain for v in representation]
+        self.broadcast(module_id, gated)
+        self._log_event(
+            MorphologyEventType.GLOBAL_WORKSPACE_BROADCAST_QUEUED,
+            {
+                "module_id": module_id,
+                "phase_gate": True,
+                "phase": float(phase),
+                "gain": gain,
+            },
+        )
+
+    def broadcast_arc_deliberation(
+        self,
+        deliberation: Dict[str, Any],
+    ) -> None:
+        """T169 — encode an MM-APR council deliberation into a workspace
+        representation and queue it for broadcast.
+
+        The representation is a fixed-shape vector where:
+        - First slot = emergent_confidence (0..1)
+        - Slots 1..4 = one slot per agent (verifier, critic, auditor, interpreter)
+          holding that agent's accept flag (-1 reject, +1 accept, 0 abstain).
+        - Remaining slots = a stable hash of the deliberation_id (so two
+          distinct verdicts with the same confidence produce distinct vectors).
+
+        The workspace is then advanced by one step, which propagates the
+        consensus into the recurrent state and symbolic compression,
+        increasing ignition and coherence when the council reaches agreement.
+        """
+        vec = np.zeros(self._broadcast_dim, dtype=np.float64)
+        emergent = float(deliberation.get("emergent_confidence", 0.0) or 0.0)
+        accept = bool(deliberation.get("accept", False))
+        vec[0] = emergent
+        votes = deliberation.get("votes", []) or []
+        for i, v in enumerate(votes[:4]):
+            conf = float(v.get("confidence", 0.0) or 0.0)
+            is_accept = bool(v.get("accept", False))
+            vec[1 + i] = conf if is_accept else -conf
+        # Stable hash of deliberation_id
+        did = str(deliberation.get("deliberation_id", ""))
+        if did:
+            h = abs(hash(did)) % (10 ** 8)
+            for i in range(min(8, self._broadcast_dim - 5)):
+                vec[5 + i] = ((h >> (i * 4)) & 0xF) / 16.0 - 0.5
+        # Module id encodes the verdict polarity
+        module_id = "mmapr_consensus" if accept else "mmapr_rejection"
+        self.broadcast(module_id, vec.tolist())
+        # Step the workspace to propagate the broadcast
+        self.step()
+
     def step(self) -> Dict[str, Any]:
         """Run one full workspace cycle:
         1) attention_routing selects the winning representation

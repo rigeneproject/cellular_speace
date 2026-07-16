@@ -1,5 +1,5 @@
 import uuid
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from speace_core.cellular_brain.memory.morphological_memory import MorphologicalMemory
 from speace_core.cellular_brain.memory.morphology_events import MorphologyEvent, MorphologyEventType
@@ -11,7 +11,9 @@ from speace_core.cellular_brain.memory.semantic.cell_assembly import (
 from speace_core.cellular_brain.memory.semantic.semantic_memory_store import (
     SemanticMemoryStore,
 )
-from speace_core.orchestrator import CellularBrainOrchestrator
+
+if TYPE_CHECKING:
+    from speace_core.orchestrator import CellularBrainOrchestrator
 
 
 class CellAssemblyEngine:
@@ -51,7 +53,7 @@ class CellAssemblyEngine:
     # ------------------------------------------------------------------ #
 
     def observe_activation(
-        self, orchestrator: CellularBrainOrchestrator
+        self, orchestrator: "CellularBrainOrchestrator"
     ) -> AssemblyActivationTrace:
         neurons = (
             orchestrator.circuit.input_neurons
@@ -187,7 +189,7 @@ class CellAssemblyEngine:
     # ------------------------------------------------------------------ #
 
     def run_semantic_memory_cycle(
-        self, orchestrator: CellularBrainOrchestrator
+        self, orchestrator: "CellularBrainOrchestrator"
     ) -> SemanticMemoryMetrics:
         trace = self.observe_activation(orchestrator)
 
@@ -255,7 +257,7 @@ class CellAssemblyEngine:
 
     @staticmethod
     def _log_event(
-        orchestrator: CellularBrainOrchestrator,
+        orchestrator: "CellularBrainOrchestrator",
         event_type: MorphologyEventType,
         assembly_id: str,
     ) -> None:

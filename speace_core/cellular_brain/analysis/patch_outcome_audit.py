@@ -300,9 +300,6 @@ class PatchOutcomeAuditor:
     # ------------------------------------------------------------------ #
 
     def _build_loop(self, orch, profile: PatchOutcomeAuditProfile) -> SelfImprovementLoop:
-        from speace_core.cellular_brain.self_improvement.counterfactual_sandbox import (
-            CounterfactualArchitectureSandbox,
-        )
         from speace_core.cellular_brain.self_improvement.episodic_policy import (
             EpisodicSelfImprovementPolicy,
         )
@@ -463,7 +460,7 @@ class PatchOutcomeAuditor:
             f"- Regression rate: {result.regression_rate:.4f}",
             f"- Learning confidence delta: {result.learning_confidence_delta:.4f}",
             "",
-            f"## Verdict",
+            "## Verdict",
             f"**{result.verdict}**",
             "",
             "---",

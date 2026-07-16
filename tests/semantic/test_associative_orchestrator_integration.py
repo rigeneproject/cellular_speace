@@ -19,10 +19,6 @@ class TestOrchestratorAssociativeIntegration:
         assert orch._associative_learning_engine is engine
 
     def test_orchestrator_manual_associative_learning_cycle(self):
-        from speace_core.cellular_brain.memory.semantic.semantic_memory_store import (
-            SemanticMemoryStore,
-        )
-
         genome = SharedGenome()
         orch = CellularBrainOrchestrator.build_mvp(genome)
         orch.semantic_memory_enabled = True
@@ -37,10 +33,6 @@ class TestOrchestratorAssociativeIntegration:
         assert result.created_associations == 1
 
     def test_orchestrator_associative_recall_lazy(self):
-        from speace_core.cellular_brain.memory.semantic.semantic_memory_store import (
-            SemanticMemoryStore,
-        )
-
         genome = SharedGenome()
         orch = CellularBrainOrchestrator.build_mvp(genome)
         orch.semantic_memory_enabled = True

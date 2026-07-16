@@ -1,5 +1,5 @@
 import math
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from pydantic import BaseModel, Field
 
@@ -205,6 +205,7 @@ class RegionSignalRouter:
         memory: Optional[MorphologicalMemory] = None,
         confidence_score: float = 0.0,
         routing_multiplier_map: Optional[Dict[str, float]] = None,
+        per_pair_multipliers: Optional[Dict[Tuple[str, str], float]] = None,
         current_tick: int = 0,
     ) -> RegionRoutingResult:
         result = RegionRoutingResult()
@@ -231,6 +232,11 @@ class RegionSignalRouter:
                 break
 
             multiplier = multiplier_map.get(conn.source_region_id, 1.0)
+
+            # FRL — Communication Through Coherence: per-pair phase alignment multiplier
+            if per_pair_multipliers is not None:
+                pair_key = (conn.source_region_id, conn.target_region_id)
+                multiplier *= per_pair_multipliers.get(pair_key, 1.0)
 
             # T34 — stability-aware correction (don't fully suppress deep regions)
             if t34_calibrator is not None:

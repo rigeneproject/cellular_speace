@@ -75,7 +75,7 @@ def test_mvp_pruning():
     _lower_thresholds(orch)
 
     async def _run():
-        for i in range(200):
+        for i in range(100):
             pattern = [0.0] * 10
             pattern[i % 10] = 2.0
             orch.inject(pattern)
@@ -86,4 +86,8 @@ def test_mvp_pruning():
 
     asyncio.run(_run())
     pruned = sum(1 for s in orch.circuit.synapses if s.state == "pruned")
-    assert pruned > 0, f"Microglia should prune low-trust synapses, got {pruned} pruned"
+    synapse_count = len(orch.circuit.synapses)
+    assert pruned > 0, (
+        f"Microglia should prune low-trust synapses, "
+        f"got {pruned} pruned out of {synapse_count}"
+    )

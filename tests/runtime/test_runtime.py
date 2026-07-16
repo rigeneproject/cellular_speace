@@ -34,12 +34,13 @@ class FakeOrchestrator:
         self.energy_field_enabled = False
         self.predictive_coding_enabled = False
         self.active_inference_enabled = False
-        self.global_homeostatic_drive_enabled = False
+        self.homeostatic_drive_enabled = False
         self.criticality_monitor_enabled = False
         self.community_detection_enabled = True
         self.evolution_enabled = True
         self._lifecycle_manager = None
         self._brainstem_controller = None
+        self._last_sensor_snapshot: Any = None
 
     async def _tick(self) -> None:
         self.current_tick += 1
@@ -167,6 +168,11 @@ def test_health_critical_by_exceptions():
     mon.record_exception()
     mon.record_exception()
     mon.record_exception()
+    # Graduated penalties with floor at 0.15:
+    # jitter overshoot: 0.10 + 0.10*(2900/100-1) ≈ 0.39
+    # latency overshoot: 0.10 + 0.10*(500/100-1) = 0.50
+    # exceptions: 0.20
+    # Total deduction ≈ 1.09, floored to 0.15
     assert mon.health_score() < 0.3
     assert mon.is_critical()
 
@@ -178,13 +184,22 @@ def test_health_critical_by_exceptions():
 def test_degradation_slowdown():
     orch = FakeOrchestrator()
     handler = SafeDegradationHandler()
+
+    class FakeEngine:
+        tick_interval = 1.0
+
+    engine = FakeEngine()
     actions = handler.evaluate(
         runtime_health={"health_score": 0.5},
         brainstem_state="stable",
         orchestrator=orch,
+        runtime_engine=engine,
     )
     assert len(actions) >= 1
     assert actions[0]["action"] == "slowdown"
+    # The slowdown must propagate to the runtime engine's tick_interval
+    # (the one actually used for sleep), not just the orchestrator's.
+    assert engine.tick_interval > 1.0
     assert orch.tick_interval > 1.0
 
 
@@ -219,10 +234,10 @@ def test_halt_not_triggered_when_healthy():
 
 
 def test_halt_triggered_by_health():
-    gate = EmergencyHaltGate(health_score_threshold=0.1)
+    gate = EmergencyHaltGate(health_score_threshold=0.15)
     orch = FakeOrchestrator()
     reason = gate.evaluate(
-        runtime_health={"health_score": 0.05},
+        runtime_health={"health_score": 0.10},
         brainstem_state="stable",
         memory_rss_mb=100,
         orchestrator=orch,
@@ -234,10 +249,10 @@ def test_halt_triggered_by_health():
 
 
 def test_halt_reset():
-    gate = EmergencyHaltGate(health_score_threshold=0.1)
+    gate = EmergencyHaltGate(health_score_threshold=0.15)
     orch = FakeOrchestrator()
     gate.evaluate(
-        runtime_health={"health_score": 0.05},
+        runtime_health={"health_score": 0.10},
         brainstem_state="stable",
         memory_rss_mb=100,
         orchestrator=orch,
@@ -298,4 +313,227 @@ async def test_engine_force_checkpoint():
     await engine.start()
     cp = await engine.force_checkpoint()
     assert cp["runtime_state"] == "running"
+    await engine.stop()
+
+
+# --------------------------------------------------------------------------- #
+# T111 — Extended Runtime Observer
+# --------------------------------------------------------------------------- #
+
+async def test_extended_observer_sampling():
+    from speace_core.runtime.extended_runtime_observer import ExtendedRuntimeObserver
+    obs = ExtendedRuntimeObserver(history_window_seconds=1.0, report_interval_seconds=0.1)
+    orch = FakeOrchestrator()
+    obs.sample(memory_rss_mb=100.0, health_score=1.0, tick_latency_ms=50.0, orchestrator=orch)
+    import asyncio
+    await asyncio.sleep(0.15)
+    obs.sample(memory_rss_mb=110.0, health_score=0.9, tick_latency_ms=60.0, orchestrator=orch)
+    report = obs.latest_report()
+    assert report is not None
+    assert "memory_growth_mb" in report
+    assert "health_trend" in report
+
+
+# --------------------------------------------------------------------------- #
+# T112 — Circadian Validator
+# --------------------------------------------------------------------------- #
+
+def test_circadian_validator_phase_order():
+    from speace_core.runtime.circadian_validator import CircadianValidator
+    val = CircadianValidator()
+    val.record_phase_transition("awake", "pre_sleep")
+    val.record_phase_transition("pre_sleep", "sleep")
+    val.record_phase_transition("sleep", "consolidation")
+    val.record_phase_transition("consolidation", "post_sleep")
+    val.record_phase_transition("post_sleep", "awake")
+    report = val.validate(FakeOrchestrator())
+    assert report["phase_order_valid"] is True
+    assert report["is_valid"] is True
+
+
+def test_circadian_validator_invalid_order():
+    from speace_core.runtime.circadian_validator import CircadianValidator
+    val = CircadianValidator()
+    val.record_phase_transition("awake", "sleep")  # skip
+    report = val.validate(FakeOrchestrator())
+    assert report["phase_order_valid"] is False
+
+
+# --------------------------------------------------------------------------- #
+# T113 — Memory Leak Auditor
+# --------------------------------------------------------------------------- #
+
+def test_memory_leak_auditor_baseline():
+    from speace_core.runtime.memory_leak_auditor import MemoryLeakAuditor
+    auditor = MemoryLeakAuditor(sample_interval_seconds=0.0)
+    orch = FakeOrchestrator()
+    report = auditor.sample(orch)
+    assert report is not None
+    assert "rss_mb" in report
+    assert "object_counts" in report
+    assert auditor.summary()["baseline_set"] is True
+
+
+# --------------------------------------------------------------------------- #
+# T114 — Degradation Drill
+# --------------------------------------------------------------------------- #
+
+async def test_degradation_drill_memory_pressure():
+    from speace_core.runtime.degradation_drill import DegradationDrill
+    orch = FakeOrchestrator()
+    health = RuntimeHealthMonitor()
+    handler = SafeDegradationHandler()
+    drill = DegradationDrill(orch, health, handler)
+    report = await drill.run_drill(scenario="memory_pressure", duration_seconds=0.5)
+    assert report["scenario"] == "memory_pressure"
+    assert report["passed"] is True
+    assert len(report["injected_faults"]) > 0
+
+
+# --------------------------------------------------------------------------- #
+# T117 — Runtime Latent Integration
+# --------------------------------------------------------------------------- #
+
+def test_engine_snapshot_includes_latent_integration():
+    orch = FakeOrchestrator()
+    engine = ContinuousRuntimeEngine(
+        orchestrator=orch,
+        tick_interval=0.05,
+        checkpoint_interval_seconds=60.0,
+    )
+    snap = engine.snapshot()
+    assert "latent_integration" in snap
+    assert snap["latent_integration"]["vector_dim"] == 64
+
+
+# --------------------------------------------------------------------------- #
+# T147 — Embodied Sensory Stream Activation
+# --------------------------------------------------------------------------- #
+
+async def test_t147_embodiment_activated_in_runtime():
+    from speace_core.dna.parser import load_genome
+    from speace_core.orchestrator import CellularBrainOrchestrator
+
+    genome = load_genome("speace_core/dna/genome/default_genome.yaml")
+    orch = CellularBrainOrchestrator.build_mvp(genome)
+    engine = ContinuousRuntimeEngine(
+        orchestrator=orch,
+        tick_interval=0.05,
+        checkpoint_interval_seconds=60.0,
+    )
+    result = await engine.start()
+    assert result["state"] == "running"
+    # T147: embodiment and predictive coding should be initialized
+    assert orch.embodiment_enabled is True
+    assert orch.predictive_coding_enabled is True
+    assert orch._sensor_array is not None
+    assert orch._physical_environment is not None
+    assert orch._predictive_coding is not None
+
+    await asyncio.sleep(0.15)
+
+    # Narrative engine should have recorded sensory events
+    recent = engine.narrative_engine.recent(hours=0.1, limit=50)
+    assert isinstance(recent, list)
+
+    await engine.stop()
+    assert engine._state == "halted"
+    # Sensor thread should have been stopped
+    if orch._sensor_array is not None:
+        sampling_thread = getattr(orch._sensor_array, "_sampling_thread", None)
+        assert sampling_thread is None or not sampling_thread.is_alive()
+
+
+async def test_t148_micro_actuator_initialized_in_runtime():
+    from speace_core.dna.parser import load_genome
+    from speace_core.orchestrator import CellularBrainOrchestrator
+
+    genome = load_genome("speace_core/dna/genome/default_genome.yaml")
+    orch = CellularBrainOrchestrator.build_mvp(genome)
+    engine = ContinuousRuntimeEngine(
+        orchestrator=orch,
+        tick_interval=0.05,
+        checkpoint_interval_seconds=60.0,
+    )
+    result = await engine.start()
+    assert result["state"] == "running"
+
+    # T148: Phase 3 micro actuator should be initialized
+    assert engine._micro_actuator is not None
+    assert hasattr(engine._micro_actuator, "propose_action")
+    assert hasattr(engine._micro_actuator, "execute_action")
+    assert hasattr(engine._micro_actuator, "summary")
+
+    # Narrative engine should have recorded micro actuator initialization
+    recent = engine.narrative_engine.recent(hours=0.1, limit=50)
+    init_events = [e for e in recent if e.get("event_type") == "micro_actuator_initialized"]
+    assert len(init_events) >= 1
+
+    await engine.stop()
+    assert engine._state == "halted"
+
+
+async def test_t149_distributed_organism_initialized_in_runtime():
+    from speace_core.dna.parser import load_genome
+    from speace_core.orchestrator import CellularBrainOrchestrator
+
+    genome = load_genome("speace_core/dna/genome/default_genome.yaml")
+    orch = CellularBrainOrchestrator.build_mvp(genome)
+    engine = ContinuousRuntimeEngine(
+        orchestrator=orch,
+        tick_interval=0.05,
+        checkpoint_interval_seconds=60.0,
+    )
+    result = await engine.start()
+    assert result["state"] == "running"
+
+    # T149: Phase 4 distributed organism should be initialized
+    assert engine._distributed_organism is not None
+    assert hasattr(engine._distributed_organism, "register_node")
+    assert hasattr(engine._distributed_organism, "observe_distributed_state")
+    assert hasattr(engine._distributed_organism, "summary")
+
+    # Narrative engine should have recorded distributed organism initialization
+    recent = engine.narrative_engine.recent(hours=0.1, limit=50)
+    init_events = [e for e in recent if e.get("event_type") == "distributed_organism_initialized"]
+    assert len(init_events) >= 1
+
+    await engine.stop()
+    assert engine._state == "halted"
+
+
+# --------------------------------------------------------------------------- #
+# Fase 2 — Runtime Integration: 10 ticks, health green, checkpoint written
+# --------------------------------------------------------------------------- #
+
+async def test_fase2_10_ticks_healthy_checkpoint(tmp_path, monkeypatch):
+    """Start engine, run 10+ ticks, health stays green, checkpoint saved."""
+    monkeypatch.chdir(tmp_path)
+
+    orch = FakeOrchestrator()
+    engine = ContinuousRuntimeEngine(
+        orchestrator=orch,
+        tick_interval=0.05,
+        checkpoint_interval_seconds=0.5,
+    )
+
+    result = await engine.start()
+    assert result["state"] == "running"
+
+    await asyncio.sleep(1.5)
+
+    assert engine._state != "halted", "Engine should not have halted"
+    assert orch.current_tick >= 10, f"Expected >= 10 ticks, got {orch.current_tick}"
+
+    assert not engine.health_monitor.is_degraded(), \
+        f"Health should be green (score={engine.health_monitor.health_score():.2f})"
+    assert not engine.health_monitor.is_critical()
+    assert engine.health_monitor.health_score() >= 0.7
+
+    checkpoints = engine.checkpoint_manager.list_checkpoints()
+    assert len(checkpoints) >= 1, "No checkpoints written"
+    cp = checkpoints[0]
+    assert cp["runtime_state"] == "running"
+    assert cp["circadian_phase"] == "awake"
+
     await engine.stop()

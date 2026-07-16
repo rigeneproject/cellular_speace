@@ -5,6 +5,7 @@ All operations are read-only and safe.
 """
 
 import json
+import logging
 import pathlib
 from typing import Any, Dict, List, Optional
 
@@ -137,7 +138,7 @@ class OrganismStateCollector:
                 focus = self.orchestrator.get_global_workspace_attention_focus()
                 cognition["attention_focus"] = focus
             except Exception:
-                pass
+                logging.getLogger(__name__).warning("State collection failed for cognition", exc_info=True)
 
         # Self-Model from files
         snap = self._last_jsonl(self.data_root / "self_model" / "snapshots.jsonl")
@@ -169,6 +170,20 @@ class OrganismStateCollector:
         if drives_last:
             cognition["active_goals"] = [drives_last.get("action_tendency", "idle")]
 
+        # Cognitive score: simplified composite from available metrics
+        phi = cognition.get("self_model", {}).get("coherence_phi", 0.0)
+        mean_energy = 0.0
+        if self.orchestrator is not None:
+            metrics = getattr(self.orchestrator, "_last_metrics", None)
+            if metrics is not None:
+                mean_energy = getattr(metrics, "mean_energy", 0.0)
+        else:
+            snaps = self._read_jsonl(self.data_root / "morphological_memory" / "snapshots.jsonl")
+            if snaps:
+                mean_energy = snaps[-1].get("mean_energy", 0.0)
+        energy_eff = max(0.0, min(1.0, mean_energy))
+        cognition["cognitive_score"] = max(0.0, min(1.0, 0.55 * phi + 0.35 * energy_eff + 0.10))
+
         return cognition
 
     # ------------------------------------------------------------------ #
@@ -189,6 +204,7 @@ class OrganismStateCollector:
                 "last_intervention": None,
                 "intervention_count": 0,
             },
+            "energy_efficiency": 0.0,
         }
 
         # Stabilizer interventions
@@ -225,7 +241,7 @@ class OrganismStateCollector:
                     dynamics["criticality"]["branching_ratio"] = cm.get_branching_ratio()
                     dynamics["criticality"]["near_critical"] = abs(cm.get_branching_ratio() - 1.0) < 0.1
                 except Exception:
-                    pass
+                    logging.getLogger(__name__).warning("State collection failed for dynamics criticality", exc_info=True)
 
             # Emergent dynamics stabilizer
             eds = getattr(self.orchestrator, "_emergent_dynamics_stabilizer", None)
@@ -235,7 +251,21 @@ class OrganismStateCollector:
                     if last_result and isinstance(last_result, dict):
                         dynamics["emergent_dynamics"] = last_result
                 except Exception:
-                    pass
+                    logging.getLogger(__name__).warning("State collection failed for dynamics emergent", exc_info=True)
+
+        # Energy efficiency from live orchestrator metrics
+        if self.orchestrator is not None:
+            metrics = getattr(self.orchestrator, "_last_metrics", None)
+            if metrics is not None:
+                mean_energy = getattr(metrics, "mean_energy", 0.0)
+                dynamics["energy_efficiency"] = max(0.0, min(1.0, mean_energy))
+            else:
+                # Fallback from morphological memory snapshots
+                snaps = self._read_jsonl(self.data_root / "morphological_memory" / "snapshots.jsonl")
+                if snaps:
+                    last = snaps[-1]
+                    mean_energy = last.get("mean_energy", 0.0)
+                    dynamics["energy_efficiency"] = max(0.0, min(1.0, mean_energy))
 
         return dynamics
 
@@ -333,7 +363,7 @@ class OrganismStateCollector:
                             live_drives, key=lambda d: d["urgency"]
                         )["name"]
                 except Exception:
-                    pass
+                    logging.getLogger(__name__).warning("State collection failed for drives", exc_info=True)
 
         return drives_state
 
@@ -418,7 +448,7 @@ class OrganismStateCollector:
                         emb["prediction_accuracy"] = report.get("prediction_accuracy", 0.0)
                         emb["action_success_rate"] = report.get("action_success_rate", 0.0)
                 except Exception:
-                    pass
+                    logging.getLogger(__name__).warning("State collection failed for embodiment report", exc_info=True)
 
             # Prediction error from physical environment model
             phys = getattr(self.orchestrator, "_physical_environment", None)
@@ -432,7 +462,7 @@ class OrganismStateCollector:
                         errs = [abs(flat_actual.get(k, 0) - flat_pred.get(k, 0)) for k in set(flat_actual) | set(flat_pred)]
                         emb["prediction_error"] = sum(errs) / max(1, len(errs))
                 except Exception:
-                    pass
+                    logging.getLogger(__name__).warning("State collection failed for embodiment prediction error", exc_info=True)
 
             # Sensor / actuator status
             if getattr(self.orchestrator, "_sensor_array", None) is not None:

@@ -2,6 +2,8 @@ import random
 from typing import Any, Dict, List, Optional
 
 from speace_core.cellular_brain.world_model.world_model_models import (
+    CausalSimulationResult,
+    ImpactAssessment,
     WorldConstraint,
     WorldEntity,
     WorldEntityType,
