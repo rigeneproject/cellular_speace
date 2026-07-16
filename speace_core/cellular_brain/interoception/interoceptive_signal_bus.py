@@ -48,6 +48,8 @@ DEFAULT_CHANNELS = (
     "fatigue_fraction",
     "prediction_error",
     "homeostatic_drift",
+    "gut_inflammation",
+    "gut_feeling",
 )
 
 
@@ -95,6 +97,8 @@ class InteroceptiveSignalBus:
                 "fatigue_fraction": "lower_better",
                 "prediction_error": "lower_better",
                 "homeostatic_drift": "lower_better",
+                "gut_inflammation": "lower_better",
+                "gut_feeling": "lower_better",
             }
         )
         # (healthy, alarm). If None we fall back to sensible defaults.
@@ -109,6 +113,8 @@ class InteroceptiveSignalBus:
                 "fatigue_fraction": (0.0, 0.7),
                 "prediction_error": (0.0, 1.0),
                 "homeostatic_drift": (0.0, 1.0),
+                "gut_inflammation": (0.0, 0.7),
+                "gut_feeling": (0.0, 0.7),
             }
         )
         self._tick: int = 0
@@ -133,6 +139,8 @@ class InteroceptiveSignalBus:
         neuron_count: int = 0,
         prediction_error: float = 0.0,
         homeostatic_drift: float = 0.0,
+        gut_inflammation: float = 0.0,
+        gut_feeling: float = 0.0,
     ) -> InteroceptiveSnapshot:
         """Sample all available sources and produce a snapshot.
 
@@ -224,6 +232,14 @@ class InteroceptiveSignalBus:
         # Homeostatic drift: scalar in [0, 1].
         signals["homeostatic_drift"] = self._normalise(
             "homeostatic_drift", max(0.0, min(1.0, float(homeostatic_drift)))
+        )
+
+        # Gut-brain axis signals (from EntericSignalBus).
+        signals["gut_inflammation"] = self._normalise(
+            "gut_inflammation", max(0.0, min(1.0, float(gut_inflammation)))
+        )
+        signals["gut_feeling"] = self._normalise(
+            "gut_feeling", max(0.0, min(1.0, float(gut_feeling)))
         )
 
         self._tick += 1

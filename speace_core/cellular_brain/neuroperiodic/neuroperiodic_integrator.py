@@ -53,6 +53,13 @@ class NeuroPeriodicIntegrator(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
+    # Runtime dynamics (T171)
+    membrane_dynamics: Any = None
+    propagation_engine: Any = None
+
+    class Config:
+        arbitrary_types_allowed = True
+
     @classmethod
     def from_genome(cls, genome: Any) -> "NeuroPeriodicIntegrator":
         """Build an integrator whose periodic laws are driven by Digital DNA."""
@@ -61,6 +68,107 @@ class NeuroPeriodicIntegrator(BaseModel):
             laws=PeriodicLaw.from_genome(genome),
             bond_registry=BondRegistry(),
         )
+
+    # ------------------------------------------------------------------
+    # Runtime dynamics (T171)
+    # ------------------------------------------------------------------
+
+    def enable_runtime_dynamics(self) -> None:
+        """Enable spike propagation and membrane dynamics.
+
+        Called once during orchestrator init when the genome flag
+        neuroperiodic.enable_runtime_dynamics is True.
+        """
+        from speace_core.cellular_brain.neuroperiodic.membrane_dynamics import (
+            MembraneDynamics,
+        )
+        from speace_core.cellular_brain.neuroperiodic.propagation_engine import (
+            PropagationEngine,
+        )
+
+        self.membrane_dynamics = MembraneDynamics()
+        self.propagation_engine = PropagationEngine(
+            table=self.table,
+            bond_registry=self.bond_registry,
+        )
+
+    def tick(
+        self,
+        circuit: Any,
+        tick: int = 0,
+        dt: float = 1.0,
+        fired_neuron_ids: list | None = None,
+    ) -> dict:
+        """Run one tick of periodic-informed spike propagation.
+
+        Pipeline per tick:
+        1. Convert fired neurons to SpikeEvents (using element lookup)
+        2. Propagate events through bonds (delay, attenuation, amplification)
+        3. Update bond states (short-term depression)
+        4. Return propagation summary
+
+        Parameters
+        ----------
+        circuit : NeuralCircuit
+            The active neural circuit.
+        tick : int
+            Current tick number.
+        dt : float
+            Time step.
+        fired_neuron_ids : list[str] | None
+            Neuron IDs that fired this tick (from burst engine).
+
+        Returns
+        -------
+        dict
+            Propagation summary with counters.
+        """
+        from speace_core.cellular_brain.neuroperiodic.spike_event import SpikeEvent
+
+        if self.membrane_dynamics is None:
+            return {"error": "Runtime dynamics not enabled. Call enable_runtime_dynamics() first."}
+
+        # 1. Convert fired neurons to SpikeEvents
+        spikes: list[SpikeEvent] = []
+        if fired_neuron_ids:
+            for nid in fired_neuron_ids:
+                element = self._guess_element_from_neuron_id(nid)
+                if element is None:
+                    continue
+                state = self.membrane_dynamics.get_state(nid)
+                spikes.append(SpikeEvent(
+                    source_z=element.atomic_number,
+                    target_z=None,
+                    timestamp=tick,
+                    phase=(tick * 0.1) % (2.0 * 3.14159),
+                    inter_spike_interval=max(1, tick - state.last_spike_tick),
+                    strength=1.0,
+                ))
+
+        # 2. Propagate through bonds
+        result = self.propagation_engine.propagate(spikes, circuit, tick)
+
+        # 3. Apply STDP
+        if result.propagated_spikes > 0:
+            updated = self.propagation_engine.apply_stdp(spikes, spikes, tick)
+            result.bonds_updated = updated
+
+        return {
+            "spikes_created": len(spikes),
+            "propagated": result.propagated_spikes,
+            "attenuated": result.attenuated_spikes,
+            "dropped": result.dropped_spikes,
+            "bonds_updated": result.bonds_updated,
+            "mean_delay": result.mean_delay,
+        }
+
+    def _guess_element_from_neuron_id(self, neuron_id: str) -> NeuralElement | None:
+        """Try to extract element info from a neuron ID."""
+        for element in self.table.elements.values():
+            for ct in element.cell_types:
+                if ct.lower() in neuron_id.lower():
+                    return element
+        return None
 
     # ------------------------------------------------------------------
     # Element lookup

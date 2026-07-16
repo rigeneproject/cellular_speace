@@ -29,6 +29,11 @@ species_orientation:
       - sleep_consolidation
       - cellular_differentiation
       - evolutionary_adaptation
+      - enteroception_gut_brain_axis
+      - physiological_signal_network
+      - digital_metabolism
+      - physiome
+      - physiological_genome
 
   organismic_identity:
     identity_model: "one distributed organism, many localized expressions"
@@ -172,6 +177,45 @@ species_orientation:
       metric: identity_kernel_distance
       target_direction: minimize
       rationale: "Learning must preserve the constitutional genome / species orientation."
+
+  # ---------------------------------------------------------------- #
+  # T177 — Physiological Signal Network & Physiological Genome
+  # ---------------------------------------------------------------- #
+  physiological_genome:
+    status: constitutional
+    version: "1.0.0"
+    manifest: "speace_core/dna/genome/physiology/physiological_genome.yaml"
+    note: >
+      The Physiological Genome defines the species' physiological identity:
+      systems, organs, tissues, cells, molecular mediators, signal ontology,
+      receptor maps, metabolic profiles, homeostatic setpoints, and
+      physiological policies. It is loaded at startup and immutable for
+      constitutional sections at runtime. Changes require a DNA mutation event.
+
+  physiological_signal_network:
+    status: constitutional
+    note: >
+      The PSN is the universal physiological middleware — a dual-bus architecture
+      (Neural + Endocrine) that carries streams and events mediated by molecular
+      analogues. No organ communicates directly with another; all signals flow
+      through the PSN. Built on the Physiome blueprint and constrained by Digital
+      Metabolism.
+
+  digital_metabolism:
+    status: constitutional
+    note: >
+      Every operation has a metabolic cost. Energy budgets per tissue,
+      global energy pool, heat generation, and crisis management ensure that
+      no signal or computation is free. Enables emergent efficiency, resource
+      reallocation, and adaptive prioritisation.
+
+  physiome:
+    status: constitutional
+    note: >
+      The Physiome is the complete, runtime-accessible description of the
+      organism's physiology, loaded from the Physiological Genome. It is not
+      middleware — it is the constitutional blueprint that constrains all
+      runtime behaviour.
 
   # How the BCEL uses these invariants
   bcel_guideline:

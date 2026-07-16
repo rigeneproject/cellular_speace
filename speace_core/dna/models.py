@@ -2,6 +2,8 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
+from speace_core.dna.tft_gene import TFTPspGeneSet
+
 
 class GenomeIdentity(BaseModel):
     entity_name: str = "SPEACE"
@@ -233,6 +235,7 @@ class SharedGenome(BaseModel):
     functional_activation: FunctionalActivationParams = Field(default_factory=FunctionalActivationParams)
     quantum_genes: QuantumGeneSet = Field(default_factory=QuantumGeneSet)
     cor_genes: CORGeneSet = Field(default_factory=CORGeneSet)
+    tftpsp_genes: TFTPspGeneSet = Field(default_factory=TFTPspGeneSet)
 
     def get_genes_for_role(self, role: str) -> List[str]:
         rules = self.expression_rules.get(role)

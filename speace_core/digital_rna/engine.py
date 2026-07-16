@@ -8,6 +8,7 @@ the cognitive workspace and the neural-synaptic periodic table.
 from typing import Any, Dict, List, Set
 
 from speace_core.digital_rna.models import RNAExpressionProfile, Transcriptome
+from speace_core.digital_rna.tftpsp_engine import populate_tftpsp_transcriptome
 from speace_core.epigenetics.epigenetic_tags import EpigeneticTagsManager
 
 
@@ -33,7 +34,14 @@ class RNAExpressionEngine:
         context_key: str = "default",
         context_state: Dict[str, float] | None = None,
     ) -> Transcriptome:
-        """Build a fresh transcriptome from DNA + epigenetic context."""
+        """Build a fresh transcriptome from DNA + epigenetic context.
+
+        After the cell-type expression rules are evaluated, the
+        :class:`TFTPspGeneSet` carried by the genome is transcribed via
+        :func:`speace_core.digital_rna.tftpsp_engine.populate_tftpsp_transcriptome`.
+        This is purely additive: existing expression profiles are not
+        overwritten.
+        """
         transcriptome = Transcriptome(context_key=context_key)
         state = context_state or {}
 
@@ -70,10 +78,21 @@ class RNAExpressionEngine:
         # 4. Set the coherence/entropy lambda from context.
         transcriptome.lambda_coherence_entropy = self._derive_lambda(state)
 
+        # 5. T173 — Transcribe the TFTpsp block if present in the genome.
+        tftpsp_set = getattr(self.genome, "tftpsp_genes", None)
+        if tftpsp_set is not None:
+            populate_tftpsp_transcriptome(transcriptome, tftpsp_set, state)
+
         transcriptome.metadata = {
             "genome_version": getattr(self.genome, "__version__", "unknown"),
             "context_state": state,
             "tagged_genes": len(self.tags.get_active_tags()),
+            "tftpsp_genes_applied": transcriptome.metadata.get(
+                "tftpsp_genes_applied", 0
+            ),
+            "tftpsp_context_tags": transcriptome.metadata.get(
+                "tftpsp_context_tags", []
+            ),
         }
         return transcriptome
 

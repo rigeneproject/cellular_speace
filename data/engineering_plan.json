@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "updated_at": "2026-06-17T10:41:22.047319+00:00",
-  "current_agi_percentage": 46.23,
-  "current_ari_percentage": 85.21,
+  "updated_at": "2026-06-17T11:41:26.740269+00:00",
+  "current_agi_percentage": 46.34,
+  "current_ari_percentage": 79.78,
   "milestones": [
     {
       "id": "M-AGI-10",
@@ -45,21 +45,21 @@
     },
     {
       "axis": "generalization",
-      "current": 0.9831,
+      "current": 0.9804,
       "current_target": 0.85,
       "next_target": 0.95,
       "rationale": "Already strong. Keep AGI% variance low across cycles."
     },
     {
       "axis": "memory_integration",
-      "current": 0.8995,
+      "current": 0.6,
       "current_target": 0.85,
       "next_target": 0.95,
       "rationale": "Workspace active_items and ignition_score are both 0; needs the cognitive subsystem to feed live ignition events into the snapshot."
     },
     {
       "axis": "self_improvement",
-      "current": 0.7547,
+      "current": 0.6651,
       "current_target": 0.6,
       "next_target": 0.8,
       "rationale": "Slope-based measure; improve by completing at least one cycle that produces a measurable AGI delta."
@@ -116,6 +116,13 @@
       "rationale": "status=no_data"
     },
     {
+      "gap_id": "ari-axis:memory_integration",
+      "title": "Improve ARI axis 'memory_integration' (current 0.60 < target 0.85)",
+      "severity": "high",
+      "category": "ari_alignment",
+      "rationale": "Workspace active_items and ignition_score are both 0; needs the cognitive subsystem to feed live ignition events into the snapshot."
+    },
+    {
       "gap_id": "ari-axis:planning",
       "title": "Improve ARI axis 'planning' (current 0.83 < target 0.85)",
       "severity": "medium",
@@ -137,6 +144,12 @@
       "rationale": "Status=watch"
     },
     {
+      "title": "ARI axis 'memory_integration': lift from 0.60 to \u22650.85",
+      "category": "ari_alignment",
+      "weight": 0.15,
+      "rationale": "weight=0.15, current=0.60"
+    },
+    {
       "title": "ARI axis 'planning': lift from 0.83 to \u22650.85",
       "category": "ari_alignment",
       "weight": 0.1,
@@ -151,17 +164,17 @@
   ],
   "open_proposals": [
     {
-      "proposal_id": "proposal-10f05059",
+      "proposal_id": "proposal-70618e8c",
       "title": "Extract genome loader into reusable helper",
       "category": "refactor"
     },
     {
-      "proposal_id": "proposal-86393b2f",
+      "proposal_id": "proposal-dbb2a241",
       "title": "Merge STDP plasticity toggles into a single dataclass",
       "category": "refactor"
     },
     {
-      "proposal_id": "proposal-ac895fbd",
+      "proposal_id": "proposal-f5e6bce4",
       "title": "Cache DashboardStateReader per request",
       "category": "refactor"
     }

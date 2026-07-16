@@ -125,10 +125,48 @@ speace_core/
 - All translations must be stress-tested before merge.
 - The genome orientation block remains the source of truth for "why" a module exists.
 
-## 8. Next immediate tasks
+## 8. Registered equivalences
+
+The following entries are registered in `speace_core/bcel/catalog.py`:
+
+### Identity Vector / Self-Nonself Boundary
+
+| Phase | Output |
+|-------|--------|
+| Biological structure | Immune self-recognition / cellular identity markers (MHC) |
+| Function | Distinguish self from non-self to prevent autoimmunity |
+| Accidental part | MHC polymorphism, clonal selection latency |
+| Functional part | Identity preservation through change; tolerance for diversity |
+| Digital synthesis | 10D identity vector + Euclidean distance threshold (`is_self`, `self_distance`) |
+| Integration | `Organism.identity_vector` built from kernel state each tick; advisory check only |
+
+### Metabolic Cycle (Energy Acquisition & Transformation)
+
+| Phase | Output |
+|-------|--------|
+| Biological structure | Cellular metabolism (glycolysis → Krebs cycle → oxidative phosphorylation) |
+| Function | Extract energy from resources, transform for use, produce waste |
+| Accidental part | ATP yield per glucose, enzyme kinetics, mitochondrial density |
+| Functional part | Resource allocation weighted by activity; interconnection efficiency |
+| Digital synthesis | `MetabolicCycle.tick()`: acquire → transform → waste → store |
+| Integration | Called after organism update in orchestrator tick; energy stored in `_energy_reserve` |
+
+### Waste Clearance
+
+| Phase | Output |
+|-------|--------|
+| Biological structure | Lysosomal degradation / autophagy / excretory system |
+| Function | Remove metabolic byproducts that would poison the system |
+| Accidental part | Slow enzyme degradation rates, limited lysosome capacity |
+| Functional part | Programmed removal threshold prevents runaway entropy accumulation |
+| Digital synthesis | `WasteClearanceEngine`: scan-interval clearance + forced clearance above threshold |
+| Integration | Called by `MetabolicCycle.tick()`; forced clearance prevents freeze when waste > limit |
+
+## 9. Next immediate tasks
 
 1. Implement `speace_core/bcel/` core classes.
 2. Implement `speace_core/digital_rna/` transcriptome engine.
 3. Add `FunctionalConstraintLaw` to the neural-synaptic periodic table.
 4. Wire `Digital RNA` into `GlobalWorkspace` and `PeriodicLaw`.
 5. Add unit tests and update the capability assessment.
+6. Register identity vector, metabolic cycle, and waste clearance equivalences.

@@ -66,22 +66,22 @@ dynamics:
     parameters: {}
 
   homeostatic_drive:
-    enabled: false
+    enabled: true
     description: "Global homeostatic drive system that modulates brain parameters"
     parameters:
       drives:
         exploration:
-          setpoint: 0.5
-          weight: 1.0
+          setpoint: 0.4
+          weight: 0.8
         stability:
-          setpoint: 0.5
-          weight: 1.0
-        survival:
-          setpoint: 0.2
-          weight: 1.5
-        efficiency:
           setpoint: 0.6
           weight: 1.0
+        survival:
+          setpoint: 0.5
+          weight: 1.0
+        efficiency:
+          setpoint: 0.5
+          weight: 0.8
       plasticity_range: [0.0, 2.0]
       exploration_range: [0.0, 2.0]
       energy_supply_range: [0.5, 1.5]

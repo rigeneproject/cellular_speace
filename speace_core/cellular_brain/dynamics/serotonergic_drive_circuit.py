@@ -68,12 +68,16 @@ class SerotonergicModulator:
         memory: Optional[MorphologicalMemory] = None,
         source_id: str = "serotonergic_modulator",
         target_id: str = "global_inhibition",
+        gut_serotonin: float = 0.0,
     ) -> SerotoninState:
         """Process reward/punishment signals and update serotonin level.
 
         Serotonin responds primarily to long-term average reward rates
         and punishment signals (opponent to dopamine's short-term RPE).
+        ``gut_serotonin`` provides a tonic baseline elevation from the
+        gut-brain axis (microbiome-derived 5-HT precursor).
         """
+        tonic_floor = max(0.0, gut_serotonin * 0.3)
         net_signal = reward_signal - punishment_signal
         current = self.state.serotonin_level
 
@@ -86,7 +90,7 @@ class SerotonergicModulator:
         self.state.drn_firing_rate = burst
 
         self.state.serotonin_level = max(
-            0.0,
+            tonic_floor,
             min(1.0, current + burst + dip),
         )
 

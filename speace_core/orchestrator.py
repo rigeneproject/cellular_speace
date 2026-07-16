@@ -120,6 +120,9 @@ from speace_core.cellular_brain.sleep.digital_sleep_controller import DigitalSle
 from speace_core.cellular_brain.immune.digital_immune_controller import DigitalImmuneController
 from speace_core.cellular_brain.tool_registry.tool_registry_controller import ToolRegistryController
 from speace_core.cellular_brain.identity_kernel.identity_kernel import IdentityKernel
+from speace_core.organism.organism_facade import Organism
+from speace_core.metabolism.metabolic_cycle import MetabolicCycle
+from speace_core.cellular_brain.psn import Physiome, PhysiologicalSignalBus
 from speace_core.cellular_brain.cognition.global_workspace import GlobalWorkspace
 from speace_core.cellular_brain.cognition.linguistic_cognitive_bridge import (
     LinguisticCognitiveBridge,
@@ -170,6 +173,8 @@ from speace_core.cellular_brain.cognition.capability_gap_analyzer import Capabil
 from speace_core.monitoring.bottleneck_detector import BottleneckDetector
 from speace_core.ilf import GlobalFieldIntegrator, FieldState, ILFMetrics
 from speace_core.ilf.field_integrator import FieldAwareMixin
+from speace_core.cellular_brain.enteroception.enteric_signal_bus import EntericSignalBus
+from speace_core.cellular_brain.enteroception.microbiome_modulator import MicrobiomeModulator
 
 import numpy as np
 
@@ -224,6 +229,10 @@ class CellularBrainOrchestrator(FieldAwareMixin, BaseModel):
     _last_brainstem_result = None
     _brainstem_gain_controller = None
     _last_brainstem_gain_result = None
+    # T175 — Enteroception / Digital Gut-Brain Axis
+    enteroception_enabled: bool = False
+    _enteric_signal_bus: EntericSignalBus | None = None
+    _microbiome_modulator: MicrobiomeModulator | None = None
     # T54 — Controlled Perturbation & Recovery Audit
     perturbation_recovery_audit_enabled: bool = False
     _perturbation_recovery_audit = None
@@ -309,10 +318,22 @@ class CellularBrainOrchestrator(FieldAwareMixin, BaseModel):
     # T70 — Autobiographical Identity Kernel
     identity_kernel_enabled: bool = False
     _identity_kernel: IdentityKernel | None = None
+    # T170 — Organism Facade (unified identity + self/non-self)
+    organism_enabled: bool = False
+    _organism: Organism | None = None
+    # T170 — Metabolic Cycle (acquisition → transformation → waste)
+    metabolic_cycle_enabled: bool = False
+    _metabolic_cycle: MetabolicCycle | None = None
     # T71 — Global Cognitive Workspace
     global_workspace_enabled: bool = False
     _global_workspace: GlobalWorkspace | None = None
     _last_global_workspace_step_result: dict | None = None
+    # T-COGS — Cognitive Self Observatory
+    cognitive_observatory_enabled: bool = False
+    _cognitive_observatory: Any | None = None
+    # T177 — Physiological Signal Network (digital physiology)
+    psn_enabled: bool = False
+    _psn_bus: Any | None = PrivateAttr(default=None)
 
     # T-BCEL — Digital RNA layer
     digital_rna_enabled: bool = Field(default=False, description="Enable volatile Digital RNA transcriptome step")
@@ -430,7 +451,7 @@ class CellularBrainOrchestrator(FieldAwareMixin, BaseModel):
     _thought_phase_transition_engine: ThoughtPhaseTransitionEngine | None = None
     _scale_coupling_engine: ScaleCouplingEngine | None = None
     _progress_tracker: IncrementalProgressTracker | None = None
-    _replication_engine: ReplicationDynamicsEngine | None = None
+    _replication_engine: "ReplicationDynamicsEngine | None" = None
     _last_thought_phase: str = "default"
     _last_progress_report: dict | None = None
 
@@ -507,6 +528,14 @@ class CellularBrainOrchestrator(FieldAwareMixin, BaseModel):
         else:
             self._brainstem_gain_controller = None
 
+        # T175 — Enteroception / Digital Gut-Brain Axis
+        if self.enteroception_enabled:
+            self._microbiome_modulator = MicrobiomeModulator()
+            self._enteric_signal_bus = EntericSignalBus()
+        else:
+            self._microbiome_modulator = None
+            self._enteric_signal_bus = None
+
         # T42 — Cellular Adaptive Defense & Repair
         if self.cellular_adaptive_defense_enabled:
             self._cellular_stress_engine = CellularStressEngine()
@@ -562,6 +591,13 @@ class CellularBrainOrchestrator(FieldAwareMixin, BaseModel):
         if self.identity_kernel_enabled:
             self._identity_kernel = IdentityKernel()
 
+        # T170 — Organism Facade
+        if self.organism_enabled:
+            self._organism = Organism()
+        # T170 — Metabolic Cycle
+        if self.metabolic_cycle_enabled:
+            self._metabolic_cycle = MetabolicCycle()
+
         # T71 — Global Cognitive Workspace
         if self.global_workspace_enabled:
             self._global_workspace = GlobalWorkspace(
@@ -605,6 +641,29 @@ class CellularBrainOrchestrator(FieldAwareMixin, BaseModel):
                 data_dir="data/arc_agi",
                 evaluation_mode=self.evaluation_mode,
             )
+
+        # T177 — Physiological Signal Network (digital physiology)
+        if self.psn_enabled:
+            try:
+                genome_dir = Path(__file__).resolve().parent / "dna" / "genome" / "physiology"
+                if not genome_dir.exists():
+                    genome_dir = Path("speace_core/dna/genome/physiology")
+                phys = Physiome(str(genome_dir))
+                phys.load()
+                violations = phys.validate()
+                if violations:
+                    logger.warning("physiome_validation", count=len(violations), violations=violations)
+                self._psn_bus = PhysiologicalSignalBus(phys, auto_register_hormones=True)
+                logger.info("psn_initialized", systems=len(phys.systems), organs=len(phys.organs),
+                            tissues=len(phys.tissues_by_id), signals=len(phys.constitutional_signals))
+            except Exception as exc:
+                logger.error("psn_init_failed", error=str(exc))
+                self._psn_bus = None
+
+        # T-COGS — Cognitive Self Observatory
+        if self.cognitive_observatory_enabled:
+            from speace_core.cognitive_observatory.observatory import CognitiveObservatory
+            self._cognitive_observatory = CognitiveObservatory(psn=getattr(self, "_psn_bus", None))
 
         # System Assimilation — VFS e Windows System Assimilation (dopo _initialize_dynamic_modules)
         genome_sa = getattr(self.genome, "system_assimilation", None)
@@ -1005,6 +1064,11 @@ class CellularBrainOrchestrator(FieldAwareMixin, BaseModel):
         # T-BCEL — update the volatile transcriptome from Digital DNA
         self._step_digital_rna()
 
+        # T177 — PSN tick begin (clear neural bus, decay endocrine, begin metabolism)
+        psn = getattr(self, "_psn_bus", None)
+        if psn is not None:
+            psn.tick_begin(self.current_tick)
+
 
         # Neuro-OS scheduling decision (beginning of cycle)
         neuro_os_decision: Any = None
@@ -1171,10 +1235,15 @@ class CellularBrainOrchestrator(FieldAwareMixin, BaseModel):
         coherence = getattr(metrics, "coherence_phi", 0.5) if metrics else 0.5
 
         if self.serotonergic_modulation_enabled and self._serotonergic_modulator is not None:
+            gut_5ht = 0.0
+            if self.enteroception_enabled and self._enteric_signal_bus is not None:
+                snap = self._enteric_signal_bus.last_snapshot
+                gut_5ht = snap.signals.get("gut_serotonin", 0.0)
             self._serotonergic_modulator.tick(
                 reward_signal=max(0.0, coherence - 0.5),
                 punishment_signal=max(0.0, 0.5 - coherence),
                 memory=self._memory,
+                gut_serotonin=gut_5ht,
             )
             # Apply serotonin effects to circuit
             inh_mod = self._serotonergic_modulator.get_inhibition_modulation()
@@ -1576,6 +1645,64 @@ class CellularBrainOrchestrator(FieldAwareMixin, BaseModel):
                         n.activation = getattr(n, "activation", 0.0) * decay_factor
 
         # ------------------------------------------------------------------ #
+        # T175 — Enteroception / Digital Gut-Brain Axis
+        # ------------------------------------------------------------------ #
+        if self.enteroception_enabled and self._enteric_signal_bus is not None and self._microbiome_modulator is not None:
+            stress_level = 0.0
+            if self.brainstem_controller_enabled and self._brainstem_controller is not None:
+                stress_level = min(1.0, getattr(self._brainstem_controller, "_last_suppression_cost", 0.0) * 2.0)
+            elif hasattr(self, "_homeostatic_drive"):
+                stress_level = 1.0 - getattr(self._homeostatic_drive, "_homeostatic_balance", 0.5)
+
+            coherence = metrics.coherence_phi if metrics else 0.5
+            entero_snap = self._enteric_signal_bus.read(
+                microbiome_modulator=self._microbiome_modulator,
+                stress_level=stress_level,
+                coherence=coherence,
+            )
+
+            gut_signal = self._enteric_signal_bus.last_snapshot.signals
+
+            # 1) novelty_boost → exploration drive modulation
+            novelty_boost = gut_signal.get("novelty_boost", 0.0)
+            if novelty_boost > 0.01 and self.homeostatic_drive_enabled and self._homeostatic_drive is not None:
+                try:
+                    self._homeostatic_drive.update_drive("exploration", novelty_boost)
+                except Exception:
+                    pass
+
+            # 2) gut_inflammation → immune controller
+            gut_inflamm = gut_signal.get("gut_inflammation", 0.0)
+            if gut_inflamm > 0.01 and self.immune_enabled and self._immune_controller is not None:
+                try:
+                    if not hasattr(self._immune_controller, "_last_gut_inflammation"):
+                        self._immune_controller._last_gut_inflammation = 0.0
+                    self._immune_controller._last_gut_inflammation = gut_inflamm
+                except Exception:
+                    pass
+
+            # 3) ILF endocrine messaging for gut state
+            if entero_snap is not None:
+                try:
+                    gut_feeling = gut_signal.get("gut_feeling", 0.0)
+                    self.inject_field_messages(
+                        needs={
+                            "gut_diversity": max(0.0, 1.0 - gut_signal.get("microbiome_diversity", 0.5)),
+                            "gut_inflammation": gut_inflamm,
+                        },
+                        goals={"gut_balance": max(0.0, 1.0 - gut_feeling)},
+                        alarms=["gut_dysbiosis"] if gut_feeling > 0.5 and gut_inflamm > 0.3 else [],
+                    )
+                except Exception:
+                    pass
+
+                if self.global_workspace_enabled and self._global_workspace is not None:
+                    try:
+                        self._enteric_signal_bus.broadcast_to_workspace(self._global_workspace)
+                    except Exception:
+                        pass
+
+        # ------------------------------------------------------------------ #
         # FRL — Communication Through Coherence: inject phase-aware per-pair
         #       routing multipliers into the routing pipeline
         # ------------------------------------------------------------------ #
@@ -1701,6 +1828,14 @@ class CellularBrainOrchestrator(FieldAwareMixin, BaseModel):
         # T70 — Autobiographical Identity Kernel
         if self.identity_kernel_enabled and self._identity_kernel is not None:
             self._identity_kernel.tick(self)
+
+        # T170 — Organism Facade update
+        if self.organism_enabled and self._organism is not None:
+            self._organism.update(self)
+
+        # T170 — Metabolic Cycle
+        if self.metabolic_cycle_enabled and self._metabolic_cycle is not None:
+            self._metabolic_cycle.tick(self)
 
         # T71 — Global Cognitive Workspace
         if self.global_workspace_enabled and self._global_workspace is not None:
@@ -1959,6 +2094,51 @@ class CellularBrainOrchestrator(FieldAwareMixin, BaseModel):
                 )
                 asyncio.ensure_future(
                     self._replication_engine.replicate(mode=ReplicationMode.BUDDING)
+                )
+
+        # T177 — PSN tick end + signal publishing
+        psn = getattr(self, "_psn_bus", None)
+        if psn is not None:
+            metrics = self.latest_metrics
+            if metrics:
+                psn.publish_stream("energy", max(0.0, min(1.0, getattr(metrics, "mean_energy", 0.5))))
+                psn.publish_stream("stress", max(0.0, min(1.0, getattr(metrics, "noise_level", 0.3))))
+                psn.publish_stream("coherence", max(0.0, min(1.0, getattr(metrics, "coherence_phi", 0.5))))
+                psn.publish_stream("safety", max(0.0, min(1.0, 1.0 - getattr(metrics, "noise_level", 0.3))))
+                psn.set_estimate("prediction_error", max(0.0, min(1.0, getattr(metrics, "noise_level", 0.3))))
+            psn.tick_end(self.current_tick)
+
+        # T-COGS — Cognitive Self Observatory tick
+        if self.cognitive_observatory_enabled and self._cognitive_observatory is not None:
+            try:
+                all_neurons = (
+                    self.circuit.input_neurons
+                    + self.circuit.hidden_neurons
+                    + self.circuit.output_neurons
+                )
+                activations = [getattr(n, "activation", 0.0) for n in all_neurons]
+                orchestrator_state = {
+                    "identity": {"entity_name": "SPEACE", "invariants": []},
+                    "genome": {"species": self.genome.get_taxonomy() if hasattr(self.genome, "get_taxonomy") else "speace_1"},
+                    "capabilities": {},
+                    "goals": [],
+                    "constraints": [],
+                    "metrics": {
+                        "coherence_phi": metrics.coherence_phi if metrics else 0.0,
+                        "mean_energy": metrics.mean_energy if metrics else 0.0,
+                        "tick": self.current_tick,
+                    },
+                    "circuit": {
+                        "n_neurons": len(all_neurons),
+                        "n_synapses": len(self.circuit.synapses) if self.circuit else 0,
+                        "mean_activation": sum(activations) / len(activations) if activations else 0.0,
+                    },
+                }
+                self._cognitive_observatory.on_tick(orchestrator_state)
+            except Exception as exc:
+                import logging
+                logging.getLogger("speace.orchestrator").warning(
+                    "Cognitive observatory tick failed: %s", exc, exc_info=True
                 )
 
         # ILF — Field tick (causal broadcast at end of cycle)

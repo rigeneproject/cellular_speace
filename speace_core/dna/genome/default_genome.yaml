@@ -5,6 +5,14 @@ identity:
   substrate: digital_physical_hybrid
   continuity_principle: preserve_identity_through_adaptive_change
 
+identity_kernel:
+  enabled: true
+  mode: minimal
+  description: "Autobiographical identity, cross-clone coherence, and ontogenetic stage tracking"
+  narratives_enabled: true
+  coherence_check_enabled: true
+  ontogenetic_tracking_enabled: true
+
 morphology:
   allowed_cell_types:
     - digital_neuron
@@ -859,3 +867,17 @@ quantum_genes:
     d: 2
     f: 1
     g: 1
+
+# T173 — TFTpsp Digital-DNA block
+# Each TFTpsp gene is loaded from
+# ``speace_core/dna/genome/tftpsp/00_tftpsp_genome.yaml`` via the
+# TFTPspGeneLibrary. The block below is a thin pointer used by the
+# parser so that ``SharedGenome`` can carry the genes without
+# inlining all 33 records into the default file.
+tftpsp_genes:
+  enabled: true
+  catalog_path: "speace_core/dna/genome/tftpsp/00_tftpsp_genome.yaml"
+  # When ``inline`` is non-empty the parser prefers the inline copy
+  # over the catalog file. Empty by default — the catalog file is the
+  # source of truth.
+  inline: []

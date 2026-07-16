@@ -11,9 +11,13 @@ from speace_core.bcel import BCELCatalog, CyberneticSynthesizer, BiologicalCompo
 from speace_core.bcel import ConstraintStressTester
 from speace_core.digital_rna.transcriptor import DigitalTranscriptor
 from speace_core.epigenetics.epigenetic_tags import EpigeneticTagsManager
+from speace_core.omni_rag.cli_commands import omni_app
+from speace_core.cognitive_observatory.cli_commands import obs_app
 
 
 app = typer.Typer(name="speace", help="SPEACE Cellular Brain CLI")
+app.add_typer(omni_app, name="omni", help="Cognitive Omni-RAG — unified knowledge infrastructure")
+app.add_typer(obs_app, name="cognitive", help="Cognitive Self Observatory — meta-cognition layer")
 
 SPEACE_VERSION = "0.9.0"
 
@@ -739,6 +743,189 @@ def bcel_stress_test(
     typer.echo(f"Change:     {result.relative_change:.2f}x")
     typer.echo(f"Passed:     {result.passed}")
     typer.echo(f"Interpretation: {result.interpretation}")
+
+
+# ---------------------------------------------------------------------------
+# TFTpsp — 33 Problem-Solving Parameters from the Rigene Project
+# ---------------------------------------------------------------------------
+
+
+def _load_tftpsp_library(catalog_path: Optional[pathlib.Path]):
+    """Load the TFTpsp catalogue; defaulting to the on-disk one."""
+    from speace_core.dna.tftpsp_library import TFTPspGeneLibrary
+
+    if catalog_path is None:
+        return TFTPspGeneLibrary.default()
+    return TFTPspGeneLibrary.from_file(catalog_path)
+
+
+@app.command()
+def tftpsp_list(
+    domain: Optional[str] = typer.Option(
+        None, "--domain", "-d", help="Filter by domain tag (e.g. crisis, innovation)"
+    ),
+    with_bcel: bool = typer.Option(
+        False, "--with-bcel", help="Only genes with a BCEL mapping"
+    ),
+    catalog_path: Optional[pathlib.Path] = typer.Option(
+        None, "--catalog", help="Path to a TFTpsp YAML catalogue"
+    ),
+) -> None:
+    """List the 33 TFTpsp genes (optionally filtered)."""
+    lib = _load_tftpsp_library(catalog_path)
+    if not lib.enabled:
+        typer.echo("TFTpsp catalogue is DISABLED in this genome.")
+        raise typer.Exit(1)
+
+    genes = lib.all()
+    if domain:
+        genes = lib.by_domain_tag(domain)
+    if with_bcel:
+        genes = [g for g in genes if g.bcel_equivalent]
+
+    typer.echo(f"=== TFTpsp Catalogue ({len(genes)} / {len(lib)}) ===")
+    for g in genes:
+        bcel = f" -> {g.bcel_equivalent}" if g.bcel_equivalent else ""
+        typer.echo(
+            f"  TFT-{g.tft_index:02d}  {g.short_label:14s}  "
+            f"priority={g.priority:.2f}  tags={','.join(g.domain_tags)}{bcel}"
+        )
+
+
+@app.command()
+def tftpsp_show(
+    gene_id: str = typer.Argument(..., help="Gene id (e.g. tftpsp_023_epshcpe)"),
+    catalog_path: Optional[pathlib.Path] = typer.Option(
+        None, "--catalog", help="Path to a TFTpsp YAML catalogue"
+    ),
+) -> None:
+    """Show the full record of a TFTpsp gene."""
+    lib = _load_tftpsp_library(catalog_path)
+    gene = lib.get(gene_id)
+    if gene is None:
+        typer.echo(f"Gene '{gene_id}' not found in TFTpsp catalogue.")
+        raise typer.Exit(1)
+
+    typer.echo(f"=== {gene.short_label} (TFT-{gene.tft_index:02d}) ===")
+    typer.echo(f"  id:          {gene.gene_id}")
+    typer.echo(f"  full_name:   {gene.name}")
+    typer.echo(f"  priority:    {gene.priority:.2f}")
+    typer.echo(f"  domain_tags: {', '.join(gene.domain_tags)}")
+    typer.echo(f"  bcel:        {gene.bcel_equivalent or 'none'}")
+    typer.echo(f"  function:    {gene.function.strip()}")
+    typer.echo(f"  mutation_policy.allowed: {gene.mutation_policy.allowed}")
+    typer.echo(
+        f"  mutation_policy.requires_governance: "
+        f"{gene.mutation_policy.requires_governance}"
+    )
+
+    if gene.activation_conditions:
+        typer.echo("  activation_conditions:")
+        for ac in gene.activation_conditions:
+            typer.echo(
+                f"    - tag={ac.trigger_tag} boost={ac.boost} "
+                f"min_signal={ac.min_signal}"
+            )
+    if gene.epigenetic_mechanisms:
+        typer.echo("  epigenetic_mechanisms:")
+        for rule in gene.epigenetic_mechanisms:
+            typer.echo(
+                f"    - tag={rule.tag} effect={rule.effect} "
+                f"modifier={rule.modifier}"
+            )
+    if gene.interactions:
+        typer.echo("  interactions:")
+        for inter in gene.interactions:
+            typer.echo(
+                f"    - {inter.relation} {inter.target_gene_id} "
+                f"(weight={inter.weight})"
+            )
+    if gene.constraints:
+        typer.echo("  constraints:")
+        for c in gene.constraints:
+            typer.echo(
+                f"    - {c.name}: invariant={c.invariant}"
+            )
+
+
+@app.command()
+def tftpsp_express(
+    state: list[str] = typer.Option(
+        [],
+        "--state",
+        "-s",
+        help="tag=value pairs (e.g. crisis=1.0). May be passed multiple times.",
+    ),
+    genome_path: Optional[pathlib.Path] = typer.Option(
+        None, "--genome", "-g", help="Path to genome YAML"
+    ),
+    top: int = typer.Option(10, "--top", help="Number of top expressed genes"),
+    catalog_path: Optional[pathlib.Path] = typer.Option(
+        None, "--catalog", help="Path to a TFTpsp YAML catalogue"
+    ),
+) -> None:
+    """Compute TFTpsp expression levels for a given context state."""
+    from speace_core.digital_rna.tftpsp_engine import build_tftpsp_transcriptome
+
+    # Parse --state key=value pairs
+    context_state: dict[str, float] = {}
+    for pair in state:
+        if "=" not in pair:
+            typer.echo(f"Invalid --state '{pair}' (expected tag=value)")
+            raise typer.Exit(1)
+        key, _, raw = pair.partition("=")
+        try:
+            value = float(raw)
+        except ValueError:
+            typer.echo(f"Invalid numeric value for --state '{pair}'")
+            raise typer.Exit(1) from None
+        # Reject NaN/inf to keep the context state well-formed.
+        if value != value or value in (float("inf"), float("-inf")):
+            typer.echo(f"Invalid numeric value for --state '{pair}' (NaN/inf)")
+            raise typer.Exit(1)
+        context_state[key.strip()] = value
+
+    lib = _load_tftpsp_library(catalog_path)
+    tr = build_tftpsp_transcriptome(lib, context_state)
+
+    typer.echo(f"=== TFTpsp Expression (context={context_state or '{}'}) ===")
+    ranked = sorted(
+        tr.expression_profiles.values(), key=lambda p: p.expression, reverse=True
+    )
+    for profile in ranked[:top]:
+        typer.echo(
+            f"  {profile.gene_name:34s} {profile.expression:.3f}  "
+            f"tags={','.join(profile.context_tags)}"
+        )
+    typer.echo(
+        f"  ... ({len(ranked)} total profiles; metadata keys: "
+        f"{','.join(tr.metadata.keys())})"
+    )
+
+
+@app.command()
+def tftpsp_audit(
+    catalog_path: Optional[pathlib.Path] = typer.Option(
+        None, "--catalog", help="Path to a TFTpsp YAML catalogue"
+    ),
+) -> None:
+    """Audit the TFTpsp catalogue: gene count, BCEL mappings, mutation policies."""
+    lib = _load_tftpsp_library(catalog_path)
+    typer.echo("=== TFTpsp Audit ===")
+    typer.echo(f"  enabled:           {lib.enabled}")
+    typer.echo(f"  gene_count:        {len(lib)}")
+    typer.echo(f"  with_bcel:         {len(lib.with_bcel())}")
+    typer.echo(f"  emergency_genes:   {[g.gene_id for g in lib.emergency_genes()]}")
+    typer.echo(f"  bcel_resolvable:   {len(lib.bcel_resolvable())}")
+    locked = [
+        g.gene_id for g in lib.all() if not g.mutation_policy.allowed
+    ]
+    typer.echo(f"  locked_mutations:  {locked}")
+    by_priority = lib.by_priority(descending=True)[:3]
+    typer.echo(
+        "  top_priority:      "
+        + ", ".join(f"{g.gene_id}({g.priority})" for g in by_priority)
+    )
 
 if __name__ == "__main__":
     app()
